@@ -1,0 +1,59 @@
+@import "tailwindcss";
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: #faf8f4;
+  font-family: 'Inter', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Animations ─────────────────────────── */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.anim-up  { animation: fadeInUp 0.6s cubic-bezier(.22,1,.36,1) both; }
+.anim-in  { animation: fadeIn   0.5s ease both; }
+
+.d1 { animation-delay: 0.08s; }
+.d2 { animation-delay: 0.16s; }
+.d3 { animation-delay: 0.24s; }
+.d4 { animation-delay: 0.34s; }
+.d5 { animation-delay: 0.44s; }
+
+/* ── Search focus ring ───────────────────── */
+.search-bar:focus-within {
+  border-color: #c8861a !important;
+  box-shadow: 0 0 0 3px rgba(200, 134, 26, 0.14),
+              0 4px 24px rgba(200, 134, 26, 0.10);
+}
+
+/* ── Category chip hover ─────────────────── */
+.cat-chip {
+  transition: all 0.18s ease;
+}
+.cat-chip:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.09);
+}
+
+/* ── Search suggestion hover ─────────────── */
+.sug-chip {
+  transition: all 0.16s ease;
+}
+.sug-chip:hover {
+  border-color: #c8861a;
+  color: #7a4f0d;
+  background: #fdf3e3;
+  transform: translateY(-1px);
+}

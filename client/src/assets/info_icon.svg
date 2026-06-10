@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <!-- Background matching the generated PNGs -->
+  <rect width="100%" height="100%" fill="#FAF8F4" />
+  
+  <!-- Outer border matching notes_icon -->
+  <rect x="20" y="20" width="472" height="472" rx="40" fill="none" stroke="#c8861a" stroke-width="6" opacity="0.1" />
+
+  <!-- Drawing in the center -->
+  <g fill="none" stroke="#c8861a" stroke-width="12" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Triangular Roof / Pediment -->
+    <polygon points="256,120 110,210 402,210" />
+    <polygon points="256,145 140,200 372,200" opacity="0.7" />
+    
+    <!-- Arch / Ornament under roof -->
+    <path d="M 226,200 A 30,30 0 0,1 286,200" />
+    
+    <!-- Architrave / Beam -->
+    <rect x="130" y="210" width="252" height="25" rx="4" fill="#FAF8F4" />
+    
+    <!-- Columns (4 columns) -->
+    <!-- Column 1 -->
+    <line x1="160" y1="235" x2="160" y2="360" />
+    <line x1="150" y1="235" x2="170" y2="235" stroke-width="8" />
+    <line x1="150" y1="360" x2="170" y2="360" stroke-width="8" />
+    
+    <!-- Column 2 -->
+    <line x1="220" y1="235" x2="220" y2="360" />
+    <line x1="210" y1="235" x2="230" y2="235" stroke-width="8" />
+    <line x1="210" y1="360" x2="230" y2="360" stroke-width="8" />
+    
+    <!-- Column 3 -->
+    <line x1="292" y1="235" x2="292" y2="360" />
+    <line x1="282" y1="235" x2="302" y2="235" stroke-width="8" />
+    <line x1="282" y1="360" x2="302" y2="360" stroke-width="8" />
+    
+    <!-- Column 4 -->
+    <line x1="352" y1="235" x2="352" y2="360" />
+    <line x1="342" y1="235" x2="362" y2="235" stroke-width="8" />
+    <line x1="342" y1="360" x2="362" y2="360" stroke-width="8" />
+    
+    <!-- Foundation / Steps (3 steps) -->
+    <rect x="110" y="360" width="292" height="20" rx="4" fill="#FAF8F4" />
+    <rect x="90" y="380" width="332" height="20" rx="4" />
+    <rect x="70" y="400" width="372" height="22" rx="4" />
+  </g>
+</svg>
