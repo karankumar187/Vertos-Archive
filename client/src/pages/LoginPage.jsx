@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import campusSketch from "../assets/campus-sketch.png";
 
 /* ── Shared field component ── */
 function Field({ label, id, type = "text", value, onChange, placeholder }) {
@@ -58,8 +59,26 @@ export default function LoginPage() {
       justifyContent: "center",
       padding: "40px 20px",
       position: "relative",
-      overflow: "hidden",
     }}>
+      {/* Fixed Background Image */}
+      <div style={{
+        position: "fixed",
+        inset: 0,
+        backgroundImage: `url(${campusSketch})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
+        zIndex: 0,
+        pointerEvents: "none",
+      }} />
+      {/* Fade overlay */}
+      <div style={{
+        position: "fixed",
+        inset: 0,
+        pointerEvents: "none",
+        zIndex: 0,
+        background: "linear-gradient(to bottom, #faf8f4 0%, #faf8f4 40%, rgba(250,248,244,0.85) 65%, rgba(250,248,244,0.2) 100%)",
+      }}/>
       {/* Background ornament */}
       <div style={{
         position: "absolute", top: "-80px", right: "-80px",
@@ -76,12 +95,14 @@ export default function LoginPage() {
 
       <div className="anim-up d1" style={{
         width: "100%",
-        maxWidth: "440px",
+        maxWidth: "520px",
         background: "#ffffff",
         border: "1px solid #e9dcc8",
         borderRadius: "16px",
         boxShadow: "0 8px 48px rgba(160,110,40,0.1), 0 2px 12px rgba(0,0,0,0.04)",
         overflow: "hidden",
+        position: "relative",
+        zIndex: 1,
       }}>
         {/* Top gold bar */}
         <div style={{

@@ -40,19 +40,27 @@ export default function UploadPage() {
   return (
     <div style={{
       background: "#faf8f4",
-      backgroundImage: `url(${campusSketch})`,
-      backgroundSize: "cover",
-      backgroundPosition: "center",
-      backgroundRepeat: "no-repeat",
-      backgroundAttachment: "fixed",
       minHeight: "calc(100vh - 68px)",
       padding: "48px 24px",
       position: "relative",
-      overflow: "hidden"
     }}>
+      {/* Fixed Background Image */}
+      <div style={{
+        position: "fixed",
+        inset: 0,
+        backgroundImage: `url(${campusSketch})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
+        zIndex: 0,
+        pointerEvents: "none",
+      }} />
       {/* Fade overlay */}
       <div style={{
-        position: "absolute", inset: 0, pointerEvents: "none", zIndex: 0,
+        position: "fixed",
+        inset: 0,
+        pointerEvents: "none",
+        zIndex: 0,
         background: "linear-gradient(to bottom, #faf8f4 0%, #faf8f4 40%, rgba(250,248,244,0.85) 65%, rgba(250,248,244,0.2) 100%)",
       }}/>
       <div style={{ maxWidth: "1100px", margin: "0 auto", position: "relative", zIndex: 1 }}>

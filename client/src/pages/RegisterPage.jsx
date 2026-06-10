@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import campusSketch from "../assets/campus-sketch.png";
 
 function Field({ label, id, type = "text", value, onChange, placeholder, hint }) {
   const [focused, setFocused] = useState(false);
@@ -47,19 +48,40 @@ export default function RegisterPage() {
       minHeight: "calc(100vh - 68px)",
       background: "#faf8f4",
       display: "flex", alignItems: "center", justifyContent: "center",
-      padding: "40px 20px", position: "relative", overflow: "hidden",
+      padding: "40px 20px", position: "relative",
     }}>
+      {/* Fixed Background Image */}
+      <div style={{
+        position: "fixed",
+        inset: 0,
+        backgroundImage: `url(${campusSketch})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
+        zIndex: 0,
+        pointerEvents: "none",
+      }} />
+      {/* Fade overlay */}
+      <div style={{
+        position: "fixed",
+        inset: 0,
+        pointerEvents: "none",
+        zIndex: 0,
+        background: "linear-gradient(to bottom, #faf8f4 0%, #faf8f4 40%, rgba(250,248,244,0.85) 65%, rgba(250,248,244,0.2) 100%)",
+      }}/>
       {/* Ornaments */}
       <div style={{ position: "absolute", top: "-60px", left: "-60px", width: "380px", height: "380px", background: "radial-gradient(circle, rgba(200,134,26,0.07) 0%, transparent 70%)", pointerEvents: "none" }} />
       <div style={{ position: "absolute", bottom: "-80px", right: "-80px", width: "400px", height: "400px", background: "radial-gradient(circle, rgba(200,134,26,0.06) 0%, transparent 70%)", pointerEvents: "none" }} />
 
       <div className="anim-up d1" style={{
-        width: "100%", maxWidth: "480px",
+        width: "100%", maxWidth: "600px",
         background: "#ffffff",
         border: "1px solid #e9dcc8",
         borderRadius: "16px",
         boxShadow: "0 8px 48px rgba(160,110,40,0.1), 0 2px 12px rgba(0,0,0,0.04)",
         overflow: "hidden",
+        position: "relative",
+        zIndex: 1,
       }}>
         <div style={{ height: "4px", background: "linear-gradient(to right, #d97706, #c8861a, #d4a96a, #c8861a, #d97706)" }} />
 

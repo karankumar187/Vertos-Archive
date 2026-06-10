@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 
 export default function Footer() {
   return (
-    <footer style={{ background: "#faf8f4" }}>
+    <footer style={{ background: "#faf8f4", position: "relative", zIndex: 10 }}>
       {/* Gold accent line */}
       <div style={{
         width: "100%", height: "2px",
