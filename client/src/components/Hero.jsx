@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import campusSketch from "../assets/campus-sketch.png";
 
 /* ─── Data ──────────────────────────────────────────────────── */
@@ -24,7 +25,19 @@ const suggestions = [
 
 /* ─── Component ─────────────────────────────────────────────── */
 export default function Hero() {
-  const [query, setQuery] = useState("");
+  const [query, setQuery]               = useState("");
+  const [selected, setSelected]         = useState(null); // selected category
+  const navigate                        = useNavigate();
+
+  const handleAsk = () => {
+    const q = query.trim();
+    if (!q && !selected) return;
+    // Build URL: include category if one is selected, include query if typed
+    const params = new URLSearchParams();
+    if (q)        params.set("q", q);
+    if (selected) params.set("category", selected.label);
+    navigate(`/chat?${params.toString()}`);
+  };
 
   return (
     <section
@@ -41,13 +54,13 @@ export default function Hero() {
         overflow: "hidden",
       }}
     >
-      {/* Fade so text is readable over the sketch */}
+      {/* Fade overlay */}
       <div style={{
         position: "absolute", inset: 0, pointerEvents: "none", zIndex: 0,
         background: "linear-gradient(to bottom, #faf8f4 0%, #faf8f4 40%, rgba(250,248,244,0.85) 65%, rgba(250,248,244,0.2) 100%)",
       }}/>
 
-      {/* ── Content column ───────────────────────────────────── */}
+      {/* ── Content column ── */}
       <div style={{
         position: "relative", zIndex: 1,
         display: "flex", flexDirection: "column", alignItems: "center",
@@ -58,94 +71,71 @@ export default function Hero() {
         paddingRight: "24px",
       }}>
 
-        {/* ── AI badge ─────────────────────────────────────── */}
-        <div
-          className="anim-in"
-          style={{
-            display: "flex", alignItems: "center", gap: "8px",
-            background: "#fef3dc", border: "1px solid #e8c96a",
-            borderRadius: "999px", padding: "6px 16px",
-            marginBottom: "20px",
-          }}
-        >
+        {/* AI badge */}
+        <div className="anim-in" style={{
+          display: "flex", alignItems: "center", gap: "8px",
+          background: "#fef3dc", border: "1px solid #e8c96a",
+          borderRadius: "999px", padding: "6px 16px",
+          marginBottom: "20px",
+        }}>
           <span style={{ color: "#c8861a", fontSize: "13px" }}>✦</span>
           <span style={{
             fontFamily: "'Inter', sans-serif",
             fontSize: "12px", fontWeight: 500,
             letterSpacing: "0.08em", textTransform: "uppercase",
             color: "#92620a",
-          }}>
-            AI-Powered University Assistant
-          </span>
+          }}>AI-Powered University Assistant</span>
           <span style={{ color: "#c8861a", fontSize: "13px" }}>✦</span>
         </div>
 
-        {/* ── Heading ──────────────────────────────────────── */}
-        <h1
-          className="anim-up d1"
-          style={{
-            fontFamily: "'Playfair Display', Georgia, serif",
-            fontSize: "clamp(2.4rem, 5.5vw, 3.8rem)",
-            fontWeight: 700,
-            color: "#1f1209",
-            textAlign: "center",
-            lineHeight: 1.2,
-            marginBottom: "12px",
-          }}
-        >
+        {/* Heading */}
+        <h1 className="anim-up d1" style={{
+          fontFamily: "'Playfair Display', Georgia, serif",
+          fontSize: "clamp(2.4rem, 5.5vw, 3.8rem)",
+          fontWeight: 700, color: "#1f1209",
+          textAlign: "center", lineHeight: 1.2,
+          marginBottom: "12px",
+        }}>
           <span style={{ color: "#c8861a" }}>Vertos</span> Archive
         </h1>
 
-        {/* ── Decorative divider ────────────────────────────── */}
-        <div
-          className="anim-up d2"
-          style={{
-            display: "flex", alignItems: "center", gap: "12px",
-            width: "100%", maxWidth: "360px",
-            marginBottom: "16px",
-          }}
-        >
+        {/* Decorative divider */}
+        <div className="anim-up d2" style={{
+          display: "flex", alignItems: "center", gap: "12px",
+          width: "100%", maxWidth: "360px", marginBottom: "16px",
+        }}>
           <div style={{ flex: 1, height: "1px", background: "linear-gradient(to right, transparent, #d4a96a)" }}/>
           <span style={{ color: "#c8861a", fontSize: "16px" }}>✦</span>
           <div style={{ flex: 1, height: "1px", background: "linear-gradient(to left, transparent, #d4a96a)" }}/>
         </div>
 
-        {/* ── Subtitle ─────────────────────────────────────── */}
-        <p
-          className="anim-up d2"
-          style={{
-            fontFamily: "'Inter', sans-serif",
-            fontSize: "1rem",
-            color: "#6b4d1f",
-            textAlign: "center",
-            lineHeight: 1.75,
-            maxWidth: "680px",
-            marginBottom: "24px",
-          }}
-        >
+        {/* Subtitle */}
+        <p className="anim-up d2" style={{
+          fontFamily: "'Inter', sans-serif",
+          fontSize: "1rem", color: "#6b4d1f",
+          textAlign: "center", lineHeight: 1.75,
+          maxWidth: "680px", marginBottom: "24px",
+        }}>
           Ask anything about notes, previous year papers, placements,
           faculty, or any information about Lovely Professional University.
         </p>
 
-        {/* ── Search bar ───────────────────────────────────── */}
+        {/* ── Search bar ── */}
         <form
           id="search-form"
-          onSubmit={e => { e.preventDefault(); }}
+          onSubmit={e => { e.preventDefault(); handleAsk(); }}
           className="anim-up d3"
-          style={{ width: "100%", maxWidth: "900px", marginBottom: "16px" }}
+          style={{ width: "100%", maxWidth: "900px", marginBottom: selected ? "12px" : "24px" }}
         >
-          <div
-            className="search-bar"
-            style={{
-              display: "flex", alignItems: "center", gap: "12px",
-              background: "#ffffff",
-              border: "1.5px solid #ddd0b8",
-              borderRadius: "12px",
-              padding: "14px 18px",
-              boxShadow: "0 2px 20px rgba(160,110,40,0.08)",
-              transition: "all 0.25s ease",
-            }}
-          >
+          <div className="search-bar" style={{
+            display: "flex", alignItems: "center", gap: "12px",
+            background: "#ffffff",
+            border: "1.5px solid #ddd0b8",
+            borderRadius: "12px",
+            padding: "14px 18px",
+            boxShadow: "0 2px 20px rgba(160,110,40,0.08)",
+            transition: "all 0.25s ease",
+          }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
               stroke="#a07840" strokeWidth="2" style={{ flexShrink: 0 }}>
               <circle cx="11" cy="11" r="8"/>
@@ -157,7 +147,7 @@ export default function Hero() {
               type="text"
               value={query}
               onChange={e => setQuery(e.target.value)}
-              placeholder="Ask Vertos Archive…"
+              placeholder={selected ? `Ask about ${selected.label}…` : "Ask Vertos Archive…"}
               style={{
                 flex: 1, background: "none", border: "none", outline: "none",
                 fontFamily: "'Inter', sans-serif",
@@ -169,21 +159,24 @@ export default function Hero() {
             <button
               id="search-submit-btn"
               type="submit"
+              disabled={!query.trim() && !selected}
               style={{
                 flexShrink: 0,
                 display: "flex", alignItems: "center", gap: "7px",
                 padding: "9px 22px",
-                background: "linear-gradient(135deg, #d97706 0%, #b45309 100%)",
+                background: (query.trim() || selected)
+                  ? "linear-gradient(135deg, #d97706 0%, #b45309 100%)"
+                  : "#e9dcc8",
                 border: "none", borderRadius: "8px",
-                color: "#fff",
+                color: (query.trim() || selected) ? "#fff" : "#b0916a",
                 fontFamily: "'Inter', sans-serif",
                 fontSize: "0.875rem", fontWeight: 600,
-                cursor: "pointer",
+                cursor: (query.trim() || selected) ? "pointer" : "not-allowed",
                 letterSpacing: "0.03em",
-                transition: "opacity 0.2s",
+                transition: "all 0.2s",
               }}
-              onMouseEnter={e => e.currentTarget.style.opacity = "0.88"}
-              onMouseLeave={e => e.currentTarget.style.opacity = "1"}
+              onMouseEnter={e => { if (query.trim() || selected) e.currentTarget.style.opacity = "0.88"; }}
+              onMouseLeave={e => { e.currentTarget.style.opacity = "1"; }}
             >
               Ask
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
@@ -194,64 +187,88 @@ export default function Hero() {
           </div>
         </form>
 
-        {/* ── Category chips ────────────────────────────────── */}
-        <div
-          className="anim-up d4"
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            flexWrap: "wrap",
-            gap: "12px 24px",
-            maxWidth: "900px",
-            width: "100%",
-            marginBottom: "32px",
-            padding: "0 16px",
-          }}
-        >
-          {categories.map((cat, index) => (
-            <div
-              key={cat.id}
-              id={`category-${cat.id}`}
-              style={{
-                display: "flex",
-                alignItems: "center",
-              }}
-            >
-              <span
-                style={{
-                  fontFamily: "'Inter', sans-serif",
-                  fontSize: "0.86rem",
-                  fontWeight: 500,
-                  color: "#5c4021",
-                  letterSpacing: "0.03em",
-                }}
-              >
-                {cat.label}
-              </span>
-              {index < categories.length - 1 && (
-                <span
+        {/* Selected category hint */}
+        {selected && (
+          <div className="anim-in" style={{
+            display: "flex", alignItems: "center", gap: "8px",
+            marginBottom: "16px",
+            fontFamily: "'Inter', sans-serif",
+            fontSize: "0.8rem", color: "#8b6535",
+          }}>
+            <span style={{ color: "#c8861a" }}>✦</span>
+            Browsing <strong style={{ color: "#5c4021" }}>{selected.label}</strong>
+            <button onClick={() => setSelected(null)} style={{
+              background: "none", border: "none", cursor: "pointer",
+              color: "#c8861a", fontSize: "16px", lineHeight: 1,
+              padding: 0, marginLeft: "2px",
+            }}>×</button>
+          </div>
+        )}
+
+        {/* ── Category chips (select before asking) ── */}
+        <div className="anim-up d4" style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: "10px 8px",
+          maxWidth: "900px",
+          width: "100%",
+          marginBottom: "32px",
+          padding: "0 16px",
+        }}>
+          {categories.map((cat, index) => {
+            const isActive = selected?.id === cat.id;
+            return (
+              <div key={cat.id} style={{ display: "flex", alignItems: "center" }}>
+                <button
+                  id={`category-${cat.id}`}
+                  onClick={() => setSelected(isActive ? null : cat)}
                   style={{
-                    color: "#c8861a",
-                    marginLeft: "24px",
-                    fontSize: "11px",
-                    opacity: 0.75,
-                    userSelect: "none",
+                    fontFamily: "'Inter', sans-serif",
+                    fontSize: "0.85rem",
+                    fontWeight: isActive ? 600 : 500,
+                    color: isActive ? "#7a4f0d" : "#5c4021",
+                    letterSpacing: "0.03em",
+                    background: isActive ? "#fef3dc" : "none",
+                    border: isActive ? "1.5px solid #e8c96a" : "1.5px solid transparent",
+                    cursor: "pointer",
+                    padding: "5px 14px",
+                    borderRadius: "999px",
+                    transition: "all 0.18s ease",
+                    boxShadow: isActive ? "0 2px 8px rgba(200,134,26,0.15)" : "none",
+                  }}
+                  onMouseEnter={e => {
+                    if (!isActive) {
+                      e.currentTarget.style.color = "#c8861a";
+                      e.currentTarget.style.background = "#fef9f0";
+                      e.currentTarget.style.border = "1.5px solid #e8c96a88";
+                    }
+                  }}
+                  onMouseLeave={e => {
+                    if (!isActive) {
+                      e.currentTarget.style.color = "#5c4021";
+                      e.currentTarget.style.background = "none";
+                      e.currentTarget.style.border = "1.5px solid transparent";
+                    }
                   }}
                 >
-                  ✦
-                </span>
-              )}
-            </div>
-          ))}
+                  {isActive && <span style={{ marginRight: "5px", fontSize: "10px" }}>✦</span>}
+                  {cat.label}
+                </button>
+                {index < categories.length - 1 && (
+                  <span style={{
+                    color: "#c8861a", marginLeft: "8px",
+                    fontSize: "10px", opacity: 0.5, userSelect: "none",
+                  }}>✦</span>
+                )}
+              </div>
+            );
+          })}
         </div>
 
-        {/* ── Popular Searches ─────────────────────────────── */}
-        <div
-          className="anim-up d5"
-          style={{ width: "100%", maxWidth: "900px" }}
-        >
-          {/* Label */}
+        {/* ── Popular Searches ── */}
+        <div className="anim-up d5" style={{ width: "100%", maxWidth: "900px" }}>
           <div style={{
             display: "flex", alignItems: "center", gap: "10px",
             marginBottom: "16px",
@@ -262,20 +279,17 @@ export default function Hero() {
               fontSize: "11px", fontWeight: 600,
               letterSpacing: "0.18em", textTransform: "uppercase",
               color: "#8b6535",
-            }}>
-              Popular Searches
-            </span>
+            }}>Popular Searches</span>
             <div style={{ flex: 1, height: "1px", background: "linear-gradient(to right, #d4a96a55, transparent)" }}/>
           </div>
 
-          {/* Chips */}
           <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
             {suggestions.map((s, i) => (
               <button
                 key={i}
                 id={`popular-search-${i}`}
                 className="sug-chip"
-                onClick={() => setQuery(s)}
+                onClick={() => navigate(`/chat?q=${encodeURIComponent(s)}`)}
                 style={{
                   display: "flex", alignItems: "center", gap: "7px",
                   padding: "6px 12px",
