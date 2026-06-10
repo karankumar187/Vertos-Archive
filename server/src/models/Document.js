@@ -22,6 +22,4 @@ const documentSchema = new mongoose.Schema({
     },
 } , { timestamps: true });
 
-module.exports = {
-    Document: mongoose.model('Document', documentSchema),
-}
+module.exports = mongoose.model("Document", documentSchema);

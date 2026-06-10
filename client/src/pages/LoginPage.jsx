@@ -2,6 +2,30 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import campusSketch from "../assets/campus-sketch.png";
 
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+
+const login = async (email, password) => {
+  try {
+    const response = await fetch(`${API_URL}/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+      credentials: "include",
+    });
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Login failed");
+    }
+    const data = await response.json();
+    localStorage.setItem("token", data.token);
+    localStorage.setItem("user", JSON.stringify(data.user));
+    return { success: true };
+  } catch (error) {
+    console.error("Login error:", error);
+    return { success: false, message: error.message };
+  }
+};
+
 /* ── Shared field component ── */
 function Field({ label, id, type = "text", value, onChange, placeholder }) {
   const [focused, setFocused] = useState(false);
@@ -47,7 +71,11 @@ export default function LoginPage() {
   const onSubmit = (e) => {
     e.preventDefault();
     // TODO: API call
-    navigate("/dashboard");
+    login(form.email, form.password).then((result) => {
+      if (result.success) {
+        navigate("/");
+      }
+    });
   };
 
   return (

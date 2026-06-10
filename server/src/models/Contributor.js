@@ -19,6 +19,4 @@ const contributorSchema = new mongoose.Schema({
     }],
 }, { timestamps: true });
 
-module.exports = {
-    Contributor: mongoose.model('Contributor', contributorSchema),
-    }
+module.exports = mongoose.model('Contributor', contributorSchema);

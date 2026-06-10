@@ -22,6 +22,4 @@ const pendingDocumentSchema = new mongoose.Schema({
     },
 }, { timestamps: true });
 
-module.exports = {
-    PendingDocument: mongoose.model('PendingDocument', pendingDocumentSchema),
-}
+module.exports = mongoose.model("PendingDocument", pendingDocumentSchema);

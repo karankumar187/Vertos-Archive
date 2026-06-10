@@ -2,6 +2,30 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import campusSketch from "../assets/campus-sketch.png";
 
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+
+const register = async (name, email, registrationNo, password) => {
+  try {
+    const response = await fetch(`${API_URL}/auth/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, email, registrationNo, password }),
+      credentials: "include",
+    });
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Registration failed");
+    }
+    const data = await response.json();
+    localStorage.setItem("token", data.token);
+    localStorage.setItem("user", JSON.stringify(data.user));
+    return { success: true };
+  } catch (error) {
+    console.error("Registration error:", error);
+    return { success: false, message: error.message };
+  }
+};
+
 function Field({ label, id, type = "text", value, onChange, placeholder, hint }) {
   const [focused, setFocused] = useState(false);
   return (
@@ -40,7 +64,11 @@ export default function RegisterPage() {
   const onSubmit = (e) => {
     e.preventDefault();
     // TODO: API call
-    navigate("/dashboard");
+    register(form.name, form.email, form.registrationNo, form.password).then((result) => {
+      if (result.success) {
+        navigate("/");
+      }
+    });
   };
 
   return (
