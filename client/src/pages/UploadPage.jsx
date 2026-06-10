@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import campusSketch from "../assets/campus-sketch.png";
 
 const CATEGORIES = [
   "Notes",
@@ -37,8 +38,24 @@ export default function UploadPage() {
   };
 
   return (
-    <div style={{ background: "#faf8f4", minHeight: "calc(100vh - 68px)", padding: "48px 24px" }}>
-      <div style={{ maxWidth: "760px", margin: "0 auto" }}>
+    <div style={{
+      background: "#faf8f4",
+      backgroundImage: `url(${campusSketch})`,
+      backgroundSize: "cover",
+      backgroundPosition: "center",
+      backgroundRepeat: "no-repeat",
+      backgroundAttachment: "fixed",
+      minHeight: "calc(100vh - 68px)",
+      padding: "48px 24px",
+      position: "relative",
+      overflow: "hidden"
+    }}>
+      {/* Fade overlay */}
+      <div style={{
+        position: "absolute", inset: 0, pointerEvents: "none", zIndex: 0,
+        background: "linear-gradient(to bottom, #faf8f4 0%, #faf8f4 40%, rgba(250,248,244,0.85) 65%, rgba(250,248,244,0.2) 100%)",
+      }}/>
+      <div style={{ maxWidth: "1100px", margin: "0 auto", position: "relative", zIndex: 1 }}>
 
         {/* ── Page heading ── */}
         <div className="anim-up d1" style={{ marginBottom: "32px", textAlign: "center" }}>
