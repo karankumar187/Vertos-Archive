@@ -325,6 +325,7 @@ export default function ChatPage() {
                   id: m._id,
                   time: new Date(m.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
               })));
+              setTimeout(() => endRef.current?.scrollIntoView({ behavior: "auto" }), 100);
           }
       } catch (err) {
           console.error("Failed to fetch messages", err);
