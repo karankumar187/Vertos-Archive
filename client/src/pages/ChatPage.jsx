@@ -237,7 +237,7 @@ export default function ChatPage() {
   const [activeCategory, setActiveCategory] = useState(null);
   
   const [conversations, setConversations] = useState([]);
-  const [activeConversationId, setActiveConversationId] = useState(null);
+  const [activeConversationId, setActiveConversationId] = useState(localStorage.getItem('activeConversationId') || null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const endRef = useRef(null);
@@ -259,6 +259,10 @@ export default function ChatPage() {
 
   useEffect(() => {
       loadConversations();
+      const savedId = localStorage.getItem('activeConversationId');
+      if (savedId) {
+          selectConversation(savedId);
+      }
   }, []);
 
   // Read URL params on first render and auto-send
@@ -293,6 +297,7 @@ export default function ChatPage() {
           const res = await chatAPI.createConversation();
           const newId = res.data.conversation._id;
           setActiveConversationId(newId);
+          localStorage.setItem('activeConversationId', newId);
           loadConversations();
           return newId;
       } catch (err) {
@@ -302,12 +307,14 @@ export default function ChatPage() {
   };
 
   const handleNewChatClick = async () => {
-      await createNewConversation();
+      localStorage.removeItem('activeConversationId');
+      setActiveConversationId(null);
       setMessages([WELCOME]);
   };
 
   const selectConversation = async (id) => {
       setActiveConversationId(id);
+      localStorage.setItem('activeConversationId', id);
       try {
           const res = await chatAPI.getMessages(id);
           if (res.data.messages.length === 0) {
