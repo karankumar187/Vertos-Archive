@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import vertoAiAvatar from "../assets/verto-ai.jpg";
 import { chatAPI } from "../services/api";
 import { useAuth } from "../context/AuthContext";
@@ -64,19 +66,20 @@ function MessageBubble({ msg }) {
         borderRadius: isUser ? "14px 14px 4px 14px" : "4px 14px 14px 14px",
         boxShadow: isUser ? "0 4px 14px rgba(180,83,9,0.22)" : "0 2px 10px rgba(160,110,40,0.07)",
       }}>
-        <p style={{
+        <div style={{
           fontFamily: "'Inter', sans-serif",
           fontSize: "0.875rem",
           color: isUser ? "#fff" : "#1f1209",
           lineHeight: 1.7,
-          whiteSpace: "pre-wrap",
-        }}
-          dangerouslySetInnerHTML={{ __html: msg.content
-            .replace(/### (.*?)\n/g, '<strong style="display:block; margin-top:8px; font-size:0.9rem; color:#8b5e0a;">$1</strong>\n')
-            .replace(/### (.*?)$/g, '<strong style="display:block; margin-top:8px; font-size:0.9rem; color:#8b5e0a;">$1</strong>')
-            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') 
-          }}
-        />
+        }} className="markdown-body">
+          {isUser ? (
+             <p style={{ whiteSpace: "pre-wrap", margin: 0 }}>{msg.content}</p>
+          ) : (
+             <ReactMarkdown remarkPlugins={[remarkGfm]}>
+               {msg.content}
+             </ReactMarkdown>
+          )}
+        </div>
         {msg.sources && msg.sources.length > 0 && (
             <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px dashed #e9dcc8' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: showSources ? '12px' : '0' }}>
