@@ -8,11 +8,12 @@ const openaiClient = new OpenAI({
   fetch: async (url, init) => {
       // Force connection close to prevent Node `fetch` (undici) from accumulating __cf_bm cookies
       // and bloated keep-alive headers which cause "431 Request headers are too large".
-      const customInit = { ...init };
-      customInit.headers = { ...customInit.headers, 'Connection': 'close' };
-      if (customInit.headers['cookie']) delete customInit.headers['cookie'];
-      if (customInit.headers['Cookie']) delete customInit.headers['Cookie'];
+      const customHeaders = new Headers(init.headers);
+      customHeaders.set('Connection', 'close');
+      customHeaders.delete('cookie');
+      customHeaders.delete('Cookie');
       
+      const customInit = { ...init, headers: customHeaders };
       return fetch(url, customInit);
   }
 });
