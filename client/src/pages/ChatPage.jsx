@@ -509,14 +509,14 @@ export default function ChatPage() {
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
             <div style={{
-              width: "32px", height: "32px", borderRadius: "50%",
+              width: "32px", height: "32px", borderRadius: "50%", flexShrink: 0,
               background: "linear-gradient(135deg, #d97706, #b45309)",
               display: "flex", alignItems: "center", justifyContent: "center",
               color: "#fff", fontWeight: 700, fontSize: "0.8rem",
             }}>{user?.name?.charAt(0) || 'U'}</div>
-            <div>
-              <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.78rem", fontWeight: 600, color: "#1f1209" }}>{user?.name || 'User'}</p>
-              <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.68rem", color: "#9a7845" }}>{user?.email || ''}</p>
+            <div style={{ minWidth: 0, overflow: 'hidden' }}>
+              <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.78rem", fontWeight: 600, color: "#1f1209", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{user?.name || 'User'}</p>
+              <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.68rem", color: "#9a7845", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{user?.email || ''}</p>
             </div>
           </div>
         </div>
