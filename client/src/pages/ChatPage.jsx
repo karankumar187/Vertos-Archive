@@ -85,89 +85,96 @@ function MessageBubble({ msg }) {
                     📚 Sources used
                 </p>
                 {/* Deduplicate by documentId */}
-                {[...new Map(msg.sources.map(s => [s.documentId, s])).values()].map((src, i) => (
-                    <div key={i} style={{
-                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                        padding: '8px 10px',
-                        background: '#fdfaf5',
-                        border: '1px solid #e9dcc8',
-                        borderRadius: '8px',
-                        marginBottom: '6px',
-                        gap: '8px',
-                    }}>
-                        {/* Left: icon + title + badge */}
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                                <span style={{ fontSize: '0.75rem' }}>
-                                    {src.fileType?.startsWith('image/') ? '🖼️' :
-                                     src.fileType === 'application/pdf' ? '📄' :
-                                     src.fileType?.includes('word') || src.fileType?.includes('presentation') ? '📝' : '📄'}
-                                </span>
-                                <span style={{
-                                    fontSize: '0.76rem', fontWeight: 600, color: '#3d2800',
-                                    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                                    maxWidth: '160px'
-                                }} title={src.title}>{src.title}</span>
-                                {src.category && (
-                                    <span style={{
-                                        fontSize: '0.62rem', fontWeight: 600,
-                                        padding: '2px 7px', borderRadius: '999px',
-                                        background: '#fef3dc', color: '#8b5e0a',
-                                        border: '1px solid #e8c96a', flexShrink: 0
-                                    }}>{src.category}</span>
-                                )}
-                            </div>
-                            {src.subject && (
-                                <p style={{ fontSize: '0.67rem', color: '#9a7845', marginTop: '2px' }}>{src.subject}</p>
-                            )}
-                            {(() => {
-                                // Resolve the best URL available
-                                const primaryUrl = src.fileUrl ||
-                                    (src.files && src.files.length > 0
-                                        ? (typeof src.files[0] === 'string' ? src.files[0] : src.files[0]?.url)
-                                        : null);
-                                return (
-                                    <div style={{ display: 'flex', gap: '6px', flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                                        {/* Numbered page buttons for multi-file docs */}
-                                        {src.files && src.files.length > 1 && (
-                                            <div style={{ display: 'flex', gap: '4px', marginRight: '4px', alignItems: 'center' }}>
-                                                {src.files.map((f, idx) => {
-                                                    const url = typeof f === 'string' ? f : f?.url;
-                                                    if (!url) return null;
-                                                    return (
-                                                        <a key={idx} href={url} target="_blank" rel="noopener noreferrer" title={`Open Page ${idx + 1}`}
-                                                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '24px', height: '24px', background: 'linear-gradient(135deg, #d97706, #b45309)', borderRadius: '6px', textDecoration: 'none', color: '#fff', fontSize: '0.65rem', fontWeight: 700, boxShadow: '0 2px 6px rgba(180,83,9,0.2)' }}>
-                                                            {idx + 1}
-                                                        </a>
-                                                    );
-                                                })}
-                                            </div>
-                                        )}
-                                        {/* Open + Download — always show if any URL exists */}
-                                        {primaryUrl && (
-                                            <div style={{ display: 'flex', gap: '6px' }}>
-                                                <a href={primaryUrl} target="_blank" rel="noopener noreferrer" title="Open in new tab"
-                                                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '28px', height: '28px', background: 'linear-gradient(135deg, #d97706, #b45309)', borderRadius: '7px', textDecoration: 'none', boxShadow: '0 2px 6px rgba(180,83,9,0.2)', transition: 'opacity 0.15s' }}
-                                                    onMouseEnter={e => e.currentTarget.style.opacity = '0.85'} onMouseLeave={e => e.currentTarget.style.opacity = '1'}>
-                                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6m0 0v6m0-6L10 14" />
-                                                    </svg>
-                                                </a>
-                                                <a href={primaryUrl} download={src.title || 'document'} title="Download file"
-                                                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '28px', height: '28px', background: '#fff', border: '1px solid #ddd0b8', borderRadius: '7px', textDecoration: 'none', transition: 'border-color 0.15s, background 0.15s' }}
-                                                    onMouseEnter={e => { e.currentTarget.style.background = '#fdf5e8'; e.currentTarget.style.borderColor = '#c8861a'; }} onMouseLeave={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = '#ddd0b8'; }}>
-                                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#b45309" strokeWidth="2.2">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v13m0 0l-4-4m4 4l4-4M4 20h16" />
-                                                    </svg>
-                                                </a>
-                                            </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                    {[...new Map(msg.sources.map(s => [s.documentId, s])).values()].map((src, i) => {
+                        const primaryUrl = src.fileUrl ||
+                            (src.files && src.files.length > 0
+                                ? (typeof src.files[0] === 'string' ? src.files[0] : src.files[0]?.url)
+                                : null);
+
+                        return (
+                            <div key={i} style={{
+                                display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+                                padding: '8px 10px',
+                                background: '#fdfaf5',
+                                border: '1px solid #e9dcc8',
+                                borderRadius: '8px',
+                                minWidth: '220px', maxWidth: '300px', flex: '1 1 auto',
+                                gap: '8px',
+                            }}>
+                                {/* Top: icon + title + badge */}
+                                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
+                                    <span style={{ fontSize: '0.8rem', marginTop: '1px' }}>
+                                        {src.fileType?.startsWith('image/') ? '🖼️' :
+                                         src.fileType === 'application/pdf' ? '📄' :
+                                         src.fileType?.includes('word') || src.fileType?.includes('presentation') ? '📝' : '📄'}
+                                    </span>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                            <span style={{
+                                                fontSize: '0.72rem', fontWeight: 600, color: '#3d2800',
+                                                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                                                maxWidth: '140px'
+                                            }} title={src.title}>{src.title}</span>
+                                            {src.category && (
+                                                <span style={{
+                                                    fontSize: '0.58rem', fontWeight: 600,
+                                                    padding: '1px 5px', borderRadius: '4px',
+                                                    background: '#fef3dc', color: '#8b5e0a',
+                                                    border: '1px solid #e8c96a', flexShrink: 0
+                                                }}>{src.category}</span>
+                                            )}
+                                        </div>
+                                        {src.subject && (
+                                            <p style={{ fontSize: '0.62rem', color: '#9a7845', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{src.subject}</p>
                                         )}
                                     </div>
-                                );
-                            })()}
-                        </div>
-                    </div>
-                ))}
+                                </div>
+
+                                {/* Bottom: Action Buttons */}
+                                <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', justifyContent: 'flex-end', borderTop: '1px solid #f0e8d8', paddingTop: '6px', marginTop: 'auto' }}>
+                                    {/* Numbered page buttons for multi-file docs */}
+                                    {src.files && src.files.length > 1 && (
+                                        <div style={{ display: 'flex', gap: '3px', marginRight: '4px', flexWrap: 'wrap', alignItems: 'center' }}>
+                                            {src.files.map((f, idx) => {
+                                                const url = typeof f === 'string' ? f : f?.url;
+                                                if (!url) return null;
+                                                return (
+                                                    <a key={idx} href={url} target="_blank" rel="noopener noreferrer" title={`Page ${idx + 1}`}
+                                                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '20px', height: '20px', background: '#f5ead5', borderRadius: '4px', textDecoration: 'none', color: '#8b5e0a', fontSize: '0.58rem', fontWeight: 700, transition: 'background 0.15s' }}
+                                                        onMouseEnter={e => e.currentTarget.style.background = '#e9dcc8'} onMouseLeave={e => e.currentTarget.style.background = '#f5ead5'}>
+                                                        {idx + 1}
+                                                    </a>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                    
+                                    {/* Open + Download */}
+                                    {primaryUrl && (
+                                        <div style={{ display: 'flex', gap: '4px' }}>
+                                            <a href={primaryUrl} target="_blank" rel="noopener noreferrer" title="Open Document"
+                                                style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '0 8px', height: '22px', background: 'linear-gradient(135deg, #d97706, #b45309)', borderRadius: '4px', textDecoration: 'none', boxShadow: '0 1px 3px rgba(180,83,9,0.2)', transition: 'opacity 0.15s' }}
+                                                onMouseEnter={e => e.currentTarget.style.opacity = '0.85'} onMouseLeave={e => e.currentTarget.style.opacity = '1'}>
+                                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6m0 0v6m0-6L10 14" />
+                                                </svg>
+                                                <span style={{ fontSize: '0.62rem', fontWeight: 600, color: '#fff' }}>Open</span>
+                                            </a>
+                                            <a href={primaryUrl} download={src.title || 'document'} title="Download"
+                                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '22px', height: '22px', background: '#fff', border: '1px solid #ddd0b8', borderRadius: '4px', textDecoration: 'none', transition: 'all 0.15s' }}
+                                                onMouseEnter={e => { e.currentTarget.style.background = '#fdf5e8'; e.currentTarget.style.borderColor = '#c8861a'; }} onMouseLeave={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = '#ddd0b8'; }}>
+                                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#b45309" strokeWidth="2.5">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v13m0 0l-4-4m4 4l4-4M4 20h16" />
+                                                </svg>
+                                            </a>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
             </div>
         )}
         <p style={{
