@@ -31,6 +31,8 @@ const SUGGESTIONS = [
 
 function MessageBubble({ msg }) {
   const isUser = msg.role === "user";
+  const [showSources, setShowSources] = useState(false);
+  
   return (
     <div style={{
       display: "flex",
@@ -77,14 +79,35 @@ function MessageBubble({ msg }) {
         />
         {msg.sources && msg.sources.length > 0 && (
             <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px dashed #e9dcc8' }}>
-                <p style={{
-                    fontSize: '0.68rem', color: '#9a7845', fontWeight: 700,
-                    textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px',
-                    display: 'flex', alignItems: 'center', gap: '4px'
-                }}>
-                    📚 Sources used
-                </p>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: showSources ? '12px' : '0' }}>
+                    <p style={{
+                        fontSize: '0.68rem', color: '#9a7845', fontWeight: 700,
+                        textTransform: 'uppercase', letterSpacing: '0.08em',
+                        display: 'flex', alignItems: 'center', gap: '4px', margin: 0
+                    }}>
+                        📚 {msg.sources.length} Sources
+                    </p>
+                    <button 
+                        onClick={() => setShowSources(!showSources)}
+                        style={{
+                            background: showSources ? '#fef3dc' : 'transparent',
+                            border: '1px solid #e8c96a',
+                            borderRadius: '4px',
+                            padding: '4px 8px',
+                            fontSize: '0.65rem',
+                            fontWeight: 600,
+                            color: '#8b5e0a',
+                            cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', gap: '4px',
+                            transition: 'all 0.2s'
+                        }}
+                    >
+                        {showSources ? 'Hide' : 'Show'} Sources {showSources ? '▲' : '▼'}
+                    </button>
+                </div>
+
                 {/* Deduplicate by documentId */}
+                {showSources && (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                     {[...new Map(msg.sources.map(s => [s.documentId, s])).values()].map((src, i) => {
                         const primaryUrl = src.fileUrl ||
@@ -175,6 +198,7 @@ function MessageBubble({ msg }) {
                         );
                     })}
                 </div>
+                )}
             </div>
         )}
         <p style={{

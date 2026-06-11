@@ -42,7 +42,10 @@ exports.performHybridSearch = async (query, filters = {}) => {
 
         // 3. Execute Vector Search (Qdrant)
         // Fetch more than we need (top 60) so we can rank them and capture large multi-page documents
-        const vectorResults = await searchQdrant(queryEmbedding, 60, qdrantFilter);
+        let vectorResults = await searchQdrant(queryEmbedding, 60, qdrantFilter);
+        
+        // Filter out weak vector matches to ensure search relevance
+        vectorResults = vectorResults.filter(point => point.score >= 0.35);
         
         // 4. Execute Keyword Search (MongoDB)
         // Prepare MongoDB filter by removing any empty values
