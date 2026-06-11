@@ -56,8 +56,26 @@ exports.sendMessage = async (req, res) => {
     // Auto-extract course codes (e.g., "int 221", "CSE332") from user query to strictly filter sources
     let currentFilters = filters || {};
     const courseMatch = content.match(/\b([a-zA-Z]{3})\s*(\d{3})\b/i);
+    
     if (courseMatch) {
         currentFilters.subject = `${courseMatch[1].toUpperCase()} ${courseMatch[2]}`;
+    } else {
+        // Fallback to alias mapping if they type the course name instead of the code
+        const courseAliases = {
+            'mvc': 'INT 221',
+            'mvc programming': 'INT 221',
+            'developing': 'CSE 225',
+            'dbms': 'CSE 332',
+            'database': 'CSE 332'
+        };
+        
+        const lowerContent = content.toLowerCase();
+        for (const [alias, subjectCode] of Object.entries(courseAliases)) {
+            if (new RegExp(`\\b${alias}\\b`, 'i').test(lowerContent)) {
+                currentFilters.subject = subjectCode;
+                break;
+            }
+        }
     }
 
     try {
