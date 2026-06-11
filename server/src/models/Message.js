@@ -21,7 +21,12 @@ const messageSchema = new mongoose.Schema({
         chunkId: String,
         documentId: mongoose.Schema.Types.ObjectId,
         title: String,
-        text: String
+        text: String,
+        fileUrl: String,
+        fileType: String,
+        category: String,
+        subject: String,
+        files: [mongoose.Schema.Types.Mixed]
     }]
 }, {
     timestamps: true
