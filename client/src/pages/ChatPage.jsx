@@ -120,85 +120,51 @@ function MessageBubble({ msg }) {
                             {src.subject && (
                                 <p style={{ fontSize: '0.67rem', color: '#9a7845', marginTop: '2px' }}>{src.subject}</p>
                             )}
-                        </div>
-                        {/* Right: action buttons */}
-                        <div style={{ display: 'flex', gap: '6px', flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                            {src.files && src.files.length > 1 && (
-                                <div style={{ display: 'flex', gap: '4px', marginRight: '4px', alignItems: 'center' }}>
-                                    {src.files.map((f, idx) => {
-                                        const url = typeof f === 'string' ? f : f?.url;
-                                        if (!url) return null;
-                                        return (
-                                            <a
-                                                key={idx}
-                                                href={url}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                title={`Open Page ${idx + 1}`}
-                                                style={{
-                                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                    width: '24px', height: '24px',
-                                                    background: 'linear-gradient(135deg, #d97706, #b45309)',
-                                                    borderRadius: '6px',
-                                                    textDecoration: 'none',
-                                                    color: '#fff', fontSize: '0.65rem', fontWeight: 700,
-                                                    boxShadow: '0 2px 6px rgba(180,83,9,0.2)',
-                                                }}
-                                            >
-                                                {idx + 1}
-                                            </a>
-                                        );
-                                    })}
-                                </div>
-                            )}
-
-                            {src.fileUrl && (
-                                <div style={{ display: 'flex', gap: '6px' }}>
-                                    {/* Open in new tab */}
-                                    <a
-                                        href={src.fileUrl}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        title="Open in new tab"
-                                        style={{
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                            width: '28px', height: '28px',
-                                            background: 'linear-gradient(135deg, #d97706, #b45309)',
-                                            borderRadius: '7px',
-                                            textDecoration: 'none',
-                                            boxShadow: '0 2px 6px rgba(180,83,9,0.2)',
-                                            transition: 'opacity 0.15s',
-                                        }}
-                                        onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
-                                        onMouseLeave={e => e.currentTarget.style.opacity = '1'}
-                                    >
-                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2">
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6m0 0v6m0-6L10 14" />
-                                        </svg>
-                                    </a>
-                                    {/* Download */}
-                                    <a
-                                        href={src.fileUrl}
-                                        download={src.title || 'document'}
-                                        title="Download file"
-                                        style={{
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                            width: '28px', height: '28px',
-                                            background: '#fff',
-                                            border: '1px solid #ddd0b8',
-                                            borderRadius: '7px',
-                                            textDecoration: 'none',
-                                            transition: 'border-color 0.15s, background 0.15s',
-                                        }}
-                                        onMouseEnter={e => { e.currentTarget.style.background = '#fdf5e8'; e.currentTarget.style.borderColor = '#c8861a'; }}
-                                        onMouseLeave={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = '#ddd0b8'; }}
-                                    >
-                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#b45309" strokeWidth="2.2">
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v13m0 0l-4-4m4 4l4-4M4 20h16" />
-                                        </svg>
-                                    </a>
-                                </div>
-                            )}
+                            {(() => {
+                                // Resolve the best URL available
+                                const primaryUrl = src.fileUrl ||
+                                    (src.files && src.files.length > 0
+                                        ? (typeof src.files[0] === 'string' ? src.files[0] : src.files[0]?.url)
+                                        : null);
+                                return (
+                                    <div style={{ display: 'flex', gap: '6px', flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                                        {/* Numbered page buttons for multi-file docs */}
+                                        {src.files && src.files.length > 1 && (
+                                            <div style={{ display: 'flex', gap: '4px', marginRight: '4px', alignItems: 'center' }}>
+                                                {src.files.map((f, idx) => {
+                                                    const url = typeof f === 'string' ? f : f?.url;
+                                                    if (!url) return null;
+                                                    return (
+                                                        <a key={idx} href={url} target="_blank" rel="noopener noreferrer" title={`Open Page ${idx + 1}`}
+                                                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '24px', height: '24px', background: 'linear-gradient(135deg, #d97706, #b45309)', borderRadius: '6px', textDecoration: 'none', color: '#fff', fontSize: '0.65rem', fontWeight: 700, boxShadow: '0 2px 6px rgba(180,83,9,0.2)' }}>
+                                                            {idx + 1}
+                                                        </a>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+                                        {/* Open + Download — always show if any URL exists */}
+                                        {primaryUrl && (
+                                            <div style={{ display: 'flex', gap: '6px' }}>
+                                                <a href={primaryUrl} target="_blank" rel="noopener noreferrer" title="Open in new tab"
+                                                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '28px', height: '28px', background: 'linear-gradient(135deg, #d97706, #b45309)', borderRadius: '7px', textDecoration: 'none', boxShadow: '0 2px 6px rgba(180,83,9,0.2)', transition: 'opacity 0.15s' }}
+                                                    onMouseEnter={e => e.currentTarget.style.opacity = '0.85'} onMouseLeave={e => e.currentTarget.style.opacity = '1'}>
+                                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6m0 0v6m0-6L10 14" />
+                                                    </svg>
+                                                </a>
+                                                <a href={primaryUrl} download={src.title || 'document'} title="Download file"
+                                                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '28px', height: '28px', background: '#fff', border: '1px solid #ddd0b8', borderRadius: '7px', textDecoration: 'none', transition: 'border-color 0.15s, background 0.15s' }}
+                                                    onMouseEnter={e => { e.currentTarget.style.background = '#fdf5e8'; e.currentTarget.style.borderColor = '#c8861a'; }} onMouseLeave={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = '#ddd0b8'; }}>
+                                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#b45309" strokeWidth="2.2">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v13m0 0l-4-4m4 4l4-4M4 20h16" />
+                                                    </svg>
+                                                </a>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })()}
                         </div>
                     </div>
                 ))}
@@ -291,13 +257,17 @@ export default function ChatPage() {
           const res = await chatAPI.createConversation();
           const newId = res.data.conversation._id;
           setActiveConversationId(newId);
-          setMessages([WELCOME]);
           loadConversations();
           return newId;
       } catch (err) {
           console.error("Failed to create conversation", err);
           return null;
       }
+  };
+
+  const handleNewChatClick = async () => {
+      await createNewConversation();
+      setMessages([WELCOME]);
   };
 
   const selectConversation = async (id) => {
@@ -465,7 +435,7 @@ export default function ChatPage() {
         <div style={{ padding: "14px 14px 10px" }}>
           <button
             id="new-chat-sidebar"
-            onClick={createNewConversation}
+            onClick={handleNewChatClick}
             style={{
               width: "100%", padding: "10px",
               background: "linear-gradient(135deg, #d97706, #b45309)",

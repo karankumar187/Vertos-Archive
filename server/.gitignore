@@ -39,3 +39,6 @@ coverage/
 # Runtime files
 *.pid
 *.seed
+
+# Local Qdrant storage (cloud Qdrant is used in production)
+qdrant_storage/

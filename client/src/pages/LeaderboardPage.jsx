@@ -1,35 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import campusSketch from "../assets/campus-sketch.png";
-
-/* ── Data ── */
-const leaderboard = [
-  { rank: 1,  name: "Priya Sharma",  regNo: "12304567", points: 1840, docs: 38, avatar: "P", badge: "🥇", course: "B.Tech CSE" },
-  { rank: 2,  name: "Rohit Verma",   regNo: "12298741", points: 1620, docs: 31, avatar: "R", badge: "🥈", course: "B.Tech ECE" },
-  { rank: 3,  name: "Karan Kumar",   regNo: "12345678", points: 820,  docs: 14, avatar: "K", badge: "🥉", course: "B.Tech CSE AI&ML" },
-  { rank: 4,  name: "Anjali Singh",  regNo: "12312890", points: 760,  docs: 13, avatar: "A", badge: null, course: "B.Tech IT" },
-  { rank: 5,  name: "Dev Patel",     regNo: "12278432", points: 640,  docs: 11, avatar: "D", badge: null, course: "BCA" },
-  { rank: 6,  name: "Meera Nair",    regNo: "12265109", points: 510,  docs:  9, avatar: "M", badge: null, course: "B.Tech CSE" },
-  { rank: 7,  name: "Arjun Reddy",   regNo: "12309876", points: 480,  docs:  8, avatar: "A", badge: null, course: "B.Tech ME" },
-  { rank: 8,  name: "Sneha Gupta",   regNo: "12341230", points: 390,  docs:  7, avatar: "S", badge: null, course: "B.Sc CS" },
-  { rank: 9,  name: "Nikhil Joshi",  regNo: "12356780", points: 310,  docs:  6, avatar: "N", badge: null, course: "B.Tech CSE" },
-  { rank: 10, name: "Pooja Rao",     regNo: "12367823", points: 270,  docs:  5, avatar: "P", badge: null, course: "B.Tech IT" },
-];
-
-const ME = "Karan Kumar";
-
-const stats = [
-  { label: "Total Contributors", value: "1,240+", icon: "👥" },
-  { label: "Documents Shared",   value: "8,500+", icon: "📚" },
-  { label: "Points Awarded",     value: "94,200", icon: "⭐" },
-  { label: "Active This Month",  value: "382",    icon: "🔥" },
-];
+import { leaderboardAPI } from "../services/api";
+import { useAuth } from "../context/AuthContext";
 
 const PERIODS = ["This Month", "All Time", "This Week"];
 
 function TopPodium({ entries }) {
+  if (!entries || entries.length === 0) return null;
   // Arrange: 2nd | 1st | 3rd
-  const order = [entries[1], entries[0], entries[2]];
+  const order = [entries[1], entries[0], entries[2]].filter(Boolean);
   const heights = ["80px", "110px", "64px"];
   const sizes   = ["1rem", "1.2rem", "0.95rem"];
 
@@ -152,7 +132,7 @@ function Row({ entry, isMe }) {
               color: "#c8861a", fontWeight: 600 }}>(you)</span>}
           </p>
           <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.72rem", color: "#9a7845" }}>
-            {entry.regNo} · {entry.course}
+            {entry.regNo} {entry.trustScore ? `· Trust Score: ${entry.trustScore}` : ''}
           </p>
         </div>
       </div>
@@ -183,7 +163,37 @@ function Row({ entry, isMe }) {
 }
 
 export default function LeaderboardPage() {
+  const { user } = useAuth();
   const [period, setPeriod] = useState("This Month");
+  const [leaderboard, setLeaderboard] = useState([]);
+  const [stats, setStats] = useState([
+    { label: "Total Contributors", value: "0", icon: "👥" },
+    { label: "Documents Shared",   value: "0", icon: "📚" },
+    { label: "Points Awarded",     value: "0", icon: "⭐" },
+    { label: "Active This Month",  value: "0", icon: "🔥" },
+  ]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchLeaderboard = async () => {
+      try {
+        const res = await leaderboardAPI.getLeaderboard();
+        if (res.data?.success) {
+          setLeaderboard(res.data.leaderboard);
+          if (res.data.stats) {
+            setStats(res.data.stats);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch leaderboard", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchLeaderboard();
+  }, [period]); // Period logic can be handled in backend later, currently just refetches
+
+  const myEntry = leaderboard.find(entry => entry.userId === user?.id || entry.name === user?.name);
 
   return (
     <div style={{
@@ -278,7 +288,7 @@ export default function LeaderboardPage() {
                 Top Contributors
               </h2>
               <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.75rem", color: "#c8a060" }}>
-                June 2026 · Updated daily
+                {new Date().toLocaleString('default', { month: 'long', year: 'numeric' })} · Updated daily
               </p>
             </div>
             {/* Period toggle */}
@@ -297,9 +307,11 @@ export default function LeaderboardPage() {
           </div>
 
           {/* Podium */}
-          <div style={{ padding: "32px 28px 0", background: "linear-gradient(to bottom, #fdfaf5, #fff)" }}>
-            <TopPodium entries={leaderboard.slice(0, 3)} />
-          </div>
+          {!loading && leaderboard.length >= 3 && (
+            <div style={{ padding: "32px 28px 0", background: "linear-gradient(to bottom, #fdfaf5, #fff)" }}>
+              <TopPodium entries={leaderboard.slice(0, 3)} />
+            </div>
+          )}
 
           {/* Column headers */}
           <div style={{
@@ -318,9 +330,15 @@ export default function LeaderboardPage() {
           </div>
 
           {/* Rows */}
-          {leaderboard.map(entry => (
-            <Row key={entry.rank} entry={entry} isMe={entry.name === ME} />
-          ))}
+          {loading ? (
+             <div style={{ padding: "30px", textAlign: "center", color: "#9a7845" }}>Loading leaderboard...</div>
+          ) : leaderboard.length === 0 ? (
+             <div style={{ padding: "30px", textAlign: "center", color: "#9a7845" }}>No contributors found. Be the first to upload!</div>
+          ) : (
+            leaderboard.map(entry => (
+              <Row key={entry.rank} entry={entry} isMe={entry.userId === user?.id || entry.name === user?.name} />
+            ))
+          )}
 
           {/* Footer CTA */}
           <div style={{
@@ -345,42 +363,50 @@ export default function LeaderboardPage() {
         </div>
 
         {/* My ranking card */}
-        <div className="anim-up d4" style={{
-          marginTop: "24px",
-          background: "linear-gradient(135deg, #1f1209 0%, #3d2408 100%)",
-          border: "1px solid #5a3a10",
-          borderRadius: "14px",
-          padding: "22px 28px",
-          display: "flex", alignItems: "center", justifyContent: "space-between",
-          flexWrap: "wrap", gap: "16px",
-          boxShadow: "0 4px 20px rgba(30,10,0,0.18)",
-        }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
-            <div style={{
-              width: "48px", height: "48px", borderRadius: "50%",
-              background: "linear-gradient(135deg, #d97706, #b45309)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              color: "#fff", fontWeight: 700, fontSize: "1.1rem",
-              border: "2px solid #fcd34d",
-            }}>K</div>
-            <div>
-              <p style={{ fontFamily: "'Playfair Display', serif", fontSize: "1rem", fontWeight: 700, color: "#f0d090" }}>
-                Your Current Ranking
-              </p>
-              <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.78rem", color: "#c8a060" }}>
-                Karan Kumar · 12345678
-              </p>
+        {user && myEntry && (
+          <div className="anim-up d4" style={{
+            marginTop: "24px",
+            background: "linear-gradient(135deg, #1f1209 0%, #3d2408 100%)",
+            border: "1px solid #5a3a10",
+            borderRadius: "14px",
+            padding: "22px 28px",
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+            flexWrap: "wrap", gap: "16px",
+            boxShadow: "0 4px 20px rgba(30,10,0,0.18)",
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+              <div style={{
+                width: "48px", height: "48px", borderRadius: "50%",
+                background: "linear-gradient(135deg, #d97706, #b45309)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                color: "#fff", fontWeight: 700, fontSize: "1.1rem",
+                border: "2px solid #fcd34d",
+              }}>
+                {user.avatar ? <img src={user.avatar} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} /> : user.name?.charAt(0).toUpperCase()}
+              </div>
+              <div>
+                <p style={{ fontFamily: "'Playfair Display', serif", fontSize: "1rem", fontWeight: 700, color: "#f0d090" }}>
+                  Your Current Ranking
+                </p>
+                <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.78rem", color: "#c8a060" }}>
+                  {user.name} · {user.reg_no || 'Standard User'}
+                </p>
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: "28px" }}>
+              {[
+                ["Rank", `#${myEntry.rank} ${myEntry.badge || ''}`.trim()], 
+                ["Points", myEntry.points.toLocaleString()], 
+                ["Docs", myEntry.docs.toString()]
+              ].map(([k, v]) => (
+                <div key={k} style={{ textAlign: "center" }}>
+                  <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.3rem", fontWeight: 700, color: "#f0d090" }}>{v}</div>
+                  <div style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.7rem", color: "#c8a060", letterSpacing: "0.06em", textTransform: "uppercase" }}>{k}</div>
+                </div>
+              ))}
             </div>
           </div>
-          <div style={{ display: "flex", gap: "28px" }}>
-            {[["Rank", "#3 🥉"], ["Points", "820"], ["Docs", "14"]].map(([k, v]) => (
-              <div key={k} style={{ textAlign: "center" }}>
-                <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.3rem", fontWeight: 700, color: "#f0d090" }}>{v}</div>
-                <div style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.7rem", color: "#c8a060", letterSpacing: "0.06em", textTransform: "uppercase" }}>{k}</div>
-              </div>
-            ))}
-          </div>
-        </div>
+        )}
 
       </div>
     </div>

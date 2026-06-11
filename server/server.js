@@ -23,12 +23,21 @@ connectDB().then(() => {
 
 const app = express();
 
-// CORS — allow any localhost port (Vite increments ports)
+// CORS — allow localhost (dev) + deployed frontend (production)
+const allowedOrigins = [
+    /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/,  // any localhost port
+];
+if (process.env.CLIENT_URL) {
+    allowedOrigins.push(process.env.CLIENT_URL);
+}
+
 app.use(cors({
     origin: (origin, callback) => {
-        if (!origin) return callback(null, true);
-        if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) return callback(null, true);
-        if (origin === process.env.CLIENT_URL) return callback(null, true);
+        if (!origin) return callback(null, true); // allow server-to-server / health checks
+        const allowed = allowedOrigins.some(p =>
+            typeof p === 'string' ? p === origin : p.test(origin)
+        );
+        if (allowed) return callback(null, true);
         callback(new Error(`CORS: origin ${origin} not allowed`));
     },
     credentials: true,
@@ -61,12 +70,16 @@ app.use(passport.session());
 const uploadRoutes = require('./src/routes/upload');
 const adminRoutes = require('./src/routes/admin');
 const chatRoutes = require('./src/routes/chat');
+const analyticsRoutes = require('./src/routes/analytics');
+const leaderboardRoutes = require('./src/routes/leaderboard');
 
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api/analytics', analyticsRoutes);
+app.use('/api/leaderboard', leaderboardRoutes);
 
 // Health check
 app.get('/', (req, res) => {

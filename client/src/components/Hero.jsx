@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import campusSketch from "../assets/campus-sketch.png";
+import { analyticsAPI } from "../services/api";
 
 /* ─── Data ──────────────────────────────────────────────────── */
 const categories = [
@@ -12,22 +13,35 @@ const categories = [
   { id: "university-info", label: "University Info" },
 ];
 
-const suggestions = [
-  "What are important DBMS topics?",
-  "Show previous year ETP papers",
-  "Generate placement MCQs",
-  "Faculty details for CSE",
-  "Hostel rules and regulations",
-  "What scholarships are available?",
-  "Upcoming events at LPU",
-  "How to join a student club?",
-];
-
 /* ─── Component ─────────────────────────────────────────────── */
 export default function Hero() {
   const [query, setQuery]               = useState("");
   const [selected, setSelected]         = useState(null); // selected category
   const navigate                        = useNavigate();
+  const [suggestions, setSuggestions]   = useState([
+    "What are important DBMS topics?",
+    "Show previous year ETP papers",
+    "Generate placement MCQs",
+    "Faculty details for CSE",
+    "Hostel rules and regulations",
+    "What scholarships are available?",
+    "Upcoming events at LPU",
+    "How to join a student club?",
+  ]);
+
+  useEffect(() => {
+    const fetchSuggestions = async () => {
+      try {
+        const res = await analyticsAPI.getHomepageData();
+        if (res.data?.success && res.data.data?.suggestedQuestions?.length > 0) {
+          setSuggestions(res.data.data.suggestedQuestions);
+        }
+      } catch (err) {
+        console.error("Failed to fetch homepage suggestions:", err);
+      }
+    };
+    fetchSuggestions();
+  }, []);
 
   const handleAsk = () => {
     const q = query.trim();
@@ -301,6 +315,8 @@ export default function Hero() {
                 onClick={() => navigate(`/chat?q=${encodeURIComponent(s)}`)}
                 style={{
                   display: "flex", alignItems: "center", gap: "7px",
+                  justifyContent: "space-between",
+                  flex: "1 1 auto",
                   padding: "6px 12px",
                   background: "#ffffff",
                   border: "1px solid #ddd0b8",

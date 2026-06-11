@@ -50,7 +50,7 @@ export const uploadAPI = {
 // ─── Admin API ────────────────────────────────────────────────────────────
 export const adminAPI = {
     getPending:      () => api.get('/admin/pending'),
-    approveUpload:   (id) => api.post(`/admin/approve/${id}`),
+    approveUpload:   (id, data = {}) => api.post(`/admin/approve/${id}`, data),
     rejectUpload:    (id, reviewComment) => api.post(`/admin/reject/${id}`, { reviewComment }),
     checkDuplicate:  (data) => api.post('/admin/check-duplicate', data),
 };
@@ -61,6 +61,15 @@ export const chatAPI = {
     createConversation: () => api.post('/chat/conversations'),
     getMessages:        (id) => api.get(`/chat/conversations/${id}/messages`),
     // Note: sendMessage streams via SSE, so we handle it using native fetch in the component, not axios.
+};
+// ─── Analytics API ───────────────────────────────────────────────────────
+export const analyticsAPI = {
+    getHomepageData: () => api.get('/analytics/homepage'),
+};
+
+// ─── Leaderboard API ─────────────────────────────────────────────────────
+export const leaderboardAPI = {
+    getLeaderboard: () => api.get('/leaderboard'),
 };
 
 export default api;

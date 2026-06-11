@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import campusSketch from "../assets/campus-sketch.png";
 import { useAuth } from "../context/AuthContext";
-import { uploadAPI } from "../services/api";
+import { uploadAPI, analyticsAPI } from "../services/api";
 
 const quickActions = [
   { to: "/chat", icon: "💬", label: "New Chat", desc: "Ask Vertos Archive anything" },
@@ -28,14 +28,9 @@ function StatCard({ value, label, icon }) {
   );
 }
 
-const statusStyle = {
-  approved: { background: "#ecfdf5", color: "#166534", border: "1px solid #bbf7d0" },
-  pending:  { background: "#fffbeb", color: "#92400e", border: "1px solid #fde68a" },
-  rejected: { background: "#fef2f2", color: "#991b1b", border: "1px solid #fecaca" },
-};
-
 export default function DashboardPage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [stats, setStats] = useState({
     totalUploads: 0,
     approvedUploads: 0,
@@ -43,33 +38,33 @@ export default function DashboardPage() {
     points: 0,
     rank: "N/A"
   });
-  const [recentActivity, setRecentActivity] = useState([]);
+  
+  const [homepageData, setHomepageData] = useState({
+    popularSubjects: [],
+    recentUploads: [],
+    suggestedQuestions: [],
+    trendingSearches: []
+  });
+  
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [statsRes, uploadsRes] = await Promise.all([
+        const [statsRes, analyticsRes] = await Promise.all([
           uploadAPI.getStats(),
-          uploadAPI.getMyUploads()
+          analyticsAPI.getHomepageData()
         ]);
         
         if (statsRes.data?.success) {
           setStats({
             ...statsRes.data.stats,
-            rank: "New" // Placeholder until Leaderboard is implemented
+            rank: statsRes.data.stats.points > 0 ? "Ranked" : "New"
           });
         }
 
-        if (uploadsRes.data?.success) {
-          const formattedUploads = uploadsRes.data.uploads.map(doc => ({
-            id: doc._id,
-            type: "upload",
-            label: `Uploaded ${doc.title}`,
-            time: new Date(doc.uploadedAt).toLocaleDateString(),
-            status: doc.status
-          }));
-          setRecentActivity(formattedUploads.slice(0, 5)); // Show latest 5
+        if (analyticsRes.data?.success) {
+          setHomepageData(analyticsRes.data.data);
         }
       } catch (error) {
         console.error("Failed to fetch dashboard data:", error);
@@ -131,7 +126,7 @@ export default function DashboardPage() {
               background: "#fef3dc", border: "1px solid #e8c96a", borderRadius: "999px", padding: "6px 14px",
               fontFamily: "'Inter', sans-serif", fontSize: "0.8rem", fontWeight: 600, color: "#92620a",
             }}>
-              🏆 Rank #{stats.rank}
+              🏆 {stats.rank}
             </div>
             <Link to="/upload" style={{
               padding: "9px 18px", background: "linear-gradient(135deg, #d97706, #b45309)",
@@ -143,7 +138,7 @@ export default function DashboardPage() {
 
         {/* ── Stats ── */}
         <div className="anim-up d2" style={{ display: "flex", gap: "16px", flexWrap: "wrap", marginBottom: "24px" }}>
-          <StatCard value={stats.totalUploads} label="Contributions" icon="📚" />
+          <StatCard value={stats.totalUploads} label="My Contributions" icon="📚" />
           <StatCard value={stats.approvedUploads} label="Approved" icon="✅" />
           <StatCard value={stats.pendingUploads} label="Pending" icon="⏳" />
           <StatCard value={stats.points} label="Total Points" icon="⭐" />
@@ -151,38 +146,112 @@ export default function DashboardPage() {
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: "24px" }}>
 
-          {/* ── Recent Activity ── */}
-          <div className="anim-up d3" style={{ background: "#ffffff", border: "1px solid #e9dcc8", borderRadius: "14px", overflow: "hidden", boxShadow: "0 2px 12px rgba(160,110,40,0.06)" }}>
-            <div style={{ padding: "18px 24px", borderBottom: "1px solid #f0e6d2", display: "flex", alignItems: "center", gap: "10px" }}>
-              <span style={{ color: "#c8861a" }}>✦</span>
-              <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.05rem", fontWeight: 700, color: "#1f1209" }}>Recent Activity</h2>
-            </div>
-            <div style={{ padding: "8px 0" }}>
-              {loading ? (
-                <p style={{ padding: "14px 24px", color: "#7a5a2a", fontSize: "0.9rem" }}>Loading activity...</p>
-              ) : recentActivity.length === 0 ? (
-                <p style={{ padding: "14px 24px", color: "#7a5a2a", fontSize: "0.9rem" }}>No recent activity found. Start contributing!</p>
-              ) : (
-                recentActivity.map(item => (
-                  <div key={item.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 24px", borderBottom: "1px solid #faf4eb", transition: "background 0.15s" }}
-                    onMouseEnter={e => e.currentTarget.style.background = "#fdf8f0"} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                      <span style={{ fontSize: "16px" }}>{item.type === "upload" ? "📄" : "💬"}</span>
-                      <div>
-                        <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.875rem", fontWeight: 500, color: "#2d1f0a" }}>{item.label}</p>
-                        <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.75rem", color: "#9a7845" }}>{item.time}</p>
+          {/* ── Main Dashboard Content ── */}
+          <div className="anim-up d3" style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+            
+            {/* Suggested Questions */}
+            {homepageData.suggestedQuestions.length > 0 && (
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
+                  <span style={{ fontSize: "1.1rem" }}>✨</span>
+                  <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.15rem", fontWeight: 700, color: "#1f1209" }}>Suggested Questions</h2>
+                </div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
+                  {homepageData.suggestedQuestions.map((q, idx) => (
+                    <button key={idx} 
+                      onClick={() => navigate(`/chat?q=${encodeURIComponent(q)}`)}
+                      style={{
+                        padding: "10px 16px", background: "#fff", border: "1px solid #e9dcc8",
+                        borderRadius: "999px", fontFamily: "'Inter', sans-serif", fontSize: "0.85rem",
+                        color: "#5c4021", cursor: "pointer", transition: "all 0.15s",
+                        boxShadow: "0 2px 8px rgba(160,110,40,0.05)"
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.borderColor = "#c8861a"; e.currentTarget.style.color = "#b45309"; e.currentTarget.style.transform = "translateY(-1px)"; }}
+                      onMouseLeave={e => { e.currentTarget.style.borderColor = "#e9dcc8"; e.currentTarget.style.color = "#5c4021"; e.currentTarget.style.transform = "none"; }}
+                    >
+                      {q}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Trending Searches */}
+            {homepageData.trendingSearches.length > 0 && (
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
+                  <span style={{ fontSize: "1.1rem" }}>🔥</span>
+                  <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.15rem", fontWeight: 700, color: "#1f1209" }}>Trending Topics</h2>
+                </div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                  {homepageData.trendingSearches.map((t, idx) => (
+                    <span key={idx} style={{
+                      padding: "6px 12px", background: "#fef7e9", border: "1px solid #f0e6d2",
+                      borderRadius: "6px", fontFamily: "'Inter', sans-serif", fontSize: "0.78rem",
+                      color: "#92620a", fontWeight: 500,
+                    }}>
+                      # {t.toLowerCase()}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
+              {/* Community Uploads */}
+              <div style={{ background: "#ffffff", border: "1px solid #e9dcc8", borderRadius: "14px", overflow: "hidden", boxShadow: "0 2px 12px rgba(160,110,40,0.06)" }}>
+                <div style={{ padding: "18px 24px", borderBottom: "1px solid #f0e6d2", display: "flex", alignItems: "center", gap: "10px" }}>
+                  <span style={{ color: "#c8861a" }}>✦</span>
+                  <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.05rem", fontWeight: 700, color: "#1f1209" }}>Community Uploads</h2>
+                </div>
+                <div style={{ padding: "8px 0" }}>
+                  {loading ? (
+                    <p style={{ padding: "14px 24px", color: "#7a5a2a", fontSize: "0.9rem" }}>Loading activity...</p>
+                  ) : homepageData.recentUploads.length === 0 ? (
+                    <p style={{ padding: "14px 24px", color: "#7a5a2a", fontSize: "0.9rem" }}>No recent uploads found.</p>
+                  ) : (
+                    homepageData.recentUploads.map(doc => (
+                      <div key={doc._id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 24px", borderBottom: "1px solid #faf4eb", transition: "background 0.15s" }}
+                        onMouseEnter={e => e.currentTarget.style.background = "#fdf8f0"} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                          <span style={{ fontSize: "16px" }}>📄</span>
+                          <div>
+                            <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.85rem", fontWeight: 500, color: "#2d1f0a", maxWidth: "160px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{doc.title}</p>
+                            <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.7rem", color: "#9a7845" }}>{doc.category} · {doc.subject}</p>
+                          </div>
+                        </div>
+                        <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.7rem", color: "#c8861a", background: "#fef3dc", padding: "3px 8px", borderRadius: "4px" }}>New</span>
                       </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* Popular Subjects */}
+              <div style={{ background: "#ffffff", border: "1px solid #e9dcc8", borderRadius: "14px", overflow: "hidden", boxShadow: "0 2px 12px rgba(160,110,40,0.06)" }}>
+                <div style={{ padding: "18px 24px", borderBottom: "1px solid #f0e6d2", display: "flex", alignItems: "center", gap: "10px" }}>
+                  <span style={{ color: "#c8861a" }}>✦</span>
+                  <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.05rem", fontWeight: 700, color: "#1f1209" }}>Popular Subjects</h2>
+                </div>
+                <div style={{ padding: "12px 24px", display: "flex", flexDirection: "column", gap: "10px" }}>
+                  {homepageData.popularSubjects.map((sub, idx) => (
+                    <div key={idx} style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                      <div style={{ width: "28px", height: "28px", background: "#fef7e9", borderRadius: "6px", display: "flex", alignItems: "center", justifyContent: "center", color: "#c8861a", fontWeight: "bold", fontSize: "0.8rem" }}>
+                        {idx + 1}
+                      </div>
+                      <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.85rem", color: "#5c4021", fontWeight: 500 }}>{sub}</span>
                     </div>
-                    {item.status && (
-                      <span style={{ ...statusStyle[item.status], fontFamily: "'Inter', sans-serif", fontSize: "0.72rem", fontWeight: 600, padding: "3px 10px", borderRadius: "999px", textTransform: "capitalize" }}>{item.status}</span>
-                    )}
-                  </div>
-                ))
-              )}
+                  ))}
+                  {homepageData.popularSubjects.length === 0 && !loading && (
+                    <p style={{ color: "#7a5a2a", fontSize: "0.85rem" }}>No popular subjects yet.</p>
+                  )}
+                </div>
+              </div>
             </div>
+
           </div>
 
-          {/* ── Quick Actions ── */}
+          {/* ── Quick Actions (Right Sidebar) ── */}
           <div className="anim-up d4" style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
             <div style={{ background: "#ffffff", border: "1px solid #e9dcc8", borderRadius: "14px", overflow: "hidden", boxShadow: "0 2px 12px rgba(160,110,40,0.06)" }}>
               <div style={{ padding: "18px 24px", borderBottom: "1px solid #f0e6d2", display: "flex", alignItems: "center", gap: "10px" }}>

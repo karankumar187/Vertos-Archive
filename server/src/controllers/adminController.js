@@ -34,15 +34,19 @@ exports.approveUpload = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Document is already processed' });
         }
 
-        // Create main Document
+        // Admin may override metadata fields
+        const { title, subject, category, reviewComment } = req.body;
+
+        // Create main Document (use admin overrides if provided)
         const newDoc = new Document({
-            title: pendingDoc.title,
-            category: pendingDoc.category,
+            title: title || pendingDoc.title,
+            category: category || pendingDoc.category,
             source: 'User Upload',
             verified: true,
-            subject: pendingDoc.subject,
+            subject: subject || pendingDoc.subject,
             uploaderID: pendingDoc.uploaderId,
             approvedBy: req.user._id,
+            reviewComment: reviewComment || '',
             fileUrl: pendingDoc.fileUrl,
             fileType: pendingDoc.fileType || '',
             files: pendingDoc.files || [],
@@ -57,6 +61,11 @@ exports.approveUpload = async (req, res) => {
         pendingDoc.status = 'approved';
         pendingDoc.reviewedAt = Date.now();
         pendingDoc.reviewedBy = req.user._id;
+        pendingDoc.reviewComment = reviewComment || '';
+        // Apply any admin metadata corrections to the pending doc too
+        if (title) pendingDoc.title = title;
+        if (subject) pendingDoc.subject = subject;
+        if (category) pendingDoc.category = category;
         await pendingDoc.save();
 
         // Reward Contributor (Points: +10, Trust Score: +5)

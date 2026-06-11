@@ -43,35 +43,21 @@ const getFileCategory = (mimeTypeOrUrl) => {
  * Downloads a file buffer from Cloudinary using a short-lived signed URL.
  * This works for ALL resource types (raw/PDF/Office AND images) because
  * Cloudinary restricts direct access to non-public resources.
- *
- * It parses the resource_type directly from the stored Cloudinary URL, so
- * the signed URL is always generated with the correct type.
- *
- * @param {string} fileUrl - The Cloudinary URL stored in our DB.
- * @returns {Promise<Buffer>} - The file as a Buffer.
  */
 const downloadFileBuffer = async (fileUrl) => {
     try {
-        // --- Parse resource_type and public_id from the Cloudinary URL ---
-        // URL format: https://res.cloudinary.com/<cloud>/<resource_type>/upload/[v<version>/]<public_id>
-        // e.g. https://res.cloudinary.com/demo/raw/upload/v123/folder/file.pdf
-        //      https://res.cloudinary.com/demo/image/upload/v123/folder/photo.jpg
-
         const uploadIndex = fileUrl.indexOf('/upload/');
         if (uploadIndex === -1) throw new Error('URL does not appear to be a Cloudinary URL (missing /upload/)');
 
-        // Extract the segment before /upload/ to find resource_type
-        const beforeUpload = fileUrl.substring(0, uploadIndex); // e.g. ".../demo/raw"
+        const beforeUpload = fileUrl.substring(0, uploadIndex);
         const urlSegments = beforeUpload.split('/');
-        const resourceType = urlSegments[urlSegments.length - 1]; // "raw" | "image" | "video"
+        const resourceType = urlSegments[urlSegments.length - 1];
 
-        // Extract everything after /upload/ — strip optional version prefix (v123456/)
         let publicIdWithExt = fileUrl.substring(uploadIndex + '/upload/'.length);
         publicIdWithExt = publicIdWithExt.replace(/^v\d+\//, '');
 
         console.log(`[Parser] Cloudinary resource_type: "${resourceType}", public_id: "${publicIdWithExt}"`);
 
-        // --- Generate a signed download URL valid for 5 minutes ---
         const signedUrl = cloudinary.url(publicIdWithExt, {
             resource_type: resourceType || 'raw',
             type: 'upload',
@@ -118,11 +104,89 @@ const extractTextFromImage = async (imageUrl) => {
 };
 
 /**
+ * OCR a PDF buffer using GPT-4o-mini Vision by sending the PDF as base64 data.
+ *
+ * GPT-4o natively supports PDF documents — it will process pages and extract text.
+ * For large PDFs (>20 pages), we cap at a reasonable token budget to avoid API errors.
+ *
+ * @param {Buffer} buffer      - The raw PDF file buffer.
+ * @param {number} pageCount   - Estimated page count stored in DB.
+ * @returns {Promise<string>}  - The full OCR-extracted text.
+ */
+const ocrPdfBufferWithVision = async (buffer, pageCount = 0) => {
+    console.log(`[Parser] Starting GPT-4o Vision OCR on PDF buffer (${buffer.byteLength} bytes, ~${pageCount} pages)...`);
+
+    const base64Pdf = buffer.toString('base64');
+
+    // Send the entire PDF as a base64 data URI — GPT-4o handles multi-page PDFs natively
+    const completion = await openaiClient.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+            {
+                role: 'user',
+                content: [
+                    {
+                        type: 'text',
+                        text: 'This is a scanned or handwritten academic document. Please carefully extract and transcribe ALL readable text from every page. Include all headings, body text, bullet points, tables, diagram labels, question numbers, MCQ options, and any other written content exactly as it appears. Go page by page. Output ONLY the raw extracted text — no commentary, no summaries, no explanations.',
+                    },
+                    {
+                        type: 'image_url',
+                        image_url: {
+                            url: `data:application/pdf;base64,${base64Pdf}`,
+                            detail: 'high',
+                        },
+                    },
+                ],
+            },
+        ],
+        max_tokens: 8000,
+    });
+
+    const text = completion.choices[0].message.content || '';
+    console.log(`[Parser] Vision OCR complete. Extracted ${text.length} characters from PDF.`);
+    return text;
+};
+
+/**
+ * Re-downloads a document from Cloudinary and runs Vision OCR on it.
+ * Used as a fallback by the pipeline when normal parsing yields zero chunks
+ * (e.g. scanned PDFs, handwritten notes, image-only Office files).
+ *
+ * @param {string} fileUrl    - The Cloudinary URL of the file.
+ * @param {string} mimeType   - The MIME type.
+ * @param {number} pageCount  - Page count stored in the Document (used for logging).
+ * @returns {Promise<string>} - OCR extracted text.
+ */
+exports.extractTextWithOcrFallback = async (fileUrl, mimeType, pageCount = 0) => {
+    const category = getFileCategory(mimeType || fileUrl);
+    console.log(`[Parser] OCR Fallback triggered for "${category}" file (${pageCount} pages).`);
+
+    try {
+        if (category === 'image') {
+            // Images already go through Vision — re-run on Cloudinary URL
+            console.log(`[Parser] Re-running image OCR via Vision API on URL...`);
+            return await extractTextFromImage(fileUrl);
+        }
+
+        if (category === 'pdf' || category === 'office') {
+            // Download the buffer and send to GPT Vision for OCR
+            const buffer = await downloadFileBuffer(fileUrl);
+            return await ocrPdfBufferWithVision(buffer, pageCount);
+        }
+
+        console.warn(`[Parser] OCR Fallback: unsupported file type "${category}" — cannot OCR.`);
+        return '';
+    } catch (err) {
+        console.error(`[Parser] OCR Fallback failed:`, err.message);
+        return '';
+    }
+};
+
+/**
  * Downloads a file from a URL and extracts its text content.
  *
  * @param {string} fileUrl   - The Cloudinary URL of the file.
  * @param {string} mimeType  - The MIME type (e.g. 'image/jpeg', 'application/pdf').
- *                             Falls back to URL extension if not provided.
  * @returns {Promise<string>} - The extracted text.
  */
 exports.extractTextFromUrl = async (fileUrl, mimeType) => {
