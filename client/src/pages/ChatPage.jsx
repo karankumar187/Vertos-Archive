@@ -210,6 +210,7 @@ export default function ChatPage() {
   
   const [conversations, setConversations] = useState([]);
   const [activeConversationId, setActiveConversationId] = useState(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const endRef = useRef(null);
   const chatScrollRef = useRef(null);
@@ -418,8 +419,11 @@ export default function ChatPage() {
       background: "#faf8f4",
       overflow: "hidden",
     }}>
+      {/* Mobile Backdrop */}
+      <div className={`mobile-backdrop ${sidebarOpen ? 'open' : ''}`} onClick={() => setSidebarOpen(false)} />
+
       {/* ── Sidebar ── */}
-      <aside style={{
+      <aside className={`mobile-sidebar ${sidebarOpen ? 'open' : ''}`} style={{
         width: "230px",
         flexShrink: 0,
         background: "#ffffff",
@@ -465,7 +469,7 @@ export default function ChatPage() {
         <div style={{ flex: 1, overflowY: "auto", padding: "4px 14px 12px" }}>
             <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.68rem", fontWeight: 600, color: "#9a7845", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "8px" }}>Recent Chats</p>
             {conversations.map((conv) => (
-                <button key={conv._id} onClick={() => selectConversation(conv._id)}
+                <button key={conv._id} onClick={() => { selectConversation(conv._id); setSidebarOpen(false); }}
                     style={{
                         display: "block", width: "100%", textAlign: "left",
                         padding: "9px 12px", borderRadius: "8px",
@@ -532,6 +536,20 @@ export default function ChatPage() {
           borderBottom: "1px solid #e9dcc8",
           display: "flex", alignItems: "center", gap: "12px",
         }}>
+          {/* Mobile Sidebar Toggle */}
+          <button 
+            className="mobile-only-flex"
+            onClick={() => setSidebarOpen(true)}
+            style={{
+              background: "none", border: "none", padding: 0, cursor: "pointer",
+              alignItems: "center", justifyContent: "center", color: "#5c4021"
+            }}
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <path d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+          
           <img 
             src={vertoAiAvatar}
             alt="Verto AI"

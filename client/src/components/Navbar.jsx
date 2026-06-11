@@ -131,6 +131,25 @@ export default function Navbar() {
           })}
         </div>
 
+        {/* Mobile Hamburger */}
+        <button 
+          className="mobile-only-flex"
+          onClick={() => setMenuOpen(!menuOpen)}
+          style={{
+            background: "none", border: "none", padding: "8px", cursor: "pointer",
+            alignItems: "center", justifyContent: "center", color: "#5c4021"
+          }}
+          aria-label="Toggle mobile menu"
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            {menuOpen ? (
+              <path d="M18 6L6 18M6 6l12 12" />
+            ) : (
+              <path d="M4 6h16M4 12h16M4 18h16" />
+            )}
+          </svg>
+        </button>
+
         {/* Right side — auth */}
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           {user ? (
@@ -215,7 +234,7 @@ export default function Navbar() {
                 onMouseEnter={e => e.currentTarget.style.background = "#fef3dc"}
                 onMouseLeave={e => e.currentTarget.style.background = "transparent"}
               >Login</Link>
-              <Link to="/register" style={{
+              <Link className="hidden-mobile" to="/register" style={{
                 fontFamily: "'Inter', sans-serif", fontSize: "0.875rem", fontWeight: 600,
                 color: "#fff", textDecoration: "none", padding: "8px 18px",
                 background: "linear-gradient(135deg, #d97706 0%, #b45309 100%)",
@@ -228,6 +247,43 @@ export default function Navbar() {
           )}
         </div>
       </div>
+
+      {/* Mobile Menu Overlay */}
+      {menuOpen && (
+        <div className="mobile-only" style={{
+          position: "absolute", top: "100%", left: 0, right: 0,
+          background: "#fff", borderBottom: "1px solid #e9dcc8",
+          boxShadow: "0 4px 12px rgba(160,110,40,0.1)",
+          padding: "8px 16px 16px", zIndex: 90,
+          animation: "dropIn 0.2s ease"
+        }}>
+          {NAV_LINKS.map(({ to, label }) => {
+            const active = location.pathname === to;
+            return (
+              <Link key={to} to={to} onClick={() => setMenuOpen(false)} style={{
+                display: "block", fontFamily: "'Inter', sans-serif", fontSize: "1rem", fontWeight: 500,
+                color: active ? "#c8861a" : "#5c4021", textDecoration: "none",
+                padding: "12px 16px", borderRadius: 8,
+                background: active ? "#fef3dc" : "transparent",
+                marginBottom: 4
+              }}>
+                {label}
+              </Link>
+            );
+          })}
+          {!user && (
+            <Link to="/register" onClick={() => setMenuOpen(false)} style={{
+              display: "block", textAlign: "center", marginTop: 8,
+              fontFamily: "'Inter', sans-serif", fontSize: "1rem", fontWeight: 600,
+              color: "#fff", textDecoration: "none", padding: "12px 16px",
+              background: "linear-gradient(135deg, #d97706 0%, #b45309 100%)",
+              borderRadius: 8
+            }}>
+              Register Now
+            </Link>
+          )}
+        </div>
+      )}
 
       <style>{`
         @keyframes dropIn {

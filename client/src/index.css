@@ -57,3 +57,92 @@ body {
   background: #fdf3e3;
   transform: translateY(-1px);
 }
+
+/* ── Responsive Utilities ────────────────── */
+@media (max-width: 768px) {
+  /* Utility to hide elements on mobile */
+  .mobile-hide {
+    display: none !important;
+  }
+
+  /* Utility to show elements only on mobile */
+  .mobile-only {
+    display: block !important;
+  }
+  
+  .mobile-only-flex {
+    display: flex !important;
+  }
+
+  /* Stack flex rows into columns on mobile */
+  .mobile-col {
+    flex-direction: column !important;
+  }
+  
+  .mobile-col-reverse {
+    flex-direction: column-reverse !important;
+  }
+
+  /* Reset widths for mobile */
+  .mobile-w-full {
+    width: 100% !important;
+  }
+
+  /* Reduce massive paddings and fonts */
+  .mobile-p-sm {
+    padding: 1rem !important;
+  }
+  .mobile-text-sm {
+    font-size: 0.875rem !important;
+  }
+  .mobile-text-lg {
+    font-size: 1.5rem !important;
+  }
+  .mobile-text-xl {
+    font-size: 2rem !important;
+  }
+  
+  /* Chat sidebar mobile overlay */
+  .mobile-sidebar {
+    position: fixed;
+    top: 68px; /* Below navbar */
+    left: 0;
+    bottom: 0;
+    z-index: 50;
+    transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .mobile-sidebar.open {
+    transform: translateX(0);
+  }
+  
+  .mobile-backdrop {
+    position: fixed;
+    inset: 0;
+    top: 68px;
+    background: rgba(31, 18, 9, 0.4);
+    backdrop-filter: blur(2px);
+    z-index: 40;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+  }
+  
+  .mobile-backdrop.open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .mobile-grid-1 {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (min-width: 769px) {
+  .mobile-only {
+    display: none !important;
+  }
+  .mobile-only-flex {
+    display: none !important;
+  }
+}

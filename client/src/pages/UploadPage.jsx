@@ -286,7 +286,7 @@ export default function UploadPage() {
                 </div>
 
                 {/* ── Two-col: Title + Subject ── */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "18px" }}>
+                <div className="mobile-grid-1" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "18px" }}>
                   <div style={{ display: "flex", flexDirection: "column", gap: "7px" }}>
                     <label htmlFor="upload-title" style={{ fontFamily: "'Inter', sans-serif",
                       fontSize: "0.82rem", fontWeight: 600, color: "#5c4021",

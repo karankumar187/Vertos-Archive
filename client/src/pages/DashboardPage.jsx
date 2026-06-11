@@ -144,7 +144,7 @@ export default function DashboardPage() {
           <StatCard value={stats.points} label="Total Points" icon="⭐" />
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: "24px" }}>
+        <div className="mobile-grid-1" style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: "24px" }}>
 
           {/* ── Main Dashboard Content ── */}
           <div className="anim-up d3" style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
@@ -197,7 +197,7 @@ export default function DashboardPage() {
               </div>
             )}
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
+            <div className="mobile-grid-1" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
               {/* Community Uploads */}
               <div style={{ background: "#ffffff", border: "1px solid #e9dcc8", borderRadius: "14px", overflow: "hidden", boxShadow: "0 2px 12px rgba(160,110,40,0.06)" }}>
                 <div style={{ padding: "18px 24px", borderBottom: "1px solid #f0e6d2", display: "flex", alignItems: "center", gap: "10px" }}>
