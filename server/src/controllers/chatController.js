@@ -139,8 +139,7 @@ ${contextText ? contextText : "No relevant context found in the database."}`;
         res.setHeader('Connection', 'keep-alive');
 
         // Send sources immediately as the first event so UI can display citations
-        res.write(`event: sources\n`);
-        res.write(`data: ${JSON.stringify(sourceData)}\n\n`);
+        res.write(`event: sources\ndata: ${JSON.stringify(sourceData)}\n\n`);
 
         // 8. Call OpenAI with streaming
         const stream = await openaiClient.chat.completions.create({

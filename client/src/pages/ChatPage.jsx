@@ -329,14 +329,17 @@ export default function ChatPage() {
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let done = false;
+        let buffer = '';
+        let isSourcesEvent = false;
 
         while (!done) {
             const { value, done: readerDone } = await reader.read();
             done = readerDone;
             if (value) {
-                const chunk = decoder.decode(value, { stream: true });
-                const lines = chunk.split('\n');
-                let isSourcesEvent = false;
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                // The last line might be incomplete, so we pop it back into the buffer
+                buffer = lines.pop();
 
                 lines.forEach(line => {
                     if (line.startsWith('event: sources')) {
