@@ -4,6 +4,17 @@ const OpenAI = require("openai");
 
 const openaiClient = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
+  maxRetries: 4,
+  fetch: async (url, init) => {
+      // Force connection close to prevent Node `fetch` (undici) from accumulating __cf_bm cookies
+      // and bloated keep-alive headers which cause "431 Request headers are too large".
+      const customInit = { ...init };
+      customInit.headers = { ...customInit.headers, 'Connection': 'close' };
+      if (customInit.headers['cookie']) delete customInit.headers['cookie'];
+      if (customInit.headers['Cookie']) delete customInit.headers['Cookie'];
+      
+      return fetch(url, customInit);
+  }
 });
 
 /**
@@ -48,17 +59,33 @@ ${contextText}
 /**
  * Generates embeddings for an array of text chunks using text-embedding-3-small.
  * Returns an array of vector arrays.
+ * Processes chunks in batches to avoid OpenAI 500 errors and timeout limits.
  */
 exports.generateEmbeddings = async (textChunks) => {
     try {
-        const response = await openaiClient.embeddings.create({
-            model: "text-embedding-3-small",
-            input: textChunks,
-            encoding_format: "float",
-        });
+        const BATCH_SIZE = 50;
+        let allEmbeddings = [];
         
-        // Return an array of vectors in the same order as the input chunks
-        return response.data.sort((a, b) => a.index - b.index).map(item => item.embedding);
+        for (let i = 0; i < textChunks.length; i += BATCH_SIZE) {
+            const batch = textChunks.slice(i, i + BATCH_SIZE);
+            
+            const response = await openaiClient.embeddings.create({
+                model: "text-embedding-3-small",
+                input: batch,
+                encoding_format: "float",
+            });
+            
+            // Sort to ensure order matches the input batch order
+            const batchEmbeddings = response.data.sort((a, b) => a.index - b.index).map(item => item.embedding);
+            allEmbeddings = allEmbeddings.concat(batchEmbeddings);
+            
+            // Brief pause between batches to respect rate limits
+            if (i + BATCH_SIZE < textChunks.length) {
+                await new Promise(res => setTimeout(res, 500));
+            }
+        }
+        
+        return allEmbeddings;
     } catch (error) {
         console.error("Error generating embeddings via OpenAI:", error);
         throw error;
