@@ -34,6 +34,7 @@ const SUGGESTIONS = [
 function MessageBubble({ msg }) {
   const isUser = msg.role === "user";
   const [showSources, setShowSources] = useState(false);
+  const uniqueSources = msg.sources ? [...new Map(msg.sources.map(s => [s.documentId, s])).values()] : [];
   
   return (
     <div style={{
@@ -80,7 +81,7 @@ function MessageBubble({ msg }) {
              </ReactMarkdown>
           )}
         </div>
-        {msg.sources && msg.sources.length > 0 && (
+        {uniqueSources.length > 0 && (
             <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px dashed #e9dcc8' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: showSources ? '12px' : '0' }}>
                     <p style={{
@@ -88,7 +89,7 @@ function MessageBubble({ msg }) {
                         textTransform: 'uppercase', letterSpacing: '0.08em',
                         display: 'flex', alignItems: 'center', gap: '4px', margin: 0
                     }}>
-                        📚 {msg.sources.length} Sources
+                        📚 {uniqueSources.length} Sources
                     </p>
                     <button 
                         onClick={() => setShowSources(!showSources)}
@@ -112,7 +113,7 @@ function MessageBubble({ msg }) {
                 {/* Deduplicate by documentId */}
                 {showSources && (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                    {[...new Map(msg.sources.map(s => [s.documentId, s])).values()].map((src, i) => {
+                    {uniqueSources.map((src, i) => {
                         const primaryUrl = src.fileUrl ||
                             (src.files && src.files.length > 0
                                 ? (typeof src.files[0] === 'string' ? src.files[0] : src.files[0]?.url)
