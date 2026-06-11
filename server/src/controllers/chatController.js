@@ -53,6 +53,13 @@ exports.sendMessage = async (req, res) => {
         return res.status(400).json({ success: false, message: 'Message content is required' });
     }
 
+    // Auto-extract course codes (e.g., "int 221", "CSE332") from user query to strictly filter sources
+    let currentFilters = filters || {};
+    const courseMatch = content.match(/\b([a-zA-Z]{3})\s*(\d{3})\b/i);
+    if (courseMatch) {
+        currentFilters.subject = `${courseMatch[1].toUpperCase()} ${courseMatch[2]}`;
+    }
+
     try {
         // 1. Verify conversation belongs to user
         const conversation = await Conversation.findOne({ _id: conversationId, userId: req.user._id });
@@ -77,7 +84,7 @@ exports.sendMessage = async (req, res) => {
 
         // 4. Perform Hybrid Search to get context
         // Search across vector DB and MongoDB text index
-        const searchResults = await performHybridSearch(content, filters || {});
+        const searchResults = await performHybridSearch(content, currentFilters);
 
         // Build context string from search results
         let contextText = "";
