@@ -47,6 +47,9 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Trust Render's reverse proxy for secure cookies and HTTPS resolution
+app.set('trust proxy', 1);
+
 // Session (needed for Passport OAuth flow)
 app.use(session({
     secret: config.SESSION_SECRET,
