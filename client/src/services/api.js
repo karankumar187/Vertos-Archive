@@ -55,4 +55,12 @@ export const adminAPI = {
     checkDuplicate:  (data) => api.post('/admin/check-duplicate', data),
 };
 
+// ─── Chat API ─────────────────────────────────────────────────────────────
+export const chatAPI = {
+    getConversations:   () => api.get('/chat/conversations'),
+    createConversation: () => api.post('/chat/conversations'),
+    getMessages:        (id) => api.get(`/chat/conversations/${id}/messages`),
+    // Note: sendMessage streams via SSE, so we handle it using native fetch in the component, not axios.
+};
+
 export default api;

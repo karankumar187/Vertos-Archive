@@ -42,6 +42,15 @@ const documentSchema = new mongoose.Schema({
         type: String, // MIME type e.g. application/pdf, image/jpeg
         default: '',
     },
+    extractedText: {
+        type: String, // Pre-extracted text stored at upload time
+        default: '',
+    },
+    files: [{
+        url: { type: String, required: true },
+        type: { type: String, required: true },
+        size: { type: Number, required: true }
+    }],
     pageCount: {
         type: Number,
         required: true,
@@ -52,4 +61,20 @@ const documentSchema = new mongoose.Schema({
     }
 } , { timestamps: true });
 
-module.exports = mongoose.model("Document", documentSchema);
+// Create text index for keyword search (Phase 6)
+documentSchema.index({
+    title: 'text',
+    subject: 'text',
+    category: 'text'
+}, {
+    weights: {
+        title: 10,
+        subject: 5,
+        category: 2
+    },
+    name: 'HybridSearchTextIndex'
+});
+
+const Document = mongoose.model("Document", documentSchema);
+
+module.exports = Document;

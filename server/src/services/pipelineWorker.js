@@ -20,9 +20,16 @@ exports.processDocument = async (documentId) => {
             throw new Error(`Document ${documentId} not found in database.`);
         }
 
-        // 1. Download & Extract Text (pass MIME type so parser doesn't guess from title)
-        console.log(`[Pipeline] Downloading and parsing file... (type: ${doc.fileType || 'unknown'})`);
-        const rawText = await extractTextFromUrl(doc.fileUrl, doc.fileType);
+        // 1. Get Extracted Text
+        // We use the text pre-extracted during upload to avoid re-downloading from Cloudinary
+        let rawText = doc.extractedText || '';
+        
+        if (!rawText) {
+            console.log(`[Pipeline] No pre-extracted text found. Falling back to Cloudinary download...`);
+            rawText = await extractTextFromUrl(doc.fileUrl, doc.fileType);
+        } else {
+            console.log(`[Pipeline] Using pre-extracted text (${rawText.length} characters).`);
+        }
         
         if (!rawText || rawText.length < 50) {
             console.log(`[Pipeline] Warning: Extracted text is extremely short or empty.`);
@@ -38,27 +45,37 @@ exports.processDocument = async (documentId) => {
         let insights = { topics: "", questions: "" };
         
         if (chunks.length > 0) {
-            insights = await generateDocumentInsights(chunks);
+            // Generate insights — non-fatal if it fails
+            try {
+                insights = await generateDocumentInsights(chunks);
+            } catch (insightErr) {
+                console.warn(`[Pipeline] LLM insight generation failed (non-fatal):`, insightErr.message);
+            }
 
-            // 4. Generate Embeddings & Push to Vector DB
-            console.log(`[Pipeline] Generating embeddings for ${chunks.length} chunks...`);
-            const { generateEmbeddings } = require('./openai.service');
-            const embeddings = await generateEmbeddings(chunks);
-            
-            console.log(`[Pipeline] Pushing chunks to Qdrant Vector DB...`);
-            const { pushChunksToQdrant } = require('./qdrant.service');
-            
-            // Build metadata payload
-            const metadata = {
-                title: doc.title,
-                subject: doc.subject || '',
-                category: doc.category || '',
-                source: doc.source || 'User Upload',
-                uploaderID: doc.uploaderID ? doc.uploaderID.toString() : '',
-                // pageCount: doc.pageCount || 0 // Left out for now as per Option A
-            };
-            
-            await pushChunksToQdrant(documentId, chunks, embeddings, metadata);
+            // 4. Generate Embeddings & Push to Vector DB — non-fatal if it fails
+            try {
+                console.log(`[Pipeline] Generating embeddings for ${chunks.length} chunks...`);
+                const { generateEmbeddings } = require('./openai.service');
+                const embeddings = await generateEmbeddings(chunks);
+                
+                console.log(`[Pipeline] Pushing chunks to Qdrant Vector DB...`);
+                const { pushChunksToQdrant } = require('./qdrant.service');
+                
+                const metadata = {
+                    title: doc.title,
+                    subject: doc.subject || '',
+                    category: doc.category || '',
+                    source: doc.source || 'User Upload',
+                    uploaderID: doc.uploaderID ? doc.uploaderID.toString() : '',
+                    fileUrl: doc.fileUrl || '',
+                    fileType: doc.fileType || '',
+                    files: doc.files || [],
+                };
+                
+                await pushChunksToQdrant(documentId, chunks, embeddings, metadata);
+            } catch (qdrantErr) {
+                console.warn(`[Pipeline] Qdrant push failed (non-fatal):`, qdrantErr.message);
+            }
         }
 
         // 5. Save generated Insights to MongoDB

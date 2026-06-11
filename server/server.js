@@ -60,11 +60,13 @@ app.use(passport.session());
 
 const uploadRoutes = require('./src/routes/upload');
 const adminRoutes = require('./src/routes/admin');
+const chatRoutes = require('./src/routes/chat');
 
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/chat', chatRoutes);
 
 // Health check
 app.get('/', (req, res) => {

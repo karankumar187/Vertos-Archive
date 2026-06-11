@@ -17,7 +17,7 @@ export default function UploadPage() {
   const [title, setTitle]             = useState("");
   const [description, setDescription] = useState("");
   const [subject, setSubject]         = useState("");
-  const [file, setFile]               = useState(null);
+  const [files, setFiles]             = useState([]);
   const [dragging, setDragging]       = useState(false);
   const [submitted, setSubmitted]     = useState(false);
   const [loading, setLoading]         = useState(false);
@@ -26,13 +26,27 @@ export default function UploadPage() {
 
   const handleDrop = (e) => {
     e.preventDefault(); setDragging(false);
-    const f = e.dataTransfer.files[0];
-    if (f) setFile(f);
+    const droppedFiles = Array.from(e.dataTransfer.files);
+    
+    // Filter large files
+    const validFiles = droppedFiles.filter(f => f.size <= 25 * 1024 * 1024);
+    if (validFiles.length < droppedFiles.length) {
+      setError("Some files exceeded the 25 MB limit and were skipped.");
+    }
+    
+    setFiles(prev => {
+      const newFiles = [...prev, ...validFiles];
+      if (newFiles.length > 10) {
+        setError("Maximum 10 files allowed per document.");
+        return newFiles.slice(0, 10);
+      }
+      return newFiles;
+    });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!file || !category || !title || !subject) return;
+    if (files.length === 0 || !category || !title || !subject) return;
     setLoading(true);
     setError("");
 
@@ -42,7 +56,10 @@ export default function UploadPage() {
       formData.append("description", description);
       formData.append("category", category.value); // send the backend enum value
       formData.append("subject", subject);
-      formData.append("file", file);
+      
+      files.forEach(f => {
+        formData.append("files", f);
+      });
 
       await uploadAPI.uploadDocument(formData);
       setSubmitted(true);
@@ -55,7 +72,7 @@ export default function UploadPage() {
   };
 
   const reset = () => {
-    setSubmitted(false); setFile(null); setTitle("");
+    setSubmitted(false); setFiles([]); setTitle("");
     setCategory(""); setDescription(""); setSubject(""); setError("");
   };
 
@@ -152,57 +169,80 @@ export default function UploadPage() {
                     textTransform: "uppercase", display: "block", marginBottom: "8px" }}>
                     File
                   </label>
-                  <div
-                    id="upload-dropzone"
-                    onClick={() => fileRef.current.click()}
-                    onDragOver={e => { e.preventDefault(); setDragging(true); }}
-                    onDragLeave={() => setDragging(false)}
-                    onDrop={handleDrop}
-                    style={{
-                      border: dragging ? "2px dashed #c8861a" : file ? "2px solid #c8861a" : "2px dashed #ddd0b8",
-                      borderRadius: "12px",
-                      background: dragging ? "#fef7e6" : file ? "#fef9f0" : "#fdfaf5",
+                    <div
+                      id="upload-dropzone"
+                      onClick={(e) => { if (e.target.id === 'upload-dropzone' || e.target.id === 'dropzone-content') fileRef.current.click(); }}
+                      onDragOver={e => { e.preventDefault(); setDragging(true); }}
+                      onDragLeave={() => setDragging(false)}
+                      onDrop={handleDrop}
+                      style={{
+                        border: dragging ? "2px dashed #c8861a" : files.length > 0 ? "2px solid #c8861a" : "2px dashed #ddd0b8",
+                        borderRadius: "12px",
+                        background: dragging ? "#fef7e6" : files.length > 0 ? "#fef9f0" : "#fdfaf5",
                       padding: "36px 20px",
                       textAlign: "center",
                       cursor: "pointer",
                       transition: "all 0.2s ease",
-                      boxShadow: file ? "0 0 0 4px rgba(200,134,26,0.08)" : "none",
+                      boxShadow: files.length > 0 ? "0 0 0 4px rgba(200,134,26,0.08)" : "none",
                     }}>
-                    <input ref={fileRef} type="file" accept=".pdf,.doc,.docx,.ppt,.pptx,.jpg,.jpeg,.png,.webp"
+                    <input ref={fileRef} type="file" multiple accept=".pdf,.doc,.docx,.ppt,.pptx,.jpg,.jpeg,.png,.webp"
                       style={{ display: "none" }} onChange={e => {
-                        const f = e.target.files[0];
-                        if (f && f.size > 25 * 1024 * 1024) {
-                          setError("File size exceeds 25 MB limit.");
-                          setFile(null);
+                        const selectedFiles = Array.from(e.target.files);
+                        const validFiles = selectedFiles.filter(f => f.size <= 25 * 1024 * 1024);
+                        if (validFiles.length < selectedFiles.length) {
+                          setError("Some files exceeded the 25 MB limit and were skipped.");
                         } else {
                           setError("");
-                          setFile(f);
                         }
+                        
+                        setFiles(prev => {
+                          const newFiles = [...prev, ...validFiles];
+                          if (newFiles.length > 10) {
+                            setError("Maximum 10 files allowed per document.");
+                            return newFiles.slice(0, 10);
+                          }
+                          return newFiles;
+                        });
+                        
+                        // Reset input so the same files can be re-selected if removed
+                        e.target.value = null;
                       }} />
-                    {file ? (
-                      <>
-                        <div style={{ fontSize: "36px", marginBottom: "8px" }}>📄</div>
-                        <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.92rem",
-                          fontWeight: 600, color: "#1f1209" }}>{file.name}</p>
-                        <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.78rem",
-                          color: "#9a7845", marginTop: "4px" }}>
-                          {(file.size / 1024 / 1024).toFixed(2)} MB ·{" "}
-                          <span style={{ color: "#c8861a" }}>click to change</span>
-                        </p>
-                      </>
+                    {files.length > 0 ? (
+                      <div style={{ textAlign: "left" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+                          <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.85rem", fontWeight: 600, color: "#1f1209" }}>
+                            {files.length} File{files.length !== 1 ? 's' : ''} Selected
+                          </span>
+                          <button type="button" onClick={() => fileRef.current.click()} style={{ 
+                            background: "none", border: "none", color: "#c8861a", 
+                            fontFamily: "'Inter', sans-serif", fontSize: "0.8rem", fontWeight: 600, cursor: "pointer" 
+                          }}>+ Add More</button>
+                        </div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                          {files.map((f, i) => (
+                            <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#fff", border: "1px solid #e9dcc8", borderRadius: "8px", padding: "8px 12px" }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: "10px", overflow: "hidden" }}>
+                                <div style={{ fontSize: "20px" }}>📄</div>
+                                <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                  <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.85rem", fontWeight: 500, color: "#1f1209", margin: 0, textOverflow: "ellipsis", overflow: "hidden" }}>{f.name}</p>
+                                  <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.75rem", color: "#9a7845", margin: 0 }}>{(f.size / 1024 / 1024).toFixed(2)} MB</p>
+                                </div>
+                              </div>
+                              <button type="button" onClick={(e) => { e.stopPropagation(); setFiles(files.filter((_, idx) => idx !== i)); }} style={{ background: "none", border: "none", fontSize: "16px", cursor: "pointer", color: "#b0916a" }}>×</button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     ) : (
-                      <>
-                        <div style={{ fontSize: "40px", marginBottom: "10px" }}>📁</div>
-                        <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.92rem",
-                          fontWeight: 500, color: "#5c4021" }}>
-                          Drop your file here, or{" "}
-                          <span style={{ color: "#c8861a", textDecoration: "underline" }}>browse</span>
+                      <div id="dropzone-content">
+                        <div style={{ fontSize: "40px", marginBottom: "10px", pointerEvents: "none" }}>📁</div>
+                        <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.92rem", fontWeight: 500, color: "#5c4021", pointerEvents: "none" }}>
+                          Drop your files here, or <span style={{ color: "#c8861a", textDecoration: "underline" }}>browse</span>
                         </p>
-                        <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.76rem",
-                          color: "#9a7845", marginTop: "6px" }}>
-                          PDF, DOC, PPT, JPG, PNG, WEBP · Max 25 MB
+                        <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.76rem", color: "#9a7845", marginTop: "6px", pointerEvents: "none" }}>
+                          PDF, DOC, PPT, JPG, PNG, WEBP · Max 25 MB per file
                         </p>
-                      </>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -297,23 +337,23 @@ export default function UploadPage() {
                   </div>
                 )}
                 <button id="upload-submit" type="submit"
-                  disabled={!file || !category || !title || !subject || loading}
+                  disabled={files.length === 0 || !category || !title || !subject || loading}
                   style={{
                     padding: "14px",
-                    background: (file && category && title && subject && !loading)
+                    background: (files.length > 0 && category && title && subject && !loading)
                       ? "linear-gradient(135deg, #d97706 0%, #b45309 100%)"
                       : "#e9dcc8",
                     border: "none", borderRadius: "10px",
-                    color: (file && category && title && subject && !loading) ? "#fff" : "#b0916a",
+                    color: (files.length > 0 && category && title && subject && !loading) ? "#fff" : "#b0916a",
                     fontFamily: "'Inter', sans-serif",
                     fontSize: "0.95rem", fontWeight: 600,
-                    cursor: (file && category && title && subject && !loading) ? "pointer" : "not-allowed",
+                    cursor: (files.length > 0 && category && title && subject && !loading) ? "pointer" : "not-allowed",
                     letterSpacing: "0.02em",
-                    boxShadow: (file && category && title && subject && !loading) ? "0 4px 16px rgba(180,83,9,0.28)" : "none",
+                    boxShadow: (files.length > 0 && category && title && subject && !loading) ? "0 4px 16px rgba(180,83,9,0.28)" : "none",
                     transition: "all 0.2s",
                   }}
-                  onMouseEnter={e => { if (file && category && title && subject && !loading) { e.currentTarget.style.transform = "translateY(-1px)"; e.currentTarget.style.boxShadow = "0 6px 22px rgba(180,83,9,0.35)"; } }}
-                  onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = (file && category && title && subject && !loading) ? "0 4px 16px rgba(180,83,9,0.28)" : "none"; }}
+                  onMouseEnter={e => { if (files.length > 0 && category && title && subject && !loading) { e.currentTarget.style.transform = "translateY(-1px)"; e.currentTarget.style.boxShadow = "0 6px 22px rgba(180,83,9,0.35)"; } }}
+                  onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = (files.length > 0 && category && title && subject && !loading) ? "0 4px 16px rgba(180,83,9,0.28)" : "none"; }}
                 >
                   {loading ? "Uploading Document..." : "Submit for Admin Review →"}
                 </button>

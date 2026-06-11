@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import vertoAiAvatar from "../assets/verto-ai.jpg";
+import { chatAPI } from "../services/api";
+import { useAuth } from "../context/AuthContext";
 
 /* ── Data ── */
 const CATEGORIES = [
@@ -15,7 +17,7 @@ const CATEGORIES = [
 const WELCOME = {
   role: "assistant",
   id: "w0",
-  content: "Welcome to **Vertos Archive**! I'm your AI-powered university assistant. Ask me anything about LPU — notes, PYQs, syllabus, placements, faculty, or campus life.",
+  content: "Welcome to **Verto AI**! I'm your AI-powered university assistant. Ask me anything about LPU — notes, PYQs, syllabus, placements, faculty, or campus life.",
   time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
 };
 
@@ -37,7 +39,6 @@ function MessageBubble({ msg }) {
       gap: "10px",
       alignItems: "flex-start",
     }}>
-      {/* Avatar for assistant */}
       {!isUser && (
         <img 
           src={vertoAiAvatar} 
@@ -52,16 +53,15 @@ function MessageBubble({ msg }) {
       )}
 
       <div style={{
-        maxWidth: "70%",
-        padding: "13px 17px",
+        maxWidth: "85%",
+        padding: "12px 16px",
         background: isUser
           ? "linear-gradient(135deg, #d97706 0%, #b45309 100%)"
           : "#ffffff",
         border: isUser ? "none" : "1px solid #e9dcc8",
-        borderRadius: isUser ? "16px 16px 4px 16px" : "4px 16px 16px 16px",
+        borderRadius: isUser ? "14px 14px 4px 14px" : "4px 14px 14px 14px",
         boxShadow: isUser ? "0 4px 14px rgba(180,83,9,0.22)" : "0 2px 10px rgba(160,110,40,0.07)",
       }}>
-        {/* Render basic markdown bold */}
         <p style={{
           fontFamily: "'Inter', sans-serif",
           fontSize: "0.875rem",
@@ -69,8 +69,141 @@ function MessageBubble({ msg }) {
           lineHeight: 1.7,
           whiteSpace: "pre-wrap",
         }}
-          dangerouslySetInnerHTML={{ __html: msg.content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }}
+          dangerouslySetInnerHTML={{ __html: msg.content
+            .replace(/### (.*?)\n/g, '<strong style="display:block; margin-top:8px; font-size:0.9rem; color:#8b5e0a;">$1</strong>\n')
+            .replace(/### (.*?)$/g, '<strong style="display:block; margin-top:8px; font-size:0.9rem; color:#8b5e0a;">$1</strong>')
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') 
+          }}
         />
+        {msg.sources && msg.sources.length > 0 && (
+            <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px dashed #e9dcc8' }}>
+                <p style={{
+                    fontSize: '0.68rem', color: '#9a7845', fontWeight: 700,
+                    textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px',
+                    display: 'flex', alignItems: 'center', gap: '4px'
+                }}>
+                    📚 Sources used
+                </p>
+                {/* Deduplicate by documentId */}
+                {[...new Map(msg.sources.map(s => [s.documentId, s])).values()].map((src, i) => (
+                    <div key={i} style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        padding: '8px 10px',
+                        background: '#fdfaf5',
+                        border: '1px solid #e9dcc8',
+                        borderRadius: '8px',
+                        marginBottom: '6px',
+                        gap: '8px',
+                    }}>
+                        {/* Left: icon + title + badge */}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                <span style={{ fontSize: '0.75rem' }}>
+                                    {src.fileType?.startsWith('image/') ? '🖼️' :
+                                     src.fileType === 'application/pdf' ? '📄' :
+                                     src.fileType?.includes('word') || src.fileType?.includes('presentation') ? '📝' : '📄'}
+                                </span>
+                                <span style={{
+                                    fontSize: '0.76rem', fontWeight: 600, color: '#3d2800',
+                                    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                                    maxWidth: '160px'
+                                }} title={src.title}>{src.title}</span>
+                                {src.category && (
+                                    <span style={{
+                                        fontSize: '0.62rem', fontWeight: 600,
+                                        padding: '2px 7px', borderRadius: '999px',
+                                        background: '#fef3dc', color: '#8b5e0a',
+                                        border: '1px solid #e8c96a', flexShrink: 0
+                                    }}>{src.category}</span>
+                                )}
+                            </div>
+                            {src.subject && (
+                                <p style={{ fontSize: '0.67rem', color: '#9a7845', marginTop: '2px' }}>{src.subject}</p>
+                            )}
+                        </div>
+                        {/* Right: action buttons */}
+                        <div style={{ display: 'flex', gap: '6px', flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                            {src.files && src.files.length > 1 && (
+                                <div style={{ display: 'flex', gap: '4px', marginRight: '4px', alignItems: 'center' }}>
+                                    {src.files.map((f, idx) => {
+                                        const url = typeof f === 'string' ? f : f?.url;
+                                        if (!url) return null;
+                                        return (
+                                            <a
+                                                key={idx}
+                                                href={url}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                title={`Open Page ${idx + 1}`}
+                                                style={{
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                    width: '24px', height: '24px',
+                                                    background: 'linear-gradient(135deg, #d97706, #b45309)',
+                                                    borderRadius: '6px',
+                                                    textDecoration: 'none',
+                                                    color: '#fff', fontSize: '0.65rem', fontWeight: 700,
+                                                    boxShadow: '0 2px 6px rgba(180,83,9,0.2)',
+                                                }}
+                                            >
+                                                {idx + 1}
+                                            </a>
+                                        );
+                                    })}
+                                </div>
+                            )}
+
+                            {src.fileUrl && (
+                                <div style={{ display: 'flex', gap: '6px' }}>
+                                    {/* Open in new tab */}
+                                    <a
+                                        href={src.fileUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        title="Open in new tab"
+                                        style={{
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            width: '28px', height: '28px',
+                                            background: 'linear-gradient(135deg, #d97706, #b45309)',
+                                            borderRadius: '7px',
+                                            textDecoration: 'none',
+                                            boxShadow: '0 2px 6px rgba(180,83,9,0.2)',
+                                            transition: 'opacity 0.15s',
+                                        }}
+                                        onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
+                                        onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+                                    >
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6m0 0v6m0-6L10 14" />
+                                        </svg>
+                                    </a>
+                                    {/* Download */}
+                                    <a
+                                        href={src.fileUrl}
+                                        download={src.title || 'document'}
+                                        title="Download file"
+                                        style={{
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            width: '28px', height: '28px',
+                                            background: '#fff',
+                                            border: '1px solid #ddd0b8',
+                                            borderRadius: '7px',
+                                            textDecoration: 'none',
+                                            transition: 'border-color 0.15s, background 0.15s',
+                                        }}
+                                        onMouseEnter={e => { e.currentTarget.style.background = '#fdf5e8'; e.currentTarget.style.borderColor = '#c8861a'; }}
+                                        onMouseLeave={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = '#ddd0b8'; }}
+                                    >
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#b45309" strokeWidth="2.2">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v13m0 0l-4-4m4 4l4-4M4 20h16" />
+                                        </svg>
+                                    </a>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                ))}
+            </div>
+        )}
         <p style={{
           fontFamily: "'Inter', sans-serif",
           fontSize: "0.7rem",
@@ -80,7 +213,6 @@ function MessageBubble({ msg }) {
         }}>{msg.time}</p>
       </div>
 
-      {/* Avatar for user */}
       {isUser && (
         <div style={{
           width: "34px", height: "34px", flexShrink: 0,
@@ -95,17 +227,37 @@ function MessageBubble({ msg }) {
   );
 }
 
-let msgIdCounter = 1;
-
 export default function ChatPage() {
+  const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const [messages, setMessages] = useState([WELCOME]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [activeCategory, setActiveCategory] = useState(null);
+  
+  const [conversations, setConversations] = useState([]);
+  const [activeConversationId, setActiveConversationId] = useState(null);
+
   const endRef = useRef(null);
+  const chatScrollRef = useRef(null);
   const inputRef = useRef(null);
   const didAutoSend = useRef(false);
+
+  // Load sidebar conversations
+  const loadConversations = async () => {
+      try {
+          const res = await chatAPI.getConversations();
+          if (res.data.success) {
+              setConversations(res.data.conversations);
+          }
+      } catch (err) {
+          console.error("Failed to load conversations", err);
+      }
+  };
+
+  useEffect(() => {
+      loadConversations();
+  }, []);
 
   // Read URL params on first render and auto-send
   useEffect(() => {
@@ -115,9 +267,7 @@ export default function ChatPage() {
     if (cat) setActiveCategory(cat);
     if (q) {
       didAutoSend.current = true;
-      // Clear params from URL so refresh doesn't re-fire
       setSearchParams({}, { replace: true });
-      // Slight delay so the component has rendered
       setTimeout(() => sendMessageDirect(q, cat), 100);
     } else if (cat) {
       didAutoSend.current = true;
@@ -128,28 +278,148 @@ export default function ChatPage() {
   }, []);
 
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth" });
+    const el = chatScrollRef.current;
+    if (!el) return;
+    const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 150;
+    if (isNearBottom) {
+      endRef.current?.scrollIntoView({ behavior: "auto" });
+    }
   }, [messages, loading]);
 
+  const createNewConversation = async () => {
+      try {
+          const res = await chatAPI.createConversation();
+          const newId = res.data.conversation._id;
+          setActiveConversationId(newId);
+          setMessages([WELCOME]);
+          loadConversations();
+          return newId;
+      } catch (err) {
+          console.error("Failed to create conversation", err);
+          return null;
+      }
+  };
+
+  const selectConversation = async (id) => {
+      setActiveConversationId(id);
+      try {
+          const res = await chatAPI.getMessages(id);
+          if (res.data.messages.length === 0) {
+              setMessages([WELCOME]);
+          } else {
+              setMessages(res.data.messages.map(m => ({
+                  ...m,
+                  id: m._id,
+                  time: new Date(m.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+              })));
+          }
+      } catch (err) {
+          console.error("Failed to fetch messages", err);
+      }
+  };
+
   // Internal send — accepts explicit text so we can call before state settles
-  const sendMessageDirect = (text, category) => {
+  const sendMessageDirect = async (text, category) => {
     const q = text.trim();
     if (!q) return;
     const now = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-    setMessages(prev => [...prev, { role: "user", id: `u${msgIdCounter++}`, content: q, time: now }]);
+    
+    // Optimistically add user message
+    setMessages(prev => [...prev, { role: "user", id: `u_${Date.now()}`, content: q, time: now }]);
     setInput("");
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      const now2 = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-      const catHint = category ? ` under **${category}**` : "";
-      setMessages(prev => [...prev, {
-        role: "assistant",
-        id: `a${msgIdCounter++}`,
-        content: `I found relevant information${catHint} about **"${q}"** in the Vertos Archive knowledge base. This is a demo response — once the backend RAG pipeline is connected, I'll retrieve actual documents, notes, and university data to answer your query accurately.`,
-        time: now2,
-      }]);
-    }, 1600);
+    setTimeout(() => endRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
+
+    // Get or create conversation ID
+    let currentConvId = activeConversationId;
+    if (!currentConvId) {
+        currentConvId = await createNewConversation();
+    }
+
+    let assistantMsgId = null;
+
+    try {
+        const token = localStorage.getItem('token');
+        const filters = category ? { category: category.toLowerCase() } : {};
+        const VITE_API_URL = (import.meta?.env?.VITE_API_URL) || 'http://localhost:5001/api';
+
+        const response = await fetch(`${VITE_API_URL}/chat/conversations/${currentConvId}/message`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ content: q, filters })
+        });
+
+        if (!response.ok) {
+            throw new Error("Failed to send message");
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let done = false;
+
+        while (!done) {
+            const { value, done: readerDone } = await reader.read();
+            done = readerDone;
+            if (value) {
+                const chunk = decoder.decode(value, { stream: true });
+                const lines = chunk.split('\n');
+                let isSourcesEvent = false;
+
+                lines.forEach(line => {
+                    if (line.startsWith('event: sources')) {
+                        isSourcesEvent = true;
+                    } else if (line.startsWith('data: ')) {
+                        const dataStr = line.replace('data: ', '').trim();
+                        if (dataStr === '[DONE]') {
+                            setLoading(false);
+                            loadConversations(); // refresh title
+                            return;
+                        }
+
+                        try {
+                            const parsed = JSON.parse(dataStr);
+                            if (isSourcesEvent) {
+                                if (!assistantMsgId) {
+                                    assistantMsgId = `a_${Date.now()}`;
+                                    setMessages(prev => [...prev, { role: "assistant", id: assistantMsgId, content: "", time: now, sources: parsed }]);
+                                } else {
+                                    setMessages(prev => prev.map(m => m.id === assistantMsgId ? { ...m, sources: parsed } : m));
+                                }
+                                isSourcesEvent = false;
+                            } else if (parsed.token) {
+                                if (!assistantMsgId) {
+                                    assistantMsgId = `a_${Date.now()}`;
+                                    setMessages(prev => [...prev, { role: "assistant", id: assistantMsgId, content: parsed.token, time: now, sources: [] }]);
+                                } else {
+                                    setMessages(prev => prev.map(m => m.id === assistantMsgId ? { ...m, content: m.content + parsed.token } : m));
+                                }
+                            } else if (parsed.message) { // error
+                                if (!assistantMsgId) {
+                                    assistantMsgId = `a_${Date.now()}`;
+                                    setMessages(prev => [...prev, { role: "assistant", id: assistantMsgId, content: "\n\n**Error:** " + parsed.message, time: now, sources: [] }]);
+                                } else {
+                                    setMessages(prev => prev.map(m => m.id === assistantMsgId ? { ...m, content: m.content + "\n\n**Error:** " + parsed.message } : m));
+                                }
+                            }
+                        } catch (e) {
+                            console.error("Error parsing stream chunk", e, dataStr);
+                        }
+                    }
+                });
+            }
+        }
+    } catch (err) {
+        console.error("Stream error", err);
+        if (!assistantMsgId) {
+            setMessages(prev => [...prev, { role: "assistant", id: `a_${Date.now()}`, content: "*(Error connecting to server)*", time: now, sources: [] }]);
+        } else {
+            setMessages(prev => prev.map(m => m.id === assistantMsgId ? { ...m, content: m.content + "\n\n*(Error connecting to server)*" } : m));
+        }
+        setLoading(false);
+    }
   };
 
   const sendMessage = (text) => sendMessageDirect(text || input, activeCategory);
@@ -170,7 +440,7 @@ export default function ChatPage() {
     }}>
       {/* ── Sidebar ── */}
       <aside style={{
-        width: "260px",
+        width: "230px",
         flexShrink: 0,
         background: "#ffffff",
         borderRight: "1px solid #e9dcc8",
@@ -184,10 +454,10 @@ export default function ChatPage() {
           borderBottom: "1px solid #f0e8d8",
         }}>
           <p style={{ fontFamily: "'Playfair Display', serif", fontSize: "1rem", fontWeight: 700, color: "#1f1209" }}>
-            <span style={{ color: "#c8861a" }}>Vertos</span> Archive
+            <span style={{ color: "#c8861a" }}>Verto</span> AI
           </p>
           <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.73rem", color: "#9a7845", marginTop: "2px" }}>
-            AI University Assistant
+            University Assistant
           </p>
         </div>
 
@@ -195,7 +465,7 @@ export default function ChatPage() {
         <div style={{ padding: "14px 14px 10px" }}>
           <button
             id="new-chat-sidebar"
-            onClick={() => { setMessages([WELCOME]); setActiveCategory(null); }}
+            onClick={createNewConversation}
             style={{
               width: "100%", padding: "10px",
               background: "linear-gradient(135deg, #d97706, #b45309)",
@@ -211,25 +481,45 @@ export default function ChatPage() {
           </button>
         </div>
 
-        {/* Quick topics */}
-        <div style={{ padding: "4px 14px 12px" }}>
-          <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.68rem", fontWeight: 600, color: "#9a7845", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "8px" }}>Quick Topics</p>
-          {SUGGESTIONS.map((s, i) => (
-            <button key={i} id={`chat-suggestion-${i}`} onClick={() => sendMessage(s)}
-              style={{
-                display: "block", width: "100%", textAlign: "left",
-                padding: "9px 12px", borderRadius: "8px",
-                background: "transparent", border: "none",
-                fontFamily: "'Inter', sans-serif", fontSize: "0.78rem", color: "#5c4021",
-                cursor: "pointer", marginBottom: "2px",
-                transition: "background 0.15s",
-                lineHeight: 1.4,
-              }}
-              onMouseEnter={e => e.currentTarget.style.background = "#fdf5e8"}
-              onMouseLeave={e => e.currentTarget.style.background = "transparent"}
-            >{s}</button>
-          ))}
+        {/* History */}
+        <div style={{ flex: 1, overflowY: "auto", padding: "4px 14px 12px" }}>
+            <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.68rem", fontWeight: 600, color: "#9a7845", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "8px" }}>Recent Chats</p>
+            {conversations.map((conv) => (
+                <button key={conv._id} onClick={() => selectConversation(conv._id)}
+                    style={{
+                        display: "block", width: "100%", textAlign: "left",
+                        padding: "9px 12px", borderRadius: "8px",
+                        background: activeConversationId === conv._id ? "#fdf5e8" : "transparent",
+                        border: "none",
+                        fontFamily: "'Inter', sans-serif", fontSize: "0.78rem", color: "#5c4021",
+                        cursor: "pointer", marginBottom: "2px",
+                        whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis"
+                    }}
+                >{conv.title}</button>
+            ))}
         </div>
+
+        {/* Quick topics */}
+        {!activeConversationId && (
+            <div style={{ padding: "4px 14px 12px" }}>
+            <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.68rem", fontWeight: 600, color: "#9a7845", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "8px" }}>Quick Topics</p>
+            {SUGGESTIONS.slice(0,3).map((s, i) => (
+                <button key={i} onClick={() => sendMessage(s)}
+                style={{
+                    display: "block", width: "100%", textAlign: "left",
+                    padding: "9px 12px", borderRadius: "8px",
+                    background: "transparent", border: "none",
+                    fontFamily: "'Inter', sans-serif", fontSize: "0.78rem", color: "#5c4021",
+                    cursor: "pointer", marginBottom: "2px",
+                    transition: "background 0.15s",
+                    lineHeight: 1.4,
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = "#fdf5e8"}
+                onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                >{s}</button>
+            ))}
+            </div>
+        )}
 
         {/* Footer in sidebar */}
         <div style={{
@@ -243,10 +533,10 @@ export default function ChatPage() {
               background: "linear-gradient(135deg, #d97706, #b45309)",
               display: "flex", alignItems: "center", justifyContent: "center",
               color: "#fff", fontWeight: 700, fontSize: "0.8rem",
-            }}>K</div>
+            }}>{user?.name?.charAt(0) || 'U'}</div>
             <div>
-              <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.78rem", fontWeight: 600, color: "#1f1209" }}>Karan Kumar</p>
-              <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.68rem", color: "#9a7845" }}>12345678</p>
+              <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.78rem", fontWeight: 600, color: "#1f1209" }}>{user?.name || 'User'}</p>
+              <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.68rem", color: "#9a7845" }}>{user?.email || ''}</p>
             </div>
           </div>
         </div>
@@ -275,21 +565,24 @@ export default function ChatPage() {
             <p style={{ fontFamily: "'Playfair Display', serif", fontSize: "1rem", fontWeight: 700, color: "#1f1209" }}>Verto AI</p>
             <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
               <div style={{ width: "7px", height: "7px", background: "#22c55e", borderRadius: "50%" }} />
-              <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.72rem", color: "#7a5a2a" }}>Online · RAG-powered</p>
+              <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.72rem", color: "#7a5a2a" }}>Online · Hybrid RAG Engine</p>
             </div>
           </div>
         </div>
 
         {/* Messages */}
-        <div style={{
-          flex: 1,
-          overflowY: "auto",
-          padding: "24px",
-        }}>
+        <div 
+          ref={chatScrollRef}
+          style={{
+            flex: 1,
+            overflowY: "auto",
+            padding: "24px 20px",
+          }}
+        >
           {messages.map(msg => <MessageBubble key={msg.id} msg={msg} />)}
 
           {/* Typing indicator */}
-          {loading && (
+          {loading && messages[messages.length - 1]?.role === "user" && (
             <div style={{ display: "flex", alignItems: "flex-start", gap: "10px", marginBottom: "16px" }}>
               <img 
                 src={vertoAiAvatar}
@@ -332,7 +625,7 @@ export default function ChatPage() {
           {/* Category Selector Chips */}
           <div style={{
             display: "flex", alignItems: "center", gap: "8px",
-            padding: "12px 24px 0",
+            padding: "8px 24px 0",
             overflowX: "auto",
             scrollbarWidth: "none",
           }}>
@@ -341,7 +634,7 @@ export default function ChatPage() {
               fontWeight: 600, color: "#8b6535", textTransform: "uppercase",
               letterSpacing: "0.05em", marginRight: "4px",
             }}>
-              Category:
+              Filter:
             </span>
             {CATEGORIES.map(c => {
               const isActive = activeCategory === c;
@@ -372,14 +665,14 @@ export default function ChatPage() {
           </div>
 
           {/* Search Input Box */}
-          <div style={{ padding: "12px 24px 20px" }}>
+          <div style={{ padding: "8px 24px 16px" }}>
             <div style={{
-              display: "flex", alignItems: "center", gap: "12px",
+              display: "flex", alignItems: "center", gap: "10px",
               background: "#fff",
-              border: "1.5px solid #ddd0b8",
-              borderRadius: "14px",
-              padding: "10px 16px",
-              boxShadow: "0 2px 16px rgba(160,110,40,0.07)",
+              border: "1px solid #ddd0b8",
+              borderRadius: "10px",
+              padding: "8px 12px",
+              boxShadow: "0 2px 12px rgba(160,110,40,0.05)",
               transition: "border-color 0.2s, box-shadow 0.2s",
             }}
               onFocusCapture={e => { e.currentTarget.style.borderColor = "#c8861a"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(200,134,26,0.12)"; }}
@@ -407,20 +700,20 @@ export default function ChatPage() {
                 disabled={!input.trim() || loading}
                 style={{
                   flexShrink: 0,
-                  width: "38px", height: "38px",
+                  width: "32px", height: "32px",
                   background: input.trim() && !loading ? "linear-gradient(135deg, #d97706, #b45309)" : "#e9dcc8",
-                  border: "none", borderRadius: "10px",
+                  border: "none", borderRadius: "8px",
                   display: "flex", alignItems: "center", justifyContent: "center",
                   cursor: input.trim() && !loading ? "pointer" : "not-allowed",
                   transition: "all 0.2s",
                   boxShadow: input.trim() && !loading ? "0 3px 10px rgba(180,83,9,0.25)" : "none",
                 }}>
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={input.trim() && !loading ? "#fff" : "#b0916a"} strokeWidth="2.5">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={input.trim() && !loading ? "#fff" : "#b0916a"} strokeWidth="2.5">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M12 5l7 7-7 7" />
                 </svg>
               </button>
             </div>
-            <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.7rem", color: "#b0916a", textAlign: "center", marginTop: "8px" }}>
+            <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.68rem", color: "#b0916a", textAlign: "center", marginTop: "6px" }}>
               Press Enter to send · Shift+Enter for new line
             </p>
           </div>

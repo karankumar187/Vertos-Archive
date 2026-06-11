@@ -8,8 +8,8 @@ const uploadController = require('../controllers/uploadController');
 router.use(protect);
 
 // Upload a document
-// The 'file' field should match the form-data key in the frontend
-router.post('/', upload.single('file'), uploadController.uploadDocument);
+// The 'files' field should match the form-data key in the frontend
+router.post('/', upload.array('files', 10), uploadController.uploadDocument);
 
 // Get contributor statistics
 router.get('/stats', uploadController.getContributorStats);

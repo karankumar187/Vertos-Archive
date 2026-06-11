@@ -39,6 +39,15 @@ const pendingDocumentSchema = new mongoose.Schema({
         type: String, // MIME type e.g. application/pdf, image/jpeg
         default: '',
     },
+    extractedText: {
+        type: String, // Pre-extracted text from upload time (avoids re-download)
+        default: '',
+    },
+    files: [{
+        url: { type: String, required: true },
+        type: { type: String, required: true },
+        size: { type: Number, required: true }
+    }],
     pageCount: {
         type: Number,
     },

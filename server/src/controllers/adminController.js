@@ -45,6 +45,8 @@ exports.approveUpload = async (req, res) => {
             approvedBy: req.user._id,
             fileUrl: pendingDoc.fileUrl,
             fileType: pendingDoc.fileType || '',
+            files: pendingDoc.files || [],
+            extractedText: pendingDoc.extractedText || '',
             pageCount: pendingDoc.pageCount || 0,
             indexed: false
         });

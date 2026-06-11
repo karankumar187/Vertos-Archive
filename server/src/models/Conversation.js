@@ -8,9 +8,10 @@ const conversationSchema = new mongoose.Schema({
     },
     title: {
         type: String,
-        required: true,
-        trim: true,
-    },
+        default: 'New Conversation',
+    }
+}, {
+    timestamps: true
 });
 
 module.exports = mongoose.model('Conversation', conversationSchema);

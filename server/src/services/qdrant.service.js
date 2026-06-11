@@ -27,6 +27,21 @@ exports.initQdrant = async () => {
                 },
             });
             console.log(`[Qdrant] Collection '${COLLECTION_NAME}' created successfully.`);
+            
+            // Create payload indexes for filtering
+            console.log(`[Qdrant] Creating payload index for 'category'...`);
+            await client.createPayloadIndex(COLLECTION_NAME, {
+                field_name: 'category',
+                field_schema: 'keyword',
+                wait: true,
+            });
+            console.log(`[Qdrant] Creating payload index for 'subject'...`);
+            await client.createPayloadIndex(COLLECTION_NAME, {
+                field_name: 'subject',
+                field_schema: 'keyword',
+                wait: true,
+            });
+            console.log(`[Qdrant] Payload indexes created.`);
         } else {
             console.log(`[Qdrant] Collection '${COLLECTION_NAME}' already exists.`);
         }
@@ -83,6 +98,35 @@ exports.pushChunksToQdrant = async (documentId, chunks, embeddings, metadata) =>
         console.log(`[Qdrant] Successfully pushed ${points.length} chunks for document ${documentId}`);
     } catch (error) {
         console.error(`[Qdrant] Error pushing chunks for document ${documentId}:`, error);
+        throw error;
+    }
+};
+
+/**
+ * Searches Qdrant for vectors closest to the provided query embedding.
+ * 
+ * @param {number[]} queryEmbedding - The 1536-dimensional vector for the user query.
+ * @param {number} limit - Number of results to return.
+ * @param {Object} filter - Optional Qdrant filter object to restrict search (e.g. by category or subject).
+ * @returns {Promise<Array>} - Array of scored point objects with payloads.
+ */
+exports.searchQdrant = async (queryEmbedding, limit = 5, filter = null) => {
+    try {
+        const searchParams = {
+            collection_name: COLLECTION_NAME,
+            vector: queryEmbedding,
+            limit: limit,
+            with_payload: true,
+        };
+
+        if (filter) {
+            searchParams.filter = filter;
+        }
+
+        const results = await client.search(COLLECTION_NAME, searchParams);
+        return results;
+    } catch (error) {
+        console.error('[Qdrant] Error searching vectors:', error);
         throw error;
     }
 };
