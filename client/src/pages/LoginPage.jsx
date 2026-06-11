@@ -1,30 +1,10 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import campusSketch from "../assets/campus-sketch.png";
+import { authAPI } from "../services/api";
+import { useAuth } from "../context/AuthContext";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
-const login = async (email, password) => {
-  try {
-    const response = await fetch(`${API_URL}/auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-      credentials: "include",
-    });
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || "Login failed");
-    }
-    const data = await response.json();
-    localStorage.setItem("token", data.token);
-    localStorage.setItem("user", JSON.stringify(data.user));
-    return { success: true };
-  } catch (error) {
-    console.error("Login error:", error);
-    return { success: false, message: error.message };
-  }
-};
 
 /* ── Shared field component ── */
 function Field({ label, id, type = "text", value, onChange, placeholder }) {
@@ -64,18 +44,30 @@ function Field({ label, id, type = "text", value, onChange, placeholder }) {
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const [form, setForm] = useState({ email: "", password: "" });
+  const [searchParams] = useSearchParams();
+  const { login } = useAuth();
+  const [form, setForm]     = useState({ email: "", password: "" });
+  const [error, setError]   = useState(searchParams.get("error") === "google_failed" ? "Google sign-in failed. Please try again." : "");
+  const [loading, setLoading] = useState(false);
 
   const handle = (k) => (e) => setForm(p => ({ ...p, [k]: e.target.value }));
 
-  const onSubmit = (e) => {
+  const onSubmit = async (e) => {
     e.preventDefault();
-    // TODO: API call
-    login(form.email, form.password).then((result) => {
-      if (result.success) {
-        navigate("/");
-      }
-    });
+    setError(""); setLoading(true);
+    try {
+      const res = await authAPI.login({ email: form.email, password: form.password });
+      await login(res.data.token);
+      navigate("/dashboard", { replace: true });
+    } catch (err) {
+      setError(err.response?.data?.message || "Login failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogle = () => {
+    window.location.href = authAPI.googleAuthUrl();
   };
 
   return (
@@ -163,7 +155,34 @@ export default function LoginPage() {
             </p>
           </div>
 
-          <form onSubmit={onSubmit} style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+          <form onSubmit={onSubmit} style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
+            {/* Google Sign-In */}
+            <button id="login-google" type="button" onClick={handleGoogle} style={{
+              width: "100%", padding: "12px",
+              background: "#fff", border: "1.5px solid #ddd0b8",
+              borderRadius: "9px", cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: "10px",
+              fontFamily: "'Inter', sans-serif", fontSize: "0.9rem", fontWeight: 600, color: "#3d2a0e",
+              boxShadow: "0 1px 6px rgba(160,110,40,0.08)",
+              transition: "all 0.2s",
+            }}
+              onMouseEnter={e => { e.currentTarget.style.background = "#fef9f2"; e.currentTarget.style.borderColor = "#c8861a"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.borderColor = "#ddd0b8"; }}
+            >
+              <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20H24v8h11.3C33.7 33.1 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.1 7.9 3l5.7-5.7C34.1 6.5 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20c11 0 19.7-8 19.7-20 0-1.3-.1-2.7-.1-4z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.6 16.1 19 13 24 13c3.1 0 5.8 1.1 7.9 3l5.7-5.7C34.1 6.5 29.3 4 24 4c-7.8 0-14.5 4.4-17.7 10.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-1.9 13.5-5l-6.2-5.2C29.5 35.5 26.9 36 24 36c-5.2 0-9.7-2.9-11.3-7.1L6 33.9C9.2 39.5 16.1 44 24 44z"/><path fill="#1976D2" d="M43.6 20H24v8h11.3c-.8 2.3-2.3 4.2-4.2 5.5l6.2 5.2C41.1 35.5 44 30.1 44 24c0-1.3-.1-2.7-.4-4z"/></svg>
+              Continue with Google
+            </button>
+
+            {/* Divider */}
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <div style={{ flex: 1, height: "1px", background: "#e9dcc8" }} />
+              <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.75rem", color: "#9a7845" }}>or email login</span>
+              <div style={{ flex: 1, height: "1px", background: "#e9dcc8" }} />
+            </div>
+
+            {error && (
+              <div style={{ background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 8, padding: "10px 14px", fontFamily: "'Inter', sans-serif", fontSize: "0.83rem", color: "#b91c1c" }}>{error}</div>
+            )}
             <Field label="Email Address" id="login-email" type="email" value={form.email}
               onChange={handle("email")} placeholder="you@example.com" />
             <Field label="Password" id="login-password" type="password" value={form.password}
@@ -176,31 +195,23 @@ export default function LoginPage() {
               >Forgot password?</a>
             </div>
 
-            <button id="login-submit" type="submit" style={{
-              width: "100%",
-              padding: "13px",
-              background: "linear-gradient(135deg, #d97706 0%, #b45309 100%)",
+            <button id="login-submit" type="submit" disabled={loading} style={{
+              width: "100%", padding: "13px",
+              background: loading ? "#e9dcc8" : "linear-gradient(135deg, #d97706 0%, #b45309 100%)",
               border: "none", borderRadius: "9px",
-              color: "#fff",
-              fontFamily: "'Inter', sans-serif",
-              fontSize: "0.92rem", fontWeight: 600,
-              cursor: "pointer",
-              letterSpacing: "0.02em",
-              boxShadow: "0 4px 14px rgba(180,83,9,0.3)",
+              color: loading ? "#a08060" : "#fff",
+              fontFamily: "'Inter', sans-serif", fontSize: "0.92rem", fontWeight: 600,
+              cursor: loading ? "not-allowed" : "pointer",
+              boxShadow: loading ? "none" : "0 4px 14px rgba(180,83,9,0.3)",
               transition: "all 0.2s ease",
             }}
-              onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-1px)"; e.currentTarget.style.boxShadow = "0 6px 20px rgba(180,83,9,0.35)"; }}
-              onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "0 4px 14px rgba(180,83,9,0.3)"; }}
+              onMouseEnter={e => { if (!loading) { e.currentTarget.style.transform = "translateY(-1px)"; } }}
+              onMouseLeave={e => { e.currentTarget.style.transform = "none"; }}
             >
-              Sign In to Archive
+              {loading ? "Signing in…" : "Sign In to Archive"}
             </button>
 
-            {/* Divider */}
-            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-              <div style={{ flex: 1, height: "1px", background: "#e9dcc8" }} />
-              <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.75rem", color: "#9a7845" }}>or</span>
-              <div style={{ flex: 1, height: "1px", background: "#e9dcc8" }} />
-            </div>
+
 
             <p style={{ textAlign: "center", fontFamily: "'Inter', sans-serif", fontSize: "0.875rem", color: "#7a5a2a" }}>
               Don't have an account?{" "}

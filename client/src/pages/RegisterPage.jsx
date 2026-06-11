@@ -1,30 +1,9 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import campusSketch from "../assets/campus-sketch.png";
+import { authAPI } from "../services/api";
+import { useAuth } from "../context/AuthContext";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
-
-const register = async (name, email, registrationNo, password) => {
-  try {
-    const response = await fetch(`${API_URL}/auth/register`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, registrationNo, password }),
-      credentials: "include",
-    });
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || "Registration failed");
-    }
-    const data = await response.json();
-    localStorage.setItem("token", data.token);
-    localStorage.setItem("user", JSON.stringify(data.user));
-    return { success: true };
-  } catch (error) {
-    console.error("Registration error:", error);
-    return { success: false, message: error.message };
-  }
-};
 
 function Field({ label, id, type = "text", value, onChange, placeholder, hint }) {
   const [focused, setFocused] = useState(false);
@@ -56,19 +35,42 @@ function Field({ label, id, type = "text", value, onChange, placeholder, hint })
 
 export default function RegisterPage() {
   const navigate = useNavigate();
-  const [form, setForm] = useState({ name: "", email: "", registrationNo: "", password: "", confirm: "" });
+  const { login } = useAuth();
+  const [form, setForm] = useState({ name: "", email: "", reg_no: "", password: "", confirm: "" });
   const [agreed, setAgreed] = useState(false);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handle = (k) => (e) => setForm(p => ({ ...p, [k]: e.target.value }));
 
-  const onSubmit = (e) => {
+  const onSubmit = async (e) => {
     e.preventDefault();
-    // TODO: API call
-    register(form.name, form.email, form.registrationNo, form.password).then((result) => {
-      if (result.success) {
-        navigate("/");
-      }
-    });
+    setError("");
+    if (form.password !== form.confirm) {
+      setError("Passwords do not match.");
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await authAPI.register({
+        name: form.name,
+        email: form.email,
+        reg_no: form.reg_no,
+        password: form.password,
+      });
+      await login(res.data.token);
+      navigate("/dashboard", { replace: true });
+    } catch (err) {
+      const msg = err.response?.data?.message || "Registration failed. Please try again.";
+      setError(msg);
+      console.error("Registration error:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogle = () => {
+    window.location.href = authAPI.googleAuthUrl();
   };
 
   return (
@@ -132,9 +134,40 @@ export default function RegisterPage() {
           </div>
 
           <form onSubmit={onSubmit} style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
+            {/* Google Sign-Up */}
+            <button id="register-google" type="button" onClick={handleGoogle} style={{
+              width: "100%", padding: "12px",
+              background: "#fff", border: "1.5px solid #ddd0b8",
+              borderRadius: "9px", cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: "10px",
+              fontFamily: "'Inter', sans-serif", fontSize: "0.9rem", fontWeight: 600, color: "#3d2a0e",
+              boxShadow: "0 1px 6px rgba(160,110,40,0.08)",
+              transition: "all 0.2s",
+            }}
+              onMouseEnter={e => { e.currentTarget.style.background = "#fef9f2"; e.currentTarget.style.borderColor = "#c8861a"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.borderColor = "#ddd0b8"; }}
+            >
+              <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20H24v8h11.3C33.7 33.1 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.1 7.9 3l5.7-5.7C34.1 6.5 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20c11 0 19.7-8 19.7-20 0-1.3-.1-2.7-.1-4z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.6 16.1 19 13 24 13c3.1 0 5.8 1.1 7.9 3l5.7-5.7C34.1 6.5 29.3 4 24 4c-7.8 0-14.5 4.4-17.7 10.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-1.9 13.5-5l-6.2-5.2C29.5 35.5 26.9 36 24 36c-5.2 0-9.7-2.9-11.3-7.1L6 33.9C9.2 39.5 16.1 44 24 44z"/><path fill="#1976D2" d="M43.6 20H24v8h11.3c-.8 2.3-2.3 4.2-4.2 5.5l6.2 5.2C41.1 35.5 44 30.1 44 24c0-1.3-.1-2.7-.4-4z"/></svg>
+              Continue with Google
+            </button>
+
+            {/* Divider */}
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <div style={{ flex: 1, height: "1px", background: "#e9dcc8" }} />
+              <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.75rem", color: "#9a7845" }}>or email signup</span>
+              <div style={{ flex: 1, height: "1px", background: "#e9dcc8" }} />
+            </div>
+
+            {error && (
+              <div style={{
+                background: "#fef2f2", border: "1px solid #fca5a5",
+                borderRadius: "8px", padding: "10px 14px",
+                fontFamily: "'Inter', sans-serif", fontSize: "0.83rem", color: "#b91c1c",
+              }}>{error}</div>
+            )}
             <Field label="Full Name" id="reg-name" value={form.name} onChange={handle("name")} placeholder="Karan Kumar" />
             <Field label="LPU Email" id="reg-email" type="email" value={form.email} onChange={handle("email")} placeholder="12345678@lpu.in" hint="Use your official LPU email address" />
-            <Field label="Registration Number" id="reg-rno" value={form.registrationNo} onChange={handle("registrationNo")} placeholder="12345678" />
+            <Field label="Registration Number" id="reg-rno" value={form.reg_no} onChange={handle("reg_no")} placeholder="12345678" />
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
               <Field label="Password" id="reg-password" type="password" value={form.password} onChange={handle("password")} placeholder="Min. 8 characters" />
@@ -178,7 +211,9 @@ export default function RegisterPage() {
                 onMouseLeave={e => e.currentTarget.style.textDecoration = "none"}
               >Sign in</Link>
             </p>
+
           </form>
+
         </div>
       </div>
     </div>

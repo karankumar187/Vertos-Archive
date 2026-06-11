@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
+import vertoAiAvatar from "../assets/verto-ai.jpg";
 
 /* ── Data ── */
 const CATEGORIES = [
@@ -38,14 +39,16 @@ function MessageBubble({ msg }) {
     }}>
       {/* Avatar for assistant */}
       {!isUser && (
-        <div style={{
-          width: "34px", height: "34px", flexShrink: 0,
-          background: "linear-gradient(135deg, #d97706, #b45309)",
-          borderRadius: "10px",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          color: "#fff", fontSize: "15px",
-          boxShadow: "0 2px 10px rgba(180,83,9,0.2)",
-        }}>✦</div>
+        <img 
+          src={vertoAiAvatar} 
+          alt="Verto AI"
+          style={{
+            width: "34px", height: "34px", flexShrink: 0,
+            borderRadius: "10px",
+            objectFit: "cover",
+            boxShadow: "0 2px 10px rgba(180,83,9,0.2)",
+          }}
+        />
       )}
 
       <div style={{
@@ -259,15 +262,17 @@ export default function ChatPage() {
           borderBottom: "1px solid #e9dcc8",
           display: "flex", alignItems: "center", gap: "12px",
         }}>
-          <div style={{
-            width: "36px", height: "36px",
-            background: "linear-gradient(135deg, #d97706, #b45309)",
-            borderRadius: "10px",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            color: "#fff", fontSize: "16px",
-          }}>✦</div>
+          <img 
+            src={vertoAiAvatar}
+            alt="Verto AI"
+            style={{
+              width: "36px", height: "36px",
+              borderRadius: "10px",
+              objectFit: "cover",
+            }} 
+          />
           <div>
-            <p style={{ fontFamily: "'Playfair Display', serif", fontSize: "1rem", fontWeight: 700, color: "#1f1209" }}>Vertos AI</p>
+            <p style={{ fontFamily: "'Playfair Display', serif", fontSize: "1rem", fontWeight: 700, color: "#1f1209" }}>Verto AI</p>
             <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
               <div style={{ width: "7px", height: "7px", background: "#22c55e", borderRadius: "50%" }} />
               <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.72rem", color: "#7a5a2a" }}>Online · RAG-powered</p>
@@ -286,13 +291,15 @@ export default function ChatPage() {
           {/* Typing indicator */}
           {loading && (
             <div style={{ display: "flex", alignItems: "flex-start", gap: "10px", marginBottom: "16px" }}>
-              <div style={{
-                width: "34px", height: "34px", flexShrink: 0,
-                background: "linear-gradient(135deg, #d97706, #b45309)",
-                borderRadius: "10px",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                color: "#fff", fontSize: "15px",
-              }}>✦</div>
+              <img 
+                src={vertoAiAvatar}
+                alt="Verto AI"
+                style={{
+                  width: "34px", height: "34px", flexShrink: 0,
+                  borderRadius: "10px",
+                  objectFit: "cover",
+                }}
+              />
               <div style={{
                 padding: "13px 17px",
                 background: "#ffffff",

@@ -8,8 +8,8 @@ const documentSchema = new mongoose.Schema({
     },
     category: {
         type: String,
+        enum: ["notes", "pyq", "syllabus", "placements", "faculty", "university"],
         required: true,
-        trim: true,
     },
     source: {
         type: String,
@@ -20,6 +20,36 @@ const documentSchema = new mongoose.Schema({
         type: Boolean,
         default: false,
     },
+    subject: {
+        type: String,
+        required: true,
+        trim: true,
+    },
+    uploaderID: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        required: true,
+    },
+    approvedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+    },
+    fileUrl: {
+        type: String,
+        required: true,
+    },
+    fileType: {
+        type: String, // MIME type e.g. application/pdf, image/jpeg
+        default: '',
+    },
+    pageCount: {
+        type: Number,
+        required: true,
+    },
+    indexed: {
+        type: Boolean,
+        default: false,
+    }
 } , { timestamps: true });
 
 module.exports = mongoose.model("Document", documentSchema);

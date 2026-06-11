@@ -1,57 +1,55 @@
 const express = require('express');
 const { body } = require('express-validator');
-const { register, login, getMe, updateProfile, changePassword} = require('../controllers/authController');
-const { protect } = require('../middleware/auth');
 const passport = require('passport');
 const jwt = require('jsonwebtoken');
-const { JWT_SECRET, JWT_EXPIRE } = require('../config/config');
+const { register, login, getMe, updateProfile, changePassword } = require('../controllers/authController');
+const { protect } = require('../middleware/auth');
+const { JWT_SECRET, JWT_EXPIRE, CLIENT_URL } = require('../config/config');
 
 const router = express.Router();
 
-// Helper for OAuth Token Generation
-const generateToken = (id) => {
-    return jwt.sign({ id }, JWT_SECRET, {
-        expiresIn: JWT_EXPIRE
-    });
-};
+// ─── Helpers ───────────────────────────────────────────────────────────────
+const generateToken = (id) => jwt.sign({ id }, JWT_SECRET, { expiresIn: JWT_EXPIRE });
 
-// Validation middleware
+// ─── Validation Middleware ──────────────────────────────────────────────────
 const registerValidation = [
-    body('name')
-        .trim()
-        .notEmpty().withMessage('Name is required')
-        .isLength({ max: 50 }).withMessage('Name cannot be more than 50 characters'),
-    body('email')
-        .trim()
-        .notEmpty().withMessage('Email is required')
-        .isEmail().withMessage('Please provide a valid email'),
-    body('password')
-        .notEmpty().withMessage('Password is required')
-        .isLength({ min: 6 }).withMessage('Password must be at least 6 characters')
+    body('name').trim().notEmpty().withMessage('Name is required').isLength({ max: 50 }),
+    body('email').trim().notEmpty().isEmail().withMessage('Valid email required'),
+    body('password').notEmpty().isLength({ min: 6 }).withMessage('Password min 6 chars'),
 ];
 
 const loginValidation = [
-    body('email')
-        .trim()
-        .notEmpty().withMessage('Email is required')
-        .isEmail().withMessage('Please provide a valid email'),
-    body('password')
-        .notEmpty().withMessage('Password is required')
+    body('email').trim().notEmpty().isEmail().withMessage('Valid email required'),
+    body('password').notEmpty().withMessage('Password is required'),
 ];
 
 const passwordValidation = [
-    body('currentPassword')
-        .notEmpty().withMessage('Current password is required'),
-    body('newPassword')
-        .notEmpty().withMessage('New password is required')
-        .isLength({ min: 6 }).withMessage('New password must be at least 6 characters')
+    body('currentPassword').notEmpty().withMessage('Current password is required'),
+    body('newPassword').notEmpty().isLength({ min: 6 }).withMessage('New password min 6 chars'),
 ];
 
-// Routes
+// ─── Local Auth Routes ──────────────────────────────────────────────────────
 router.post('/register', registerValidation, register);
 router.post('/login', loginValidation, login);
 router.get('/me', protect, getMe);
 router.put('/profile', protect, updateProfile);
 router.put('/change-password', protect, passwordValidation, changePassword);
+
+// ─── Google OAuth Routes ────────────────────────────────────────────────────
+
+// Step 1: Redirect to Google
+router.get('/google',
+    passport.authenticate('google', { scope: ['profile', 'email'] })
+);
+
+// Step 2: Google redirects back here
+router.get('/google/callback',
+    passport.authenticate('google', { session: false, failureRedirect: `${CLIENT_URL}/login?error=google_failed` }),
+    (req, res) => {
+        // Issue JWT and redirect to frontend with token
+        const token = generateToken(req.user._id);
+        res.redirect(`${CLIENT_URL}/auth/callback?token=${token}`);
+    }
+);
 
 module.exports = router;

@@ -1,13 +1,15 @@
 import { useState, useRef } from "react";
 import campusSketch from "../assets/campus-sketch.png";
+import { uploadAPI } from "../services/api";
 
+// Map of display label → backend enum value
 const CATEGORIES = [
-  "Notes",
-  "Syllabus",
-  "Previous Papers",
-  "Placements",
-  "Faculty",
-  "University Info",
+  { label: "Notes",          value: "notes" },
+  { label: "Syllabus",       value: "syllabus" },
+  { label: "Previous Papers",value: "pyq" },
+  { label: "Placements",     value: "placements" },
+  { label: "Faculty",        value: "faculty" },
+  { label: "University Info",value: "university" },
 ];
 
 export default function UploadPage() {
@@ -18,6 +20,8 @@ export default function UploadPage() {
   const [file, setFile]               = useState(null);
   const [dragging, setDragging]       = useState(false);
   const [submitted, setSubmitted]     = useState(false);
+  const [loading, setLoading]         = useState(false);
+  const [error, setError]             = useState("");
   const fileRef = useRef();
 
   const handleDrop = (e) => {
@@ -26,15 +30,33 @@ export default function UploadPage() {
     if (f) setFile(f);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!file || !category || !title) return;
-    setSubmitted(true);
+    if (!file || !category || !title || !subject) return;
+    setLoading(true);
+    setError("");
+
+    try {
+      const formData = new FormData();
+      formData.append("title", title);
+      formData.append("description", description);
+      formData.append("category", category.value); // send the backend enum value
+      formData.append("subject", subject);
+      formData.append("file", file);
+
+      await uploadAPI.uploadDocument(formData);
+      setSubmitted(true);
+    } catch (err) {
+      console.error(err);
+      setError(err.response?.data?.message || "Failed to upload document.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const reset = () => {
     setSubmitted(false); setFile(null); setTitle("");
-    setCategory(""); setDescription(""); setSubject("");
+    setCategory(""); setDescription(""); setSubject(""); setError("");
   };
 
   return (
@@ -146,8 +168,17 @@ export default function UploadPage() {
                       transition: "all 0.2s ease",
                       boxShadow: file ? "0 0 0 4px rgba(200,134,26,0.08)" : "none",
                     }}>
-                    <input ref={fileRef} type="file" accept=".pdf,.doc,.docx,.ppt,.pptx"
-                      style={{ display: "none" }} onChange={e => setFile(e.target.files[0])} />
+                    <input ref={fileRef} type="file" accept=".pdf,.doc,.docx,.ppt,.pptx,.jpg,.jpeg,.png,.webp"
+                      style={{ display: "none" }} onChange={e => {
+                        const f = e.target.files[0];
+                        if (f && f.size > 25 * 1024 * 1024) {
+                          setError("File size exceeds 25 MB limit.");
+                          setFile(null);
+                        } else {
+                          setError("");
+                          setFile(f);
+                        }
+                      }} />
                     {file ? (
                       <>
                         <div style={{ fontSize: "36px", marginBottom: "8px" }}>📄</div>
@@ -169,7 +200,7 @@ export default function UploadPage() {
                         </p>
                         <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.76rem",
                           color: "#9a7845", marginTop: "6px" }}>
-                          PDF, DOC, DOCX, PPT, PPTX · Max 25 MB
+                          PDF, DOC, PPT, JPG, PNG, WEBP · Max 25 MB
                         </p>
                       </>
                     )}
@@ -183,9 +214,9 @@ export default function UploadPage() {
                     letterSpacing: "0.04em", textTransform: "uppercase" }}>Category</label>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
                     {CATEGORIES.map(c => {
-                      const active = category === c;
+                      const active = category?.value === c.value;
                       return (
-                        <button key={c} type="button" id={`cat-btn-${c}`}
+                        <button key={c.value} type="button" id={`cat-btn-${c.value}`}
                           onClick={() => setCategory(active ? "" : c)}
                           style={{
                             padding: "7px 16px",
@@ -202,7 +233,7 @@ export default function UploadPage() {
                           onMouseLeave={e => { if (!active) { e.currentTarget.style.borderColor = "#ddd0b8"; e.currentTarget.style.color = "#5c4021"; } }}
                         >
                           {active && <span style={{ marginRight: "4px", fontSize: "9px" }}>✦</span>}
-                          {c}
+                          {c.label}
                         </button>
                       );
                     })}
@@ -260,26 +291,31 @@ export default function UploadPage() {
                 </div>
 
                 {/* ── Submit ── */}
+                {error && (
+                  <div style={{ background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: "8px", padding: "10px 14px", fontFamily: "'Inter', sans-serif", fontSize: "0.83rem", color: "#b91c1c" }}>
+                    {error}
+                  </div>
+                )}
                 <button id="upload-submit" type="submit"
-                  disabled={!file || !category || !title}
+                  disabled={!file || !category || !title || !subject || loading}
                   style={{
                     padding: "14px",
-                    background: (file && category && title)
+                    background: (file && category && title && subject && !loading)
                       ? "linear-gradient(135deg, #d97706 0%, #b45309 100%)"
                       : "#e9dcc8",
                     border: "none", borderRadius: "10px",
-                    color: (file && category && title) ? "#fff" : "#b0916a",
+                    color: (file && category && title && subject && !loading) ? "#fff" : "#b0916a",
                     fontFamily: "'Inter', sans-serif",
                     fontSize: "0.95rem", fontWeight: 600,
-                    cursor: (file && category && title) ? "pointer" : "not-allowed",
+                    cursor: (file && category && title && subject && !loading) ? "pointer" : "not-allowed",
                     letterSpacing: "0.02em",
-                    boxShadow: (file && category && title) ? "0 4px 16px rgba(180,83,9,0.28)" : "none",
+                    boxShadow: (file && category && title && subject && !loading) ? "0 4px 16px rgba(180,83,9,0.28)" : "none",
                     transition: "all 0.2s",
                   }}
-                  onMouseEnter={e => { if (file && category && title) { e.currentTarget.style.transform = "translateY(-1px)"; e.currentTarget.style.boxShadow = "0 6px 22px rgba(180,83,9,0.35)"; } }}
-                  onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = (file && category && title) ? "0 4px 16px rgba(180,83,9,0.28)" : "none"; }}
+                  onMouseEnter={e => { if (file && category && title && subject && !loading) { e.currentTarget.style.transform = "translateY(-1px)"; e.currentTarget.style.boxShadow = "0 6px 22px rgba(180,83,9,0.35)"; } }}
+                  onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = (file && category && title && subject && !loading) ? "0 4px 16px rgba(180,83,9,0.28)" : "none"; }}
                 >
-                  Submit for Admin Review →
+                  {loading ? "Uploading Document..." : "Submit for Admin Review →"}
                 </button>
               </div>
             </form>

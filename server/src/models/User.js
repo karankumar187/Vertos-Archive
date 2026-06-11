@@ -1,7 +1,6 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const validator = require('validator');
-const jwt = require('jsonwebtoken');
 
 const userSchema = new mongoose.Schema({
     name: {
@@ -23,25 +22,28 @@ const userSchema = new mongoose.Schema({
     },
     reg_no: {
         type: Number,
-        required: true,
         unique: true,
+        sparse: true, // allows multiple nulls (Google users without reg_no)
     },
     password: {
         type: String,
-        required: true,
         minlength: 6,
+        select: false, // never returned in queries by default
     },
     role: {
         type: String,
         enum: ['student', 'admin'],
         default: 'student',
     },
-    tokens: [{
-        token: {
-            type: String,
-            required: true,
-        }
-    }],
+    authProvider: {
+        type: String,
+        enum: ['local', 'google'],
+        default: 'local',
+    },
+    googleId: {
+        type: String,
+        sparse: true,
+    },
     avatar: {
         type: String,
         default: '',
@@ -52,23 +54,21 @@ const userSchema = new mongoose.Schema({
     },
 }, { timestamps: true });
 
-// Hash password before saving
-userSchema.pre('save', async function (next) {
-    if (this.isModified('password')) {
-        this.password = await bcrypt.hash(this.password, 10);
-    }
+// Hash password before saving — only for local auth, only when modified
+userSchema.pre('save', async function () {
+    if (!this.isModified('password') || !this.password) return;
+    this.password = await bcrypt.hash(this.password, 10);
+});
 
-    const salt = await bcrypt.genSalt(10);
-    this.password = await bcrypt.hash(this.password, salt);
-    this.updatedAt = Date.now();
-    next();
-})
-
-userSchema.methods.comparePassword = async function (candidatePassword) {
+// Compare passwords (used in login)
+userSchema.methods.matchPassword = async function (candidatePassword) {
     if (!this.password) {
-        throw new Error('Password not set for this user');
+        throw new Error('This account uses Google sign-in. No password set.');
     }
     return await bcrypt.compare(candidatePassword, this.password);
 };
+
+// Alias for backward compatibility
+userSchema.methods.comparePassword = userSchema.methods.matchPassword;
 
 module.exports = mongoose.model('User', userSchema);

@@ -17,6 +17,18 @@ const contributorSchema = new mongoose.Schema({
     badges: [{
         type: String,
     }],
+    approvedUploads: {
+        type: Number,
+        default: 0,
+    },
+    rejectedUploads: {
+        type: Number,
+        default: 0,
+    },
+    totalUploads: {
+        type: Number,
+        default: 0,
+    },
 }, { timestamps: true });
 
 module.exports = mongoose.model('Contributor', contributorSchema);
