@@ -2,14 +2,13 @@ const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
 const OpenAI = require("openai");
 
-const openrouter = new OpenAI({
-  apiKey: process.env.OPENROUTER_API_KEY,
-  baseURL: "https://openrouter.ai/api/v1",
+const openaiClient = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
 });
 
 /**
  * Generates topics and suggested questions from document text chunks
- * using google/gemini-2.5-flash via OpenRouter.
+ * using gpt-4o-mini.
  */
 exports.generateDocumentInsights = async (textChunks) => {
     try {
@@ -32,8 +31,8 @@ Output exactly in this JSON format (do not include markdown blocks or any other 
 ${contextText}
 `;
 
-        const completion = await openrouter.chat.completions.create({
-            model: "google/gemini-2.5-flash",
+        const completion = await openaiClient.chat.completions.create({
+            model: "gpt-4o-mini",
             response_format: { type: "json_object" },
             messages: [{ role: "user", content: prompt }]
         });
@@ -41,9 +40,29 @@ ${contextText}
         const resultText = completion.choices[0].message.content;
         return JSON.parse(resultText);
     } catch (error) {
-        console.error("Error generating insights via OpenRouter:", error);
+        console.error("Error generating insights via OpenAI:", error);
         throw error;
     }
 };
 
-exports.openrouter = openrouter;
+/**
+ * Generates embeddings for an array of text chunks using text-embedding-3-small.
+ * Returns an array of vector arrays.
+ */
+exports.generateEmbeddings = async (textChunks) => {
+    try {
+        const response = await openaiClient.embeddings.create({
+            model: "text-embedding-3-small",
+            input: textChunks,
+            encoding_format: "float",
+        });
+        
+        // Return an array of vectors in the same order as the input chunks
+        return response.data.sort((a, b) => a.index - b.index).map(item => item.embedding);
+    } catch (error) {
+        console.error("Error generating embeddings via OpenAI:", error);
+        throw error;
+    }
+};
+
+exports.openaiClient = openaiClient;

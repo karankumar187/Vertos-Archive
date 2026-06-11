@@ -11,9 +11,12 @@ const config = require('./src/config/config');
 // Load environment variables
 dotenv.config();
 
+const { initQdrant } = require('./src/services/qdrant.service');
+
 // Connect to Database
 connectDB().then(() => {
     console.log('MongoDB Connected successfully...');
+    return initQdrant(); // Initialize Vector DB
 }).catch(err => {
     console.error('Database connection error:', err);
 });

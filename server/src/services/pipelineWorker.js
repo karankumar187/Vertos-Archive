@@ -2,7 +2,7 @@ const Document = require('../models/Document');
 const Suggestion = require('../models/Suggestion');
 const { extractTextFromUrl } = require('./documentParser');
 const { chunkText } = require('./textChunker');
-const { generateDocumentInsights } = require('./openrouter.service');
+const { generateDocumentInsights } = require('./openai.service');
 
 /**
  * Asynchronously processes an approved document:
@@ -34,31 +34,43 @@ exports.processDocument = async (documentId) => {
         console.log(`[Pipeline] Generated ${chunks.length} chunks.`);
 
         // 3. Generate LLM Insights
-        console.log(`[Pipeline] Generating LLM insights via OpenRouter...`);
+        console.log(`[Pipeline] Generating LLM insights via OpenAI (gpt-4o-mini)...`);
         let insights = { topics: "", questions: "" };
         
         if (chunks.length > 0) {
-            try {
-                insights = await generateDocumentInsights(chunks);
-            } catch (llmError) {
-                if (llmError.status === 401 || llmError.status === 403) {
-                    console.warn('[Pipeline] ⚠️  OpenRouter auth/credit error. AI suggestions skipped. Add credits at openrouter.ai to enable this feature.');
-                } else {
-                    console.error(`[Pipeline] LLM Insight generation failed:`, llmError.message);
-                }
-            }
+            insights = await generateDocumentInsights(chunks);
+
+            // 4. Generate Embeddings & Push to Vector DB
+            console.log(`[Pipeline] Generating embeddings for ${chunks.length} chunks...`);
+            const { generateEmbeddings } = require('./openai.service');
+            const embeddings = await generateEmbeddings(chunks);
+            
+            console.log(`[Pipeline] Pushing chunks to Qdrant Vector DB...`);
+            const { pushChunksToQdrant } = require('./qdrant.service');
+            
+            // Build metadata payload
+            const metadata = {
+                title: doc.title,
+                subject: doc.subject || '',
+                category: doc.category || '',
+                source: doc.source || 'User Upload',
+                uploaderID: doc.uploaderID ? doc.uploaderID.toString() : '',
+                // pageCount: doc.pageCount || 0 // Left out for now as per Option A
+            };
+            
+            await pushChunksToQdrant(documentId, chunks, embeddings, metadata);
         }
 
-        // 4. Save Insights to Database
+        // 5. Save generated Insights to MongoDB
         console.log(`[Pipeline] Saving insights to MongoDB...`);
         const suggestion = new Suggestion({
             documentId: doc._id,
-            topics: insights.topics || "No topics generated.",
+            topics: insights.topics || "General Topics",
             questions: insights.questions || "No questions generated."
         });
         await suggestion.save();
 
-        // 5. Update Document Status
+        // 6. Mark Document as Indexed
         doc.indexed = true;
         await doc.save();
 

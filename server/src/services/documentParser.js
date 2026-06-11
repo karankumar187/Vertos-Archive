@@ -1,7 +1,8 @@
 const axios = require('axios');
 const pdfParse = require('pdf-parse');
 const officeParser = require('officeparser');
-const { openrouter } = require('./openrouter.service');
+// Reuse the shared openai client (already configured with the correct API key)
+const { openaiClient } = require('./openai.service');
 
 // MIME type → category map
 const MIME_TYPES = {
@@ -37,37 +38,28 @@ const getFileCategory = (mimeTypeOrUrl) => {
 };
 
 /**
- * Uses Gemini 2.5 Flash vision (via OpenRouter) to OCR an image URL.
- * Returns empty string on auth/credit errors so pipeline continues gracefully.
+ * Uses GPT-4o-mini vision (via OpenAI) to OCR an image URL.
  */
 const extractTextFromImage = async (imageUrl) => {
-    try {
-        const completion = await openrouter.chat.completions.create({
-            model: 'google/gemini-2.5-flash',
-            messages: [
-                {
-                    role: 'user',
-                    content: [
-                        {
-                            type: 'text',
-                            text: 'Please extract and transcribe ALL readable text content from this image. Include headings, body text, tables, labels, and any other written content. Output only the extracted text, nothing else.',
-                        },
-                        {
-                            type: 'image_url',
-                            image_url: { url: imageUrl },
-                        },
-                    ],
-                },
-            ],
-        });
-        return completion.choices[0].message.content || '';
-    } catch (err) {
-        if (err.status === 401 || err.status === 403) {
-            console.warn('[Parser] ⚠️  OpenRouter auth/credit error during image OCR. Add credits at openrouter.ai to enable vision OCR. Skipping OCR for this file.');
-            return '[Image uploaded — OCR requires OpenRouter credits. Visit openrouter.ai to top up.]';
-        }
-        throw err; // re-throw unexpected errors
-    }
+    const completion = await openaiClient.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+            {
+                role: 'user',
+                content: [
+                    {
+                        type: 'text',
+                        text: 'Please extract and transcribe ALL readable text content from this image. Include headings, body text, tables, labels, and any other written content. Output only the extracted text, nothing else.',
+                    },
+                    {
+                        type: 'image_url',
+                        image_url: { url: imageUrl },
+                    },
+                ],
+            },
+        ],
+    });
+    return completion.choices[0].message.content || '';
 };
 
 /**
@@ -97,7 +89,7 @@ exports.extractTextFromUrl = async (fileUrl, mimeType) => {
             extractedText = await officeParser.parseOfficeAsync(buffer);
         }
         else if (category === 'image') {
-            console.log(`[Parser] Running OCR via Gemini Vision on image URL...`);
+            console.log(`[Parser] Running OCR via GPT-4o-mini Vision on image URL...`);
             extractedText = await extractTextFromImage(fileUrl);
             console.log(`[Parser] OCR complete. Extracted ${extractedText.length} characters.`);
         }
