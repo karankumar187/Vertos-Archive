@@ -114,11 +114,43 @@ const extractTextFromImage = async (imageUrl) => {
  * @returns {Promise<string>}  - The full OCR-extracted text.
  */
 const ocrPdfBufferWithVision = async (buffer, pageCount = 0) => {
-    console.log(`[Parser] Starting GPT-4o Vision OCR on PDF buffer (${buffer.byteLength} bytes, ~${pageCount} pages)...`);
+    console.log(`[Parser] Uploading PDF buffer to Cloudinary for Image Conversion...`);
+    
+    // 1. Upload the PDF buffer to Cloudinary as an 'image' to enable page-by-page JPG conversion
+    const uploadResult = await new Promise((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+            { resource_type: 'image', folder: 'temp_ocr_processing' },
+            (error, result) => {
+                if (error) reject(error);
+                else resolve(result);
+            }
+        );
+        uploadStream.end(buffer);
+    });
 
-    const base64Pdf = buffer.toString('base64');
+    const totalPages = uploadResult.pages || pageCount || 1;
+    const maxPages = Math.min(totalPages, 15); // Cap to 15 pages to save OpenAI tokens
+    console.log(`[Parser] Uploaded temporary PDF to Cloudinary. Extracted ${totalPages} pages. OCRing up to ${maxPages} pages...`);
 
-    // Send the entire PDF as a base64 data URI — GPT-4o handles multi-page PDFs natively
+    // 2. Construct image URLs for each page
+    const baseUrlParts = uploadResult.secure_url.split('/upload/');
+    const baseBeforeUpload = baseUrlParts[0] + '/upload/';
+    // Replace extension at the very end of the URL
+    const baseAfterUpload = baseUrlParts[1].replace(/\.pdf$/i, '.jpg');
+    
+    const imageContents = [];
+    for (let i = 1; i <= maxPages; i++) {
+        const pageUrl = `${baseBeforeUpload}pg_${i}/${baseAfterUpload}`;
+        imageContents.push({
+            type: 'image_url',
+            image_url: {
+                url: pageUrl,
+                detail: 'high',
+            },
+        });
+    }
+
+    // 3. Send to GPT-4o-mini Vision
     const completion = await openaiClient.chat.completions.create({
         model: 'gpt-4o-mini',
         messages: [
@@ -129,21 +161,18 @@ const ocrPdfBufferWithVision = async (buffer, pageCount = 0) => {
                         type: 'text',
                         text: 'This is a scanned or handwritten academic document. Please carefully extract and transcribe ALL readable text from every page. Include all headings, body text, bullet points, tables, diagram labels, question numbers, MCQ options, and any other written content exactly as it appears. Go page by page. Output ONLY the raw extracted text — no commentary, no summaries, no explanations.',
                     },
-                    {
-                        type: 'image_url',
-                        image_url: {
-                            url: `data:application/pdf;base64,${base64Pdf}`,
-                            detail: 'high',
-                        },
-                    },
+                    ...imageContents,
                 ],
             },
         ],
         max_tokens: 8000,
     });
 
+    // 4. Cleanup: Delete the temporary PDF from Cloudinary
+    await cloudinary.uploader.destroy(uploadResult.public_id, { resource_type: 'image' }).catch(err => console.error("Failed to cleanup temp OCR PDF:", err));
+
     const text = completion.choices[0].message.content || '';
-    console.log(`[Parser] Vision OCR complete. Extracted ${text.length} characters from PDF.`);
+    console.log(`[Parser] Vision OCR complete. Extracted ${text.length} characters.`);
     return text;
 };
 
