@@ -113,7 +113,14 @@ exports.processDocument = async (documentId) => {
             try {
                 console.log(`[Pipeline] Generating embeddings for ${chunks.length} chunks...`);
                 const { generateEmbeddings } = require('./openai.service');
-                const embeddings = await generateEmbeddings(chunks);
+                
+                // Contextualize chunks with metadata so each chunk is semantically linked to the document topic
+                const contextualizedChunks = chunks.map(chunk => {
+                    const header = `[Document Context: Title: "${doc.title}", Subject: "${doc.subject || 'N/A'}", Category: "${doc.category || 'N/A'}"]\n`;
+                    return header + chunk;
+                });
+
+                const embeddings = await generateEmbeddings(contextualizedChunks);
 
                 console.log(`[Pipeline] Pushing chunks to Qdrant Vector DB...`);
                 const { pushChunksToQdrant } = require('./qdrant.service');
@@ -129,7 +136,7 @@ exports.processDocument = async (documentId) => {
                     files: doc.files || [],
                 };
 
-                await pushChunksToQdrant(documentId, chunks, embeddings, metadata);
+                await pushChunksToQdrant(documentId, contextualizedChunks, embeddings, metadata);
             } catch (qdrantErr) {
                 console.warn(`[Pipeline] Qdrant push failed (non-fatal):`, qdrantErr.message);
             }

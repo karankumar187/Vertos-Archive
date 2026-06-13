@@ -220,7 +220,14 @@ export default function DashboardPage() {
                             <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.7rem", color: "#9a7845" }}>{doc.category} · {doc.subject}</p>
                           </div>
                         </div>
-                        <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.7rem", color: "#c8861a", background: "#fef3dc", padding: "3px 8px", borderRadius: "4px" }}>New</span>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                          <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.7rem", color: "#c8861a", background: "#fef3dc", padding: "3px 8px", borderRadius: "4px" }}>New</span>
+                          {doc.fileUrl && (
+                            <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer" style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.7rem", color: "#fff", background: "#c8861a", padding: "3px 8px", borderRadius: "4px", textDecoration: "none", fontWeight: 600, transition: "background 0.2s" }} onMouseEnter={e => e.currentTarget.style.background = "#a86d10"} onMouseLeave={e => e.currentTarget.style.background = "#c8861a"}>
+                              Open ↗
+                            </a>
+                          )}
+                        </div>
                       </div>
                     ))
                   )}

@@ -148,8 +148,6 @@ exports.checkDuplicate = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Title and subject are required' });
         }
         
-        // Simple metadata similarity: Check if a document exists with exact/similar title in same subject
-        // For production, this should integrate with Qdrant vector search
         const regexTitle = new RegExp(title, 'i');
         const duplicates = await Document.find({
             $or: [
@@ -166,5 +164,80 @@ exports.checkDuplicate = async (req, res) => {
     } catch (error) {
         console.error('Duplicate check error:', error);
         res.status(500).json({ success: false, message: 'Server error checking duplicates' });
+    }
+};
+
+const { deleteDocumentEmbeddings } = require('../services/qdrant.service');
+const { cloudinary } = require('../config/cloudinary');
+
+// @desc    Get all live/approved documents
+// @route   GET /api/admin/documents
+// @access  Private/Admin
+exports.getLiveDocuments = async (req, res) => {
+    try {
+        const docs = await Document.find({ verified: true })
+            .populate('uploaderID', 'name email')
+            .sort({ createdAt: -1 });
+            
+        res.status(200).json({ success: true, count: docs.length, data: docs });
+    } catch (error) {
+        console.error('Fetch live docs error:', error);
+        res.status(500).json({ success: false, message: 'Server error fetching live documents' });
+    }
+};
+
+// @desc    Permanently delete a live document from Mongo, Cloudinary, and Qdrant
+// @route   DELETE /api/admin/documents/:id
+// @access  Private/Admin
+exports.deleteDocument = async (req, res) => {
+    try {
+        const doc = await Document.findById(req.params.id);
+        
+        if (!doc) {
+            return res.status(404).json({ success: false, message: 'Document not found' });
+        }
+
+        // 1. Delete from Cloudinary
+        if (doc.fileUrl) {
+            try {
+                const parts = doc.fileUrl.split('/upload/');
+                if (parts.length > 1) {
+                    const pathWithVersion = parts[1];
+                    const pathWithExt = pathWithVersion.replace(/^v\d+\//, ''); 
+                    const pathWithoutExt = pathWithExt.split('.').slice(0, -1).join('.');
+                    
+                    // Try destroying as both raw and image to be safe
+                    await cloudinary.uploader.destroy(pathWithExt, { resource_type: 'raw' }).catch(() => {});
+                    await cloudinary.uploader.destroy(pathWithoutExt, { resource_type: 'image' }).catch(() => {});
+                }
+            } catch (err) {
+                console.error('Error deleting from Cloudinary:', err);
+            }
+        }
+
+        // 2. Delete from Qdrant
+        try {
+            await deleteDocumentEmbeddings(doc._id);
+        } catch (err) {
+            console.error('Error deleting from Qdrant:', err);
+        }
+
+        // 3. Deduct Points from Contributor (Penalize for deleted doc)
+        if (doc.uploaderID) {
+            const contributor = await Contributor.findOne({ userId: doc.uploaderID });
+            if (contributor) {
+                contributor.approvedUploads = Math.max(0, contributor.approvedUploads - 1);
+                contributor.points = Math.max(0, contributor.points - 10);
+                await contributor.save();
+            }
+        }
+
+        // 4. Delete from MongoDB
+        await Document.findByIdAndDelete(doc._id);
+
+        res.status(200).json({ success: true, message: 'Document permanently deleted from all storage layers.' });
+    } catch (error) {
+        console.error('Delete document error:', error);
+        res.status(500).json({ success: false, message: 'Server error deleting document' });
     }
 };

@@ -2,6 +2,7 @@ const Conversation = require('../models/Conversation');
 const Message = require('../models/Message');
 const { performHybridSearch } = require('../services/search.service');
 const { openaiClient } = require('../services/openai.service');
+const Document = require('../models/Document');
 
 // Get all conversations for a user
 exports.getConversations = async (req, res) => {
@@ -53,13 +54,27 @@ exports.sendMessage = async (req, res) => {
         return res.status(400).json({ success: false, message: 'Message content is required' });
     }
 
-    // Auto-extract course codes (e.g., "int 221", "CSE332") from user query to strictly filter sources
+    // Auto-extract course codes (e.g., "int 221", "CSE332", "174") from user query to strictly filter sources
     let currentFilters = filters || {};
-    const courseMatch = content.match(/\b([a-zA-Z]{3})\s*(\d{3})\b/i);
+    const fullCourseMatch = content.match(/\b([a-zA-Z]{3})\s*(\d{3})\b/i);
+    const numCourseMatch = content.match(/\b(\d{3})\b/);
     
-    if (courseMatch) {
-        currentFilters.subject = `${courseMatch[1].toUpperCase()} ${courseMatch[2]}`;
-    } else {
+    if (fullCourseMatch) {
+        currentFilters.subject = `${fullCourseMatch[1].toUpperCase()} ${fullCourseMatch[2]}`;
+    } else if (numCourseMatch) {
+        try {
+            const courseNum = numCourseMatch[1];
+            const regexMatch = new RegExp(`^[A-Za-z]{3}\\s*${courseNum}$`, 'i');
+            const uniqueSubjects = await Document.distinct('subject', { subject: regexMatch });
+            if (uniqueSubjects.length === 1) {
+                currentFilters.subject = uniqueSubjects[0].toUpperCase();
+            }
+        } catch (err) {
+            console.error('Error resolving course number alias:', err);
+        }
+    }
+
+    if (!currentFilters.subject) {
         // Fallback to alias mapping if they type the course name instead of the code
         const courseAliases = {
             'mvc': 'INT 221',

@@ -130,5 +130,29 @@ exports.searchQdrant = async (queryEmbedding, limit = 5, filter = null) => {
         throw error;
     }
 };
+/**
+ * Deletes all chunks associated with a given document from Qdrant.
+ * 
+ * @param {string} documentId - The MongoDB ObjectId of the document.
+ */
+exports.deleteDocumentEmbeddings = async (documentId) => {
+    try {
+        await client.delete(COLLECTION_NAME, {
+            wait: true,
+            filter: {
+                must: [
+                    {
+                        key: 'documentId',
+                        match: { value: documentId.toString() }
+                    }
+                ]
+            }
+        });
+        console.log(`[Qdrant] Successfully deleted all chunks for document ${documentId}`);
+    } catch (error) {
+        console.error(`[Qdrant] Error deleting chunks for document ${documentId}:`, error);
+        throw error;
+    }
+};
 
 exports.qdrantClient = client;

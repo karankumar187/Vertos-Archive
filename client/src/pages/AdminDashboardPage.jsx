@@ -181,13 +181,19 @@ function ReviewModal({ doc, mode, onClose, onSuccess }) {
 
 export default function AdminDashboardPage() {
     const [pendingDocs, setPendingDocs] = useState([]);
+    const [liveDocs, setLiveDocs] = useState([]);
+    const [activeTab, setActiveTab] = useState('pending'); // 'pending' | 'live'
     const [loading, setLoading] = useState(true);
     const [duplicateChecks, setDuplicateChecks] = useState({});
     const [modal, setModal] = useState(null); // { doc, mode: 'approve'|'reject' }
 
     useEffect(() => {
-        fetchPending();
-    }, []);
+        if (activeTab === 'pending') {
+            fetchPending();
+        } else {
+            fetchLiveDocs();
+        }
+    }, [activeTab]);
 
     const fetchPending = async () => {
         try {
@@ -201,6 +207,35 @@ export default function AdminDashboardPage() {
             alert("Failed to load moderation queue.");
         } finally {
             setLoading(false);
+        }
+    };
+
+    const fetchLiveDocs = async () => {
+        try {
+            setLoading(true);
+            const { data } = await adminAPI.getLiveDocuments();
+            if (data.success) {
+                setLiveDocs(data.data);
+            }
+        } catch (error) {
+            console.error("Failed to fetch live documents", error);
+            alert("Failed to load live documents.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleDeleteDoc = async (id) => {
+        if (!window.confirm("Are you sure you want to permanently delete this document from MongoDB, Cloudinary, and Qdrant? This cannot be undone.")) return;
+        
+        try {
+            const { data } = await adminAPI.deleteDocument(id);
+            if (data.success) {
+                setLiveDocs(prev => prev.filter(d => d._id !== id));
+            }
+        } catch (err) {
+            console.error(err);
+            alert("Failed to delete document.");
         }
     };
 
@@ -224,23 +259,42 @@ export default function AdminDashboardPage() {
 
     return (
         <div style={{ maxWidth: "1200px", margin: "40px auto", padding: "0 24px", width: "100%" }}>
-            <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: "2.2rem", color: "#1f1209", marginBottom: "8px" }}>
-                Moderation <span style={{ color: "#c8861a" }}>Queue</span>
-            </h1>
-            <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "1rem", color: "#7a5a2a", marginBottom: "32px" }}>
-                Review, edit metadata, and approve or reject community uploads.
-            </p>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '32px' }}>
+                <div>
+                    <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: "2.2rem", color: "#1f1209", marginBottom: "8px" }}>
+                        Admin <span style={{ color: "#c8861a" }}>Dashboard</span>
+                    </h1>
+                    <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "1rem", color: "#7a5a2a" }}>
+                        Manage moderation queue and live documents.
+                    </p>
+                </div>
+                
+                <div style={{ display: 'flex', gap: '8px', background: '#fdfaf5', padding: '6px', borderRadius: '12px', border: '1px solid #e9dcc8' }}>
+                    <button onClick={() => setActiveTab('pending')}
+                        style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', background: activeTab === 'pending' ? '#c8861a' : 'transparent', color: activeTab === 'pending' ? '#fff' : '#8b6535', fontWeight: 600, cursor: 'pointer', transition: '0.2s' }}>
+                        Pending Queue
+                    </button>
+                    <button onClick={() => setActiveTab('live')}
+                        style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', background: activeTab === 'live' ? '#c8861a' : 'transparent', color: activeTab === 'live' ? '#fff' : '#8b6535', fontWeight: 600, cursor: 'pointer', transition: '0.2s' }}>
+                        Live Documents
+                    </button>
+                </div>
+            </div>
 
             <div style={{ background: "#ffffff", border: "1px solid #e9dcc8", borderRadius: "16px", overflow: "hidden", boxShadow: "0 4px 20px rgba(160,110,40,0.06)" }}>
                 {loading ? (
                     <div style={{ padding: "40px", textAlign: "center", color: "#8b6535", fontFamily: "'Inter', sans-serif" }}>Loading queue...</div>
-                ) : pendingDocs.length === 0 ? (
+                ) : activeTab === 'pending' && pendingDocs.length === 0 ? (
                     <div style={{ padding: "60px 40px", textAlign: "center" }}>
                         <div style={{ fontSize: "40px", marginBottom: "16px" }}>🎉</div>
                         <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.4rem", color: "#1f1209" }}>All caught up!</h3>
                         <p style={{ fontFamily: "'Inter', sans-serif", color: "#9a7845", marginTop: "8px" }}>There are no pending documents in the queue.</p>
                     </div>
-                ) : (
+                ) : activeTab === 'live' && liveDocs.length === 0 ? (
+                    <div style={{ padding: "60px 40px", textAlign: "center" }}>
+                        <p style={{ fontFamily: "'Inter', sans-serif", color: "#9a7845", marginTop: "8px" }}>No live documents found.</p>
+                    </div>
+                ) : activeTab === 'pending' ? (
                     <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: "'Inter', sans-serif", fontSize: "0.9rem" }}>
                         <thead>
                             <tr style={{ background: "#fdfaf5", borderBottom: "1px solid #e9dcc8", textAlign: "left", color: "#8b6535", textTransform: "uppercase", fontSize: "0.75rem", letterSpacing: "0.05em" }}>
@@ -318,6 +372,58 @@ export default function AdminDashboardPage() {
                                     </td>
                                 </tr>
                             ))}
+                        </tbody>
+                    </table>
+                ) : (
+                    <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: "'Inter', sans-serif", fontSize: "0.9rem" }}>
+                        <thead>
+                            <tr style={{ background: "#fdfaf5", borderBottom: "1px solid #e9dcc8", textAlign: "left", color: "#8b6535", textTransform: "uppercase", fontSize: "0.75rem", letterSpacing: "0.05em" }}>
+                                <th style={{ padding: "16px 20px" }}>Document</th>
+                                <th style={{ padding: "16px 20px" }}>Category / Subject</th>
+                                <th style={{ padding: "16px 20px" }}>Uploader</th>
+                                <th style={{ padding: "16px 20px" }}>Uploaded</th>
+                                <th style={{ padding: "16px 20px" }}>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {liveDocs.map(doc => (
+                            <tr key={doc._id} style={{ borderBottom: "1px solid #f0e6d2", background: "#fff", transition: "background 0.2s" }}
+                                onMouseEnter={e => e.currentTarget.style.background = "#fcfaf7"} onMouseLeave={e => e.currentTarget.style.background = "#fff"}>
+                                
+                                <td style={{ padding: "16px 20px" }}>
+                                    <p style={{ fontWeight: 600, color: "#2d1f0a", marginBottom: "4px" }}>{doc.title}</p>
+                                    <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                                        <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer" style={{ color: "#c8861a", fontSize: "0.8rem", textDecoration: "none", fontWeight: 500 }}>
+                                            Preview ↗
+                                        </a>
+                                        {doc.pageCount && <span style={{ color: "#9a7845", fontSize: "0.8rem" }}>{doc.pageCount} Pages</span>}
+                                    </div>
+                                </td>
+
+                                <td style={{ padding: "16px 20px" }}>
+                                    <span style={{ display: "inline-block", background: "#fdf3e1", color: "#b47a18", padding: "4px 10px", borderRadius: "20px", fontSize: "0.75rem", fontWeight: 600, textTransform: "capitalize", marginBottom: "4px" }}>
+                                        {doc.category}
+                                    </span>
+                                    <p style={{ color: "#7a5a2a", fontSize: "0.85rem", fontWeight: 500 }}>{doc.subject}</p>
+                                </td>
+
+                                <td style={{ padding: "16px 20px" }}>
+                                    <p style={{ color: "#3d2800", fontWeight: 500 }}>{doc.uploaderID?.name || 'Unknown'}</p>
+                                    <p style={{ color: "#9a7845", fontSize: "0.8rem" }}>{doc.uploaderID?.email || ''}</p>
+                                </td>
+
+                                <td style={{ padding: "16px 20px", color: "#7a5a2a", fontSize: "0.85rem" }}>
+                                    {new Date(doc.createdAt).toLocaleDateString('en-GB')}
+                                </td>
+
+                                <td style={{ padding: "16px 20px" }}>
+                                    <button onClick={() => handleDeleteDoc(doc._id)}
+                                        style={{ padding: '6px 14px', background: '#fff', border: '1px solid #fecaca', borderRadius: '6px', color: '#dc2626', fontWeight: 600, cursor: 'pointer', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <span>🗑️</span> Delete
+                                    </button>
+                                </td>
+                            </tr>
+                        ))}
                         </tbody>
                     </table>
                 )}
