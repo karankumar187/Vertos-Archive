@@ -232,7 +232,19 @@ exports.deleteDocument = async (req, res) => {
             }
         }
 
-        // 4. Delete from MongoDB
+        // 4. Scrub source references from old chat messages so deleted docs don't appear as broken links
+        try {
+            const Message = require('../models/Message');
+            await Message.updateMany(
+                { 'sources.documentId': doc._id },
+                { $pull: { sources: { documentId: doc._id } } }
+            );
+            console.log(`[Admin] Scrubbed source references for doc ${doc._id} from chat messages.`);
+        } catch (err) {
+            console.error('Error cleaning up message sources:', err);
+        }
+
+        // 5. Delete from MongoDB
         await Document.findByIdAndDelete(doc._id);
 
         res.status(200).json({ success: true, message: 'Document permanently deleted from all storage layers.' });
