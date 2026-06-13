@@ -1,7 +1,14 @@
 import { useState, useEffect } from "react";
 import { adminAPI } from "../services/api";
 
-const CATEGORIES = ["notes", "syllabus", "previous-papers", "placements", "faculty", "university-info"];
+const CATEGORIES = [
+  { label: "Notes",          value: "notes" },
+  { label: "Syllabus",       value: "syllabus" },
+  { label: "Previous Papers",value: "pyq" },
+  { label: "Placements",     value: "placements" },
+  { label: "Faculty",        value: "faculty" },
+  { label: "University Info",value: "university" },
+];
 
 function ReviewModal({ doc, mode, onClose, onSuccess }) {
     const [form, setForm] = useState({
@@ -123,7 +130,7 @@ function ReviewModal({ doc, mode, onClose, onSuccess }) {
                                     style={{ width: '100%', padding: '9px 13px', border: '1px solid #ddd0b8', borderRadius: '8px', fontFamily: "'Inter', sans-serif", fontSize: '0.875rem', color: '#1f1209', outline: 'none', background: '#fff', boxSizing: 'border-box', cursor: 'pointer' }}
                                 >
                                     {CATEGORIES.map(c => (
-                                        <option key={c} value={c}>{c.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</option>
+                                        <option key={c.value} value={c.value}>{c.label}</option>
                                     ))}
                                 </select>
                             </div>
