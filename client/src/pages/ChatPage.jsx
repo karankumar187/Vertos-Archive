@@ -34,6 +34,22 @@ const SUGGESTIONS = [
   "Faculty details for CSE department",
 ];
 
+const preprocessMath = (text) => {
+    if (!text) return "";
+    let res = text;
+    // Fix standard escaped brackets
+    res = res.replace(/\\\[([\s\S]*?)\\\]/g, '$$$$$1$$$$');
+    res = res.replace(/\\\((.*?)\\\)/g, '$$$1$$');
+    
+    // Fix raw [ ... ] for block math if it contains \begin, \frac, \int, ^, \, or =
+    // Only if not followed by ( to avoid breaking markdown links
+    res = res.replace(/\[\s*([^[\]]*?[\^\\=][^[\]]*?)\s*\](?!\()/g, '$$$$ $1 $$$$');
+
+    // Fix raw ( ... ) for inline math if it contains ^, \, or =
+    res = res.replace(/\(\s*([^()]*?[\^\\=][^()]*?)\s*\)/g, '$$ $1 $$');
+    return res;
+};
+
 function MessageBubble({ msg }) {
   const isUser = msg.role === "user";
   const [showSources, setShowSources] = useState(false);
@@ -83,7 +99,7 @@ function MessageBubble({ msg }) {
                 remarkPlugins={[remarkGfm, remarkMath]}
                 rehypePlugins={[rehypeKatex]}
              >
-               {msg.content}
+               {preprocessMath(msg.content)}
              </ReactMarkdown>
           )}
         </div>
