@@ -102,9 +102,23 @@ exports.performHybridSearch = async (query, filters = {}) => {
             };
         });
 
-        // 6. Sort by RRF score descending and return top 40
+        // 6. Sort by RRF score descending
         fusedResults.sort((a, b) => b.rrfScore - a.rrfScore);
-        const finalResults = fusedResults.slice(0, 40);
+        
+        // 7. Strictly enforce subject filter — when a specific course is requested,
+        // remove any chunks that don't belong to that course.
+        // This prevents keyword matches from unrelated subjects leaking in via RRF.
+        let strictResults = fusedResults;
+        if (filters.subject) {
+            const targetSubject = filters.subject.toLowerCase().replace(/\s+/g, '');
+            strictResults = fusedResults.filter(r => {
+                const chunkSubject = (r.metadata.subject || '').toLowerCase().replace(/\s+/g, '');
+                return chunkSubject === targetSubject;
+            });
+            console.log(`[HybridSearch] Subject filter "${filters.subject}" applied: ${fusedResults.length} → ${strictResults.length} chunks.`);
+        }
+        
+        const finalResults = strictResults.slice(0, 40);
 
         console.log(`[HybridSearch] Returning ${finalResults.length} fused chunks.`);
         return finalResults;
