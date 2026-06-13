@@ -115,8 +115,34 @@ exports.sendMessage = async (req, res) => {
             await conversation.save();
         }
 
-        // 4. Perform Hybrid Search to get context
-        // Search across vector DB and MongoDB text index
+        // 4. Fetch conversation history (last 10 messages) to understand context
+        const history = await Message.find({ conversationId })
+            .sort({ createdAt: -1 })
+            .limit(11) // includes the one we just saved
+            .lean();
+        history.reverse();
+
+        // 4.5. If no subject is found in current message, fallback to history
+        if (!currentFilters.subject) {
+            const historyText = history.map(m => m.content).join(" ");
+            const histFullMatch = historyText.match(/\b([a-zA-Z]{3})\s*(\d{3})\b/i);
+            const histNumMatch = historyText.match(/\b(\d{3})\b/);
+            
+            if (histFullMatch) {
+                currentFilters.subject = `${histFullMatch[1].toUpperCase()} ${histFullMatch[2]}`;
+            } else if (histNumMatch) {
+                try {
+                    const regexMatch = new RegExp(`^[A-Za-z]{3}\\s*${histNumMatch[1]}$`, 'i');
+                    const uniqueSubjects = await Document.distinct('subject', { subject: regexMatch });
+                    if (uniqueSubjects.length === 1) {
+                        currentFilters.subject = uniqueSubjects[0].toUpperCase();
+                    }
+                } catch (err) {}
+            }
+        }
+
+        // 5. Perform Hybrid Search to get context
+        // Search across vector DB and MongoDB text index using the enriched filters
         const searchResults = await performHybridSearch(content, currentFilters);
 
         // Build context string from search results
@@ -141,19 +167,14 @@ exports.sendMessage = async (req, res) => {
             });
         }
 
-        // 5. Fetch conversation history (last 10 messages to save context window)
-        const history = await Message.find({ conversationId })
-            .sort({ createdAt: -1 })
-            .limit(11) // includes the one we just saved
-            .lean();
-        history.reverse();
-
         // 6. Construct OpenAI Messages Array
         const systemPrompt = `You are Verto AI, an expert teaching assistant for university students. 
 Answer the user's questions based primarily on the provided context from university documents.
 If the answer is not in the context, say "I don't have enough information in the provided documents to answer that definitively." but you can offer general knowledge if appropriate, making sure to clarify it's not from the course material.
 Use markdown formatting (bold, italics, code blocks, lists) to make your answers easy to read.
 If the user asks for a complete list (e.g., "all questions", "list all"), do not summarize or truncate; provide the exhaustive list from the context.
+IMPORTANT: When listing multiple questions, ALWAYS add a sequential serial number (1., 2., 3., etc.) before each question to make the list easy to read.
+PRACTICE QUESTIONS POLICY: If the user asks for practice questions, first provide any actual questions found in the context (like from past papers or PYQs). If there are no more actual questions available, INVENT and generate your own highly relevant practice questions. When generating new questions, carefully analyze the provided syllabus topics AND the style/difficulty of the provided PYQs, and make sure your new questions are heavily modeled after them so they feel like authentic exam questions.
 IMPORTANT FORMATTING RULE FOR MATH: 
 You MUST use LaTeX for any mathematical expressions, equations, and matrices.
 - Use a single dollar sign ($) for inline math (e.g., $E = mc^2$).

@@ -648,12 +648,12 @@ export default function ChatPage() {
           <div ref={endRef} />
         </div>
 
-        {/* Input bar - Floating Style */}
+        {/* Input bar - Sleek Floating Style */}
         <div style={{
           background: "transparent",
           display: "flex",
           flexDirection: "column",
-          padding: "16px 24px 24px 24px",
+          padding: "8px 24px 12px 24px",
           position: "relative",
           zIndex: 5,
         }}>
@@ -661,17 +661,17 @@ export default function ChatPage() {
           <div style={{
             display: "flex", alignItems: "center", gap: "10px",
             background: "#fff",
-            border: "1px solid #ddd0b8",
-            borderRadius: "24px",
-            padding: "8px 12px 8px 20px",
-            boxShadow: "0 4px 24px rgba(160,110,40,0.1)",
+            border: "1px solid #e8decb",
+            borderRadius: "999px",
+            padding: "4px 8px 4px 16px",
+            boxShadow: "0 2px 12px rgba(160,110,40,0.06)",
             transition: "border-color 0.2s, box-shadow 0.2s",
-            marginBottom: "16px",
+            marginBottom: "12px",
           }}
-            onFocusCapture={e => { e.currentTarget.style.borderColor = "#c8861a"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(200,134,26,0.12)"; }}
-            onBlurCapture={e => { e.currentTarget.style.borderColor = "#ddd0b8"; e.currentTarget.style.boxShadow = "0 4px 24px rgba(160,110,40,0.1)"; }}
+            onFocusCapture={e => { e.currentTarget.style.borderColor = "#c8861a"; e.currentTarget.style.boxShadow = "0 0 0 2px rgba(200,134,26,0.08)"; }}
+            onBlurCapture={e => { e.currentTarget.style.borderColor = "#e8decb"; e.currentTarget.style.boxShadow = "0 2px 12px rgba(160,110,40,0.06)"; }}
           >
-            <span style={{ color: "#c8861a", fontWeight: 300, fontSize: "1.4rem", marginRight: "4px" }}>+</span>
+            <span style={{ color: "#c8861a", fontWeight: 400, fontSize: "1.4rem", marginRight: "4px", paddingBottom: "2px" }}>+</span>
             <textarea
               id="chat-input"
               ref={inputRef}
@@ -682,9 +682,10 @@ export default function ChatPage() {
               rows={1}
               style={{
                 flex: 1, background: "none", border: "none", outline: "none", resize: "none",
-                fontFamily: "'Inter', sans-serif", fontSize: "0.95rem", color: "#1f1209",
-                lineHeight: 1.6,
-                maxHeight: "120px",
+                fontFamily: "'Inter', sans-serif", fontSize: "0.9rem", color: "#1f1209",
+                lineHeight: 1.5,
+                padding: "8px 0",
+                maxHeight: "100px",
                 overflowY: "auto",
               }}
             />
@@ -694,59 +695,49 @@ export default function ChatPage() {
               disabled={!input.trim() || loading}
               style={{
                 flexShrink: 0,
-                width: "36px", height: "36px",
-                background: input.trim() && !loading ? "linear-gradient(135deg, #d97706, #b45309)" : "#fdfaf5",
-                border: "none", borderRadius: "50%",
+                width: "32px", height: "32px",
+                background: "transparent",
+                border: "none",
                 display: "flex", alignItems: "center", justifyContent: "center",
                 cursor: input.trim() && !loading ? "pointer" : "not-allowed",
                 transition: "all 0.2s",
-                boxShadow: input.trim() && !loading ? "0 3px 10px rgba(180,83,9,0.25)" : "none",
               }}>
-              {input.trim() && !loading ? (
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M12 5l7 7-7 7" />
-                </svg>
-              ) : (
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#b0916a" strokeWidth="2.5">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 1v22M17 5H7a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2z" />
-                </svg>
-              )}
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={input.trim() && !loading ? "#c8861a" : "#dcb993"} strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M12 5l7 7-7 7" />
+              </svg>
             </button>
           </div>
 
-          {/* Category Selector Pills */}
+          {/* Category Selector (Text with Diamond Separators) */}
           <div style={{
-            display: "flex", alignItems: "center", gap: "8px",
+            display: "flex", alignItems: "center", gap: "10px",
             justifyContent: "center",
             flexWrap: "wrap",
+            padding: "0 10px"
           }}>
-            {CATEGORIES.map(c => {
+            {CATEGORIES.map((c, index) => {
               const isActive = activeCategory === c;
               return (
-                <button
-                  key={c}
-                  onClick={() => setActiveCategory(isActive ? null : c)}
-                  style={{
-                    flexShrink: 0,
-                    padding: "6px 14px",
-                    fontFamily: "'Inter', sans-serif", fontSize: "0.75rem",
-                    fontWeight: isActive ? 600 : 500,
-                    color: isActive ? "#fff" : "#5c4021",
-                    background: isActive ? "#c8861a" : "transparent",
-                    border: "1px solid #ddd0b8",
-                    borderRadius: "999px",
-                    cursor: "pointer",
-                    transition: "all 0.2s",
-                    display: "flex", alignItems: "center", gap: "6px",
-                  }}
-                  onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = "#fdf5e8"; }}
-                  onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = "transparent"; }}
-                >
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                  {c}
-                </button>
+                <div key={c} style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <button
+                    onClick={() => setActiveCategory(isActive ? null : c)}
+                    style={{
+                      background: "none", border: "none", padding: 0,
+                      fontFamily: "'Inter', sans-serif", fontSize: "0.85rem",
+                      fontWeight: isActive ? 600 : 400,
+                      color: isActive ? "#3e2710" : "#6c5339",
+                      cursor: "pointer",
+                      transition: "color 0.2s",
+                    }}
+                    onMouseEnter={e => { if (!isActive) e.currentTarget.style.color = "#4a3520"; }}
+                    onMouseLeave={e => { if (!isActive) e.currentTarget.style.color = "#6c5339"; }}
+                  >
+                    {c}
+                  </button>
+                  {index < CATEGORIES.length - 1 && (
+                    <span style={{ color: "#dcb993", fontSize: "0.75rem", userSelect: "none" }}>✦</span>
+                  )}
+                </div>
               );
             })}
           </div>
