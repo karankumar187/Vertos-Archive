@@ -2,6 +2,9 @@ import { useState, useRef, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
+import "katex/dist/katex.min.css";
 import vertoAiAvatar from "../assets/verto-ai.jpg";
 import { chatAPI } from "../services/api";
 import { useAuth } from "../context/AuthContext";
@@ -57,17 +60,17 @@ function MessageBubble({ msg }) {
         />
       )}
 
-      <div style={{
-        maxWidth: "85%",
-        padding: "12px 16px",
-        background: isUser
-          ? "linear-gradient(135deg, #d97706 0%, #b45309 100%)"
-          : "#ffffff",
-        border: isUser ? "none" : "1px solid #e9dcc8",
-        borderRadius: isUser ? "14px 14px 4px 14px" : "4px 14px 14px 14px",
-        boxShadow: isUser ? "0 4px 14px rgba(180,83,9,0.22)" : "0 2px 10px rgba(160,110,40,0.07)",
-      }}>
+      <div style={{ maxWidth: "85%", display: "flex", flexDirection: "column", alignItems: isUser ? "flex-end" : "flex-start" }}>
         <div style={{
+          padding: "12px 16px",
+          background: isUser
+            ? "linear-gradient(135deg, #d97706 0%, #b45309 100%)"
+            : "#ffffff",
+          border: isUser ? "none" : "1px solid #e9dcc8",
+          borderRadius: isUser ? "14px 14px 4px 14px" : "4px 14px 14px 14px",
+          boxShadow: isUser ? "0 4px 14px rgba(180,83,9,0.22)" : "0 2px 10px rgba(160,110,40,0.07)",
+        }}>
+          <div style={{
           fontFamily: "'Inter', sans-serif",
           fontSize: "0.875rem",
           color: isUser ? "#fff" : "#1f1209",
@@ -76,7 +79,10 @@ function MessageBubble({ msg }) {
           {isUser ? (
              <p style={{ whiteSpace: "pre-wrap", margin: 0 }}>{msg.content}</p>
           ) : (
-             <ReactMarkdown remarkPlugins={[remarkGfm]}>
+             <ReactMarkdown 
+                remarkPlugins={[remarkGfm, remarkMath]}
+                rehypePlugins={[rehypeKatex]}
+             >
                {msg.content}
              </ReactMarkdown>
           )}
@@ -205,12 +211,12 @@ function MessageBubble({ msg }) {
                 )}
             </div>
         )}
+        </div>
         <p style={{
           fontFamily: "'Inter', sans-serif",
           fontSize: "0.7rem",
-          color: isUser ? "rgba(255,255,255,0.7)" : "#b0916a",
+          color: "#b0916a",
           marginTop: "6px",
-          textAlign: "right",
         }}>{msg.time}</p>
       </div>
 
@@ -563,45 +569,22 @@ export default function ChatPage() {
       </aside>
 
       {/* ── Main Chat Area ── */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-        {/* Chat header */}
-        <div style={{
-          padding: "14px 24px",
-          background: "rgba(253,250,245,0.95)",
-          backdropFilter: "blur(8px)",
-          borderBottom: "1px solid #e9dcc8",
-          display: "flex", alignItems: "center", gap: "12px",
-        }}>
-          {/* Mobile Sidebar Toggle */}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", position: "relative" }}>
+        
+        {/* Mobile Sidebar Toggle - Floating */}
+        <div className="mobile-only-flex" style={{ position: "absolute", top: "16px", left: "16px", zIndex: 10 }}>
           <button 
-            className="mobile-only-flex"
             onClick={() => setSidebarOpen(true)}
             style={{
-              background: "none", border: "none", padding: 0, cursor: "pointer",
-              alignItems: "center", justifyContent: "center", color: "#5c4021"
+              background: "rgba(253,250,245,0.9)", border: "1px solid #e9dcc8", borderRadius: "8px", padding: "8px", cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center", color: "#5c4021",
+              backdropFilter: "blur(4px)", boxShadow: "0 2px 10px rgba(160,110,40,0.15)"
             }}
           >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
               <path d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
-          
-          <img 
-            src={vertoAiAvatar}
-            alt="Verto AI"
-            style={{
-              width: "36px", height: "36px",
-              borderRadius: "10px",
-              objectFit: "cover",
-            }} 
-          />
-          <div>
-            <p style={{ fontFamily: "'Playfair Display', serif", fontSize: "1rem", fontWeight: 700, color: "#1f1209" }}>Verto AI</p>
-            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-              <div style={{ width: "7px", height: "7px", background: "#22c55e", borderRadius: "50%" }} />
-              <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.72rem", color: "#7a5a2a" }}>Online · Hybrid RAG Engine</p>
-            </div>
-          </div>
         </div>
 
         {/* Messages */}
@@ -610,7 +593,8 @@ export default function ChatPage() {
           style={{
             flex: 1,
             overflowY: "auto",
-            padding: "24px 20px",
+            padding: "24px 20px 0 20px",
+            scrollBehavior: "smooth"
           }}
         >
           {messages.map(msg => <MessageBubble key={msg.id} msg={msg} />)}
@@ -648,28 +632,78 @@ export default function ChatPage() {
           <div ref={endRef} />
         </div>
 
-        {/* Input bar */}
+        {/* Input bar - Floating Style */}
         <div style={{
-          borderTop: "1px solid #e9dcc8",
-          background: "rgba(253,250,245,0.97)",
+          background: "transparent",
           display: "flex",
           flexDirection: "column",
+          padding: "16px 24px 24px 24px",
+          position: "relative",
+          zIndex: 5,
         }}>
-          
-          {/* Category Selector Chips */}
+          {/* Search Input Box */}
+          <div style={{
+            display: "flex", alignItems: "center", gap: "10px",
+            background: "#fff",
+            border: "1px solid #ddd0b8",
+            borderRadius: "24px",
+            padding: "8px 12px 8px 20px",
+            boxShadow: "0 4px 24px rgba(160,110,40,0.1)",
+            transition: "border-color 0.2s, box-shadow 0.2s",
+            marginBottom: "16px",
+          }}
+            onFocusCapture={e => { e.currentTarget.style.borderColor = "#c8861a"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(200,134,26,0.12)"; }}
+            onBlurCapture={e => { e.currentTarget.style.borderColor = "#ddd0b8"; e.currentTarget.style.boxShadow = "0 4px 24px rgba(160,110,40,0.1)"; }}
+          >
+            <span style={{ color: "#c8861a", fontWeight: 300, fontSize: "1.4rem", marginRight: "4px" }}>+</span>
+            <textarea
+              id="chat-input"
+              ref={inputRef}
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              onKeyDown={onKeyDown}
+              placeholder={activeCategory ? `Ask about ${activeCategory}…` : "Ask anything about LPU…"}
+              rows={1}
+              style={{
+                flex: 1, background: "none", border: "none", outline: "none", resize: "none",
+                fontFamily: "'Inter', sans-serif", fontSize: "0.95rem", color: "#1f1209",
+                lineHeight: 1.6,
+                maxHeight: "120px",
+                overflowY: "auto",
+              }}
+            />
+            <button
+              id="chat-send"
+              onClick={() => sendMessage()}
+              disabled={!input.trim() || loading}
+              style={{
+                flexShrink: 0,
+                width: "36px", height: "36px",
+                background: input.trim() && !loading ? "linear-gradient(135deg, #d97706, #b45309)" : "#fdfaf5",
+                border: "none", borderRadius: "50%",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                cursor: input.trim() && !loading ? "pointer" : "not-allowed",
+                transition: "all 0.2s",
+                boxShadow: input.trim() && !loading ? "0 3px 10px rgba(180,83,9,0.25)" : "none",
+              }}>
+              {input.trim() && !loading ? (
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M12 5l7 7-7 7" />
+                </svg>
+              ) : (
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#b0916a" strokeWidth="2.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 1v22M17 5H7a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2z" />
+                </svg>
+              )}
+            </button>
+          </div>
+
+          {/* Category Selector Pills */}
           <div style={{
             display: "flex", alignItems: "center", gap: "8px",
-            padding: "8px 24px 0",
-            overflowX: "auto",
-            scrollbarWidth: "none",
+            justifyContent: "center",
+            flexWrap: "wrap",
           }}>
-            <span style={{
-              fontFamily: "'Inter', sans-serif", fontSize: "0.75rem",
-              fontWeight: 600, color: "#8b6535", textTransform: "uppercase",
-              letterSpacing: "0.05em", marginRight: "4px",
-            }}>
-              Filter:
-            </span>
             {CATEGORIES.map(c => {
               const isActive = activeCategory === c;
               return (
@@ -678,80 +712,29 @@ export default function ChatPage() {
                   onClick={() => setActiveCategory(isActive ? null : c)}
                   style={{
                     flexShrink: 0,
-                    padding: "4px 12px",
+                    padding: "6px 14px",
                     fontFamily: "'Inter', sans-serif", fontSize: "0.75rem",
                     fontWeight: isActive ? 600 : 500,
-                    color: isActive ? "#7a4f0d" : "#5c4021",
-                    background: isActive ? "#fef3dc" : "#ffffff",
-                    border: isActive ? "1px solid #e8c96a" : "1px solid #ddd0b8",
+                    color: isActive ? "#fff" : "#5c4021",
+                    background: isActive ? "#c8861a" : "transparent",
+                    border: "1px solid #ddd0b8",
                     borderRadius: "999px",
                     cursor: "pointer",
                     transition: "all 0.2s",
-                    boxShadow: isActive ? "0 2px 6px rgba(200,134,26,0.15)" : "none",
+                    display: "flex", alignItems: "center", gap: "6px",
                   }}
-                  onMouseEnter={e => { if (!isActive) e.currentTarget.style.borderColor = "#c8861a"; }}
-                  onMouseLeave={e => { if (!isActive) e.currentTarget.style.borderColor = "#ddd0b8"; }}
+                  onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = "#fdf5e8"; }}
+                  onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = "transparent"; }}
                 >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
                   {c}
                 </button>
               );
             })}
           </div>
 
-          {/* Search Input Box */}
-          <div style={{ padding: "8px 24px 16px" }}>
-            <div style={{
-              display: "flex", alignItems: "center", gap: "10px",
-              background: "#fff",
-              border: "1px solid #ddd0b8",
-              borderRadius: "10px",
-              padding: "8px 12px",
-              boxShadow: "0 2px 12px rgba(160,110,40,0.05)",
-              transition: "border-color 0.2s, box-shadow 0.2s",
-            }}
-              onFocusCapture={e => { e.currentTarget.style.borderColor = "#c8861a"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(200,134,26,0.12)"; }}
-              onBlurCapture={e => { e.currentTarget.style.borderColor = "#ddd0b8"; e.currentTarget.style.boxShadow = "0 2px 16px rgba(160,110,40,0.07)"; }}
-            >
-              <textarea
-                id="chat-input"
-                ref={inputRef}
-                value={input}
-                onChange={e => setInput(e.target.value)}
-                onKeyDown={onKeyDown}
-                placeholder={activeCategory ? `Ask about ${activeCategory}…` : "Ask anything about LPU…"}
-                rows={1}
-                style={{
-                  flex: 1, background: "none", border: "none", outline: "none", resize: "none",
-                  fontFamily: "'Inter', sans-serif", fontSize: "0.9rem", color: "#1f1209",
-                  lineHeight: 1.6,
-                  maxHeight: "120px",
-                  overflowY: "auto",
-                }}
-              />
-              <button
-                id="chat-send"
-                onClick={() => sendMessage()}
-                disabled={!input.trim() || loading}
-                style={{
-                  flexShrink: 0,
-                  width: "32px", height: "32px",
-                  background: input.trim() && !loading ? "linear-gradient(135deg, #d97706, #b45309)" : "#e9dcc8",
-                  border: "none", borderRadius: "8px",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  cursor: input.trim() && !loading ? "pointer" : "not-allowed",
-                  transition: "all 0.2s",
-                  boxShadow: input.trim() && !loading ? "0 3px 10px rgba(180,83,9,0.25)" : "none",
-                }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={input.trim() && !loading ? "#fff" : "#b0916a"} strokeWidth="2.5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M12 5l7 7-7 7" />
-                </svg>
-              </button>
-            </div>
-            <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.68rem", color: "#b0916a", textAlign: "center", marginTop: "6px" }}>
-              Press Enter to send · Shift+Enter for new line
-            </p>
-          </div>
-        </div>
       </div>
 
       <style>{`
