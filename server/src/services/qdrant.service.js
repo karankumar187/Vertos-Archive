@@ -41,6 +41,12 @@ exports.initQdrant = async () => {
                 field_schema: 'keyword',
                 wait: true,
             });
+            console.log(`[Qdrant] Creating payload index for 'documentId'...`);
+            await client.createPayloadIndex(COLLECTION_NAME, {
+                field_name: 'documentId',
+                field_schema: 'keyword',
+                wait: true,
+            });
             console.log(`[Qdrant] Payload indexes created.`);
         } else {
             console.log(`[Qdrant] Collection '${COLLECTION_NAME}' already exists.`);
