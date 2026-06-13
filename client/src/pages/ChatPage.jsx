@@ -50,7 +50,7 @@ const preprocessMath = (text) => {
     return res;
 };
 
-function MessageBubble({ msg }) {
+const MessageBubble = React.memo(function MessageBubble({ msg }) {
   const isUser = msg.role === "user";
   const [showSources, setShowSources] = useState(false);
   const uniqueSources = msg.sources ? [...new Map(msg.sources.map(s => [s.documentId, s])).values()] : [];
@@ -58,22 +58,17 @@ function MessageBubble({ msg }) {
   return (
     <div style={{
       display: "flex",
-      justifyContent: isUser ? "flex-end" : "flex-start",
-      marginBottom: "16px",
-      gap: "10px",
-      alignItems: "flex-start",
+      gap: "16px",
+      alignSelf: isUser ? "flex-end" : "flex-start",
+      flexDirection: isUser ? "row" : "row",
+      width: "100%",
+      justifyContent: isUser ? "flex-end" : "flex-start"
     }}>
       {!isUser && (
-        <img 
-          src={vertoAiAvatar} 
-          alt="Verto AI"
-          style={{
-            width: "34px", height: "34px", flexShrink: 0,
-            borderRadius: "10px",
-            objectFit: "cover",
-            boxShadow: "0 2px 10px rgba(180,83,9,0.2)",
-          }}
-        />
+        <img src={vertoAiAvatar} alt="Verto AI" style={{
+          width: "34px", height: "34px", borderRadius: "50%",
+          boxShadow: "0 2px 8px rgba(180,83,9,0.15)", flexShrink: 0,
+        }} />
       )}
 
       <div style={{ maxWidth: "85%", display: "flex", flexDirection: "column", alignItems: isUser ? "flex-end" : "flex-start" }}>
@@ -116,86 +111,66 @@ function MessageBubble({ msg }) {
                     <button 
                         onClick={() => setShowSources(!showSources)}
                         style={{
-                            background: showSources ? '#fef3dc' : 'transparent',
-                            border: '1px solid #e8c96a',
-                            borderRadius: '4px',
-                            padding: '4px 8px',
-                            fontSize: '0.65rem',
-                            fontWeight: 600,
-                            color: '#8b5e0a',
-                            cursor: 'pointer',
-                            display: 'flex', alignItems: 'center', gap: '4px',
-                            transition: 'all 0.2s'
+                            background: '#fdfaf5', border: '1px solid #e9dcc8', padding: '4px 10px',
+                            borderRadius: '12px', fontSize: '0.65rem', fontWeight: 600, color: '#9a7845',
+                            cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '4px'
                         }}
                     >
-                        {showSources ? 'Hide' : 'Show'} Sources {showSources ? '▲' : '▼'}
+                        {showSources ? 'Hide Sources' : 'View Sources'}
+                        <svg style={{ transform: showSources ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
                     </button>
                 </div>
 
-                {/* Deduplicate by documentId */}
                 {showSources && (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'thin' }}>
                     {uniqueSources.map((src, i) => {
-                        const primaryUrl = src.fileUrl ||
-                            (src.files && src.files.length > 0
-                                ? (typeof src.files[0] === 'string' ? src.files[0] : src.files[0]?.url)
-                                : null);
+                        const fileExt = src.fileType === 'application/pdf' ? 'pdf' : src.fileType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ? 'docx' : 'txt';
+                        const isDoc = fileExt === 'pdf' || fileExt === 'docx';
+                        const primaryUrl = src.fileUrl || (src.files && src.files.length > 0 ? src.files[0] : null);
 
                         return (
                             <div key={i} style={{
-                                display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
-                                padding: '8px 10px',
-                                background: '#fdfaf5',
-                                border: '1px solid #e9dcc8',
-                                borderRadius: '8px',
-                                minWidth: '220px', maxWidth: '300px', flex: '1 1 auto',
-                                gap: '8px',
+                                minWidth: '220px', maxWidth: '280px',
+                                background: '#fff', border: '1px solid #e9dcc8',
+                                borderRadius: '8px', padding: '10px', flexShrink: 0,
+                                boxShadow: '0 2px 6px rgba(160,110,40,0.04)',
+                                display: 'flex', flexDirection: 'column', justifyContent: 'space-between'
                             }}>
-                                {/* Top: icon + title + badge */}
-                                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
-                                    <span style={{ fontSize: '0.8rem', marginTop: '1px' }}>
-                                        {src.fileType?.startsWith('image/') ? '🖼️' :
-                                         src.fileType === 'application/pdf' ? '📄' :
-                                         src.fileType?.includes('word') || src.fileType?.includes('presentation') ? '📝' : '📄'}
-                                    </span>
-                                    <div style={{ flex: 1, minWidth: 0 }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                                            <span style={{
-                                                fontSize: '0.72rem', fontWeight: 600, color: '#3d2800',
-                                                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                                                maxWidth: '140px'
-                                            }} title={src.title}>{src.title}</span>
-                                            {src.category && (
-                                                <span style={{
-                                                    fontSize: '0.58rem', fontWeight: 600,
-                                                    padding: '1px 5px', borderRadius: '4px',
-                                                    background: '#fef3dc', color: '#8b5e0a',
-                                                    border: '1px solid #e8c96a', flexShrink: 0
-                                                }}>{src.category}</span>
-                                            )}
-                                        </div>
-                                        {src.subject && (
-                                            <p style={{ fontSize: '0.62rem', color: '#9a7845', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{src.subject}</p>
+                                <div>
+                                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', marginBottom: '4px' }}>
+                                        {isDoc ? (
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2" style={{ flexShrink: 0, marginTop: '2px' }}><path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+                                        ) : (
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2" style={{ flexShrink: 0, marginTop: '2px' }}><path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
                                         )}
+                                        <h4 style={{ fontSize: '0.75rem', fontWeight: 600, color: '#1f1209', margin: 0, lineHeight: 1.3, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                                            {src.title}
+                                        </h4>
                                     </div>
+                                    <p style={{ fontSize: '0.65rem', color: '#9a7845', margin: '4px 0 0 20px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.02em' }}>
+                                        {src.subject}
+                                    </p>
                                 </div>
-
-                                {/* Bottom: Action Buttons */}
-                                <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', justifyContent: 'flex-end', borderTop: '1px solid #f0e8d8', paddingTop: '6px', marginTop: 'auto' }}>
-                                    {/* Numbered page buttons for multi-file docs */}
-                                    {src.files && src.files.length > 1 && (
-                                        <div style={{ display: 'flex', gap: '3px', marginRight: '4px', flexWrap: 'wrap', alignItems: 'center' }}>
-                                            {src.files.map((f, idx) => {
-                                                const url = typeof f === 'string' ? f : f?.url;
-                                                if (!url) return null;
-                                                return (
-                                                    <a key={idx} href={url} target="_blank" rel="noopener noreferrer" title={`Page ${idx + 1}`}
-                                                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '20px', height: '20px', background: '#f5ead5', borderRadius: '4px', textDecoration: 'none', color: '#8b5e0a', fontSize: '0.58rem', fontWeight: 700, transition: 'background 0.15s' }}
-                                                        onMouseEnter={e => e.currentTarget.style.background = '#e9dcc8'} onMouseLeave={e => e.currentTarget.style.background = '#f5ead5'}>
-                                                        {idx + 1}
-                                                    </a>
-                                                );
-                                            })}
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '10px', paddingTop: '8px', borderTop: '1px solid #fdf5e8' }}>
+                                    
+                                    {/* Pagination / Pages indicator */}
+                                    {src.files && src.files.length > 0 ? (
+                                        <div style={{ display: 'flex', gap: '3px' }}>
+                                            {src.files.slice(0, 5).map((f, idx) => (
+                                                <a key={idx} href={f} target="_blank" rel="noopener noreferrer" 
+                                                    style={{ width: '16px', height: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fdfaf5', border: '1px solid #e9dcc8', borderRadius: '4px', fontSize: '0.55rem', fontWeight: 600, color: '#9a7845', textDecoration: 'none' }}
+                                                    title={`Page ${idx + 1}`}
+                                                >
+                                                    {idx + 1}
+                                                </a>
+                                            ))}
+                                            {src.files.length > 5 && <span style={{ fontSize: '0.6rem', color: '#9a7845', marginLeft: '2px' }}>+{src.files.length - 5}</span>}
+                                        </div>
+                                    ) : (
+                                        <div style={{ fontSize: '0.6rem', color: '#b0916a' }}>
+                                            <span style={{ display: 'inline-block', padding: '2px 6px', background: '#fdfaf5', borderRadius: '4px', border: '1px solid #e9dcc8' }}>
+                                                {src.category || 'document'}
+                                            </span>
                                         </div>
                                     )}
                                     
@@ -248,7 +223,7 @@ function MessageBubble({ msg }) {
       )}
     </div>
   );
-}
+});
 
 export default function ChatPage() {
   const { user } = useAuth();
