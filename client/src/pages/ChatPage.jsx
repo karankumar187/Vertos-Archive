@@ -305,14 +305,8 @@ export default function ChatPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
-    const el = chatScrollRef.current;
-    if (!el) return;
-    const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 150;
-    if (isNearBottom) {
-      endRef.current?.scrollIntoView({ behavior: "auto" });
-    }
-  }, [messages, loading]);
+  // Removed auto-scroll during generation to keep view anchored at the top of the new message
+  // Users will now manually scroll down to read long generations.
 
   const createNewConversation = async () => {
       try {
