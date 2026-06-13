@@ -83,7 +83,7 @@ function ReviewModal({ doc, mode, onClose, onSuccess }) {
                     <span style={{ fontFamily: "'Inter', sans-serif", fontSize: '0.82rem', fontWeight: 600, color: '#3d2800', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {doc.title}
                     </span>
-                    <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer"
+                    <a href={`https://docs.google.com/viewer?url=${encodeURIComponent(doc.fileUrl)}&embedded=true`} target="_blank" rel="noopener noreferrer"
                         style={{ fontFamily: "'Inter', sans-serif", fontSize: '0.78rem', color: '#c8861a', fontWeight: 600, textDecoration: 'none', flexShrink: 0, border: '1px solid #e8c96a', borderRadius: '6px', padding: '3px 10px' }}>
                         Preview ↗
                     </a>
@@ -313,7 +313,7 @@ export default function AdminDashboardPage() {
                                     <td style={{ padding: "16px 20px", maxWidth: "280px" }}>
                                         <p style={{ fontWeight: 600, color: "#1f1209", marginBottom: "6px", wordBreak: "break-word" }}>{doc.title}</p>
                                         <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                                            <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer"
+                                            <a href={`https://docs.google.com/viewer?url=${encodeURIComponent(doc.fileUrl)}&embedded=true`} target="_blank" rel="noopener noreferrer"
                                                 style={{ color: "#c8861a", textDecoration: "none", fontSize: "0.78rem", fontWeight: 500, border: "1px solid #e8c96a", borderRadius: "5px", padding: "2px 8px" }}>
                                                 Preview ↗
                                             </a>
