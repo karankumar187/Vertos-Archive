@@ -231,6 +231,7 @@ export default function ChatPage() {
   const [messages, setMessages] = useState([WELCOME]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [abortController, setAbortController] = useState(null);
   const [activeCategory, setActiveCategory] = useState(null);
   
   const [conversations, setConversations] = useState([]);
@@ -303,6 +304,14 @@ export default function ChatPage() {
       setMessages([WELCOME]);
   };
 
+  const stopGeneration = () => {
+    if (abortController) {
+      abortController.abort();
+      setAbortController(null);
+      setLoading(false);
+    }
+  };
+
   const selectConversation = async (id) => {
       setActiveConversationId(id);
       localStorage.setItem('activeConversationId', id);
@@ -342,6 +351,8 @@ export default function ChatPage() {
     }
 
     let assistantMsgId = null;
+    const controller = new AbortController();
+    setAbortController(controller);
 
     try {
         const token = localStorage.getItem('token');
@@ -354,6 +365,7 @@ export default function ChatPage() {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
             },
+            signal: controller.signal,
             body: JSON.stringify({ content: q, filters })
         });
 
@@ -419,7 +431,13 @@ export default function ChatPage() {
                 });
             }
         }
+        setAbortController(null);
     } catch (err) {
+        if (err.name === 'AbortError') {
+            console.log("Generation stopped by user.");
+            setAbortController(null);
+            return;
+        }
         console.error("Stream error", err);
         if (!assistantMsgId) {
             setMessages(prev => [...prev, { role: "assistant", id: `a_${Date.now()}`, content: "*(Error connecting to server)*", time: now, sources: [] }]);
@@ -658,23 +676,42 @@ export default function ChatPage() {
                 overflowY: "auto",
               }}
             />
-            <button
-              id="chat-send"
-              onClick={() => sendMessage()}
-              disabled={!input.trim() || loading}
-              style={{
-                flexShrink: 0,
-                width: "32px", height: "32px",
-                background: "transparent",
-                border: "none",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                cursor: input.trim() && !loading ? "pointer" : "not-allowed",
-                transition: "all 0.2s",
-              }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={input.trim() && !loading ? "#c8861a" : "#dcb993"} strokeWidth="2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M12 5l7 7-7 7" />
-              </svg>
-            </button>
+            {loading ? (
+              <button
+                id="chat-stop"
+                onClick={stopGeneration}
+                style={{
+                  flexShrink: 0,
+                  width: "32px", height: "32px",
+                  background: "transparent",
+                  border: "none",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  cursor: "pointer",
+                  transition: "all 0.2s",
+                }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#dcb993" strokeWidth="2.5">
+                  <rect x="6" y="6" width="12" height="12" rx="2" ry="2" />
+                </svg>
+              </button>
+            ) : (
+              <button
+                id="chat-send"
+                onClick={() => sendMessage()}
+                disabled={!input.trim()}
+                style={{
+                  flexShrink: 0,
+                  width: "32px", height: "32px",
+                  background: "transparent",
+                  border: "none",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  cursor: input.trim() ? "pointer" : "not-allowed",
+                  transition: "all 0.2s",
+                }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={input.trim() ? "#c8861a" : "#dcb993"} strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M12 5l7 7-7 7" />
+                </svg>
+              </button>
+            )}
           </div>
 
           {/* Category Selector (Text with Diamond Separators) */}
