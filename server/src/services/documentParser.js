@@ -232,7 +232,7 @@ exports.extractTextFromUrl = async (fileUrl, mimeType) => {
         }
         else if (category === 'office') {
             const buffer = await downloadFileBuffer(fileUrl);
-            extractedText = await officeParser.parseOfficeAsync(buffer);
+            extractedText = await officeParser.parseOffice(buffer);
         }
         else if (category === 'image') {
             console.log(`[Parser] Running OCR via GPT-4o-mini Vision on image URL...`);
@@ -277,7 +277,7 @@ exports.extractTextFromBuffer = async (buffer, mimeType, cloudinaryUrl = null) =
             extractedText = pdfData.text;
         }
         else if (category === 'office') {
-            extractedText = await officeParser.parseOfficeAsync(buffer);
+            extractedText = await officeParser.parseOffice(buffer);
         }
         else if (category === 'image') {
             if (!cloudinaryUrl) {
