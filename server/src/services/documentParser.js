@@ -225,6 +225,18 @@ exports.extractTextFromUrl = async (fileUrl, mimeType) => {
 
         let extractedText = '';
 
+        let ext = '';
+        if (mimeType) {
+            if (mimeType.includes('presentationml')) ext = 'pptx';
+            else if (mimeType.includes('wordprocessingml')) ext = 'docx';
+            else if (mimeType.includes('spreadsheetml')) ext = 'xlsx';
+            else if (mimeType.includes('msword')) ext = 'doc';
+        }
+        if (!ext && fileUrl) {
+            const extMatch = fileUrl.match(/\.([a-zA-Z0-9]+)(\?|$)/);
+            if (extMatch) ext = extMatch[1];
+        }
+
         if (category === 'pdf') {
             const buffer = await downloadFileBuffer(fileUrl);
             const pdfData = await pdfParse(buffer);
@@ -232,7 +244,8 @@ exports.extractTextFromUrl = async (fileUrl, mimeType) => {
         }
         else if (category === 'office') {
             const buffer = await downloadFileBuffer(fileUrl);
-            extractedText = await officeParser.parseOffice(buffer);
+            const parsed = await officeParser.parseOffice(buffer, ext ? { fileType: ext } : {});
+            extractedText = parsed.toText();
         }
         else if (category === 'image') {
             console.log(`[Parser] Running OCR via GPT-4o-mini Vision on image URL...`);
@@ -277,7 +290,15 @@ exports.extractTextFromBuffer = async (buffer, mimeType, cloudinaryUrl = null) =
             extractedText = pdfData.text;
         }
         else if (category === 'office') {
-            extractedText = await officeParser.parseOffice(buffer);
+            let ext = '';
+            if (mimeType) {
+                if (mimeType.includes('presentationml')) ext = 'pptx';
+                else if (mimeType.includes('wordprocessingml')) ext = 'docx';
+                else if (mimeType.includes('spreadsheetml')) ext = 'xlsx';
+                else if (mimeType.includes('msword')) ext = 'doc';
+            }
+            const parsed = await officeParser.parseOffice(buffer, ext ? { fileType: ext } : {});
+            extractedText = parsed.toText();
         }
         else if (category === 'image') {
             if (!cloudinaryUrl) {

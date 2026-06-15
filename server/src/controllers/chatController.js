@@ -194,8 +194,9 @@ ${contextText ? contextText : "No relevant context found in the database."}
             });
         }
 
-        // Add the current user query
-        apiMessages.push({ role: 'user', content });
+        // Add the current user query with a forceful reminder to override bad history
+        const userQueryWithReminder = content + "\n\n[SYSTEM REMINDER: You MUST format EVERY question starting with '### Question 1:', '### Question 2:', etc. If this is a mid-term request, you MUST generate EXACTLY 40 questions. DO NOT output unnumbered questions.]";
+        apiMessages.push({ role: 'user', content: userQueryWithReminder });
 
         // 7. Setup SSE Headers for streaming
         res.setHeader('Content-Type', 'text/event-stream');
