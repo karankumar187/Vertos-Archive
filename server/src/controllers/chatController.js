@@ -56,18 +56,24 @@ exports.sendMessage = async (req, res) => {
 
     // Auto-extract course codes (e.g., "int 221", "CSE332", "174") from user query to strictly filter sources
     let currentFilters = filters || {};
-    const fullCourseMatch = content.match(/\b([a-zA-Z]{3})\s*(\d{3})\b/i);
+    const fullCourseMatch = content.match(/\b([a-zA-Z]{3})[-_\s]*(\d{3})\b/i);
     const numCourseMatch = content.match(/\b(\d{3})\b/);
     
-    if (fullCourseMatch) {
-        currentFilters.subject = `${fullCourseMatch[1].toUpperCase()} ${fullCourseMatch[2]}`;
-    } else if (numCourseMatch) {
+    if (fullCourseMatch || numCourseMatch) {
         try {
-            const courseNum = numCourseMatch[1];
-            const regexMatch = new RegExp(`^[A-Za-z]{3}\\s*${courseNum}$`, 'i');
+            const courseCode = fullCourseMatch ? fullCourseMatch[1] : '';
+            const courseNum = fullCourseMatch ? fullCourseMatch[2] : numCourseMatch[1];
+            // Match with or without spaces/dashes (e.g. PHY 110, PHY110, PHY-110)
+            const regexStr = courseCode ? `^${courseCode}[-_\\s]*${courseNum}$` : `^[A-Za-z]{3}[-_\\s]*${courseNum}$`;
+            const regexMatch = new RegExp(regexStr, 'i');
+            
             const uniqueSubjects = await Document.distinct('subject', { subject: regexMatch });
-            if (uniqueSubjects.length === 1) {
-                currentFilters.subject = uniqueSubjects[0].toUpperCase();
+            if (uniqueSubjects.length > 0) {
+                // If found in DB, use the exact string from the DB (e.g. "PHY110" or "INT-221")
+                currentFilters.subject = uniqueSubjects[0];
+            } else if (fullCourseMatch) {
+                // Fallback to exactly what the user typed if not in DB yet
+                currentFilters.subject = `${fullCourseMatch[1].toUpperCase()} ${fullCourseMatch[2]}`;
             }
         } catch (err) {
             console.error('Error resolving course number alias:', err);
@@ -125,17 +131,21 @@ exports.sendMessage = async (req, res) => {
         // 4.5. If no subject is found in current message, fallback to history
         if (!currentFilters.subject) {
             const historyText = history.map(m => m.content).join(" ");
-            const histFullMatch = historyText.match(/\b([a-zA-Z]{3})\s*(\d{3})\b/i);
+            const histFullMatch = historyText.match(/\b([a-zA-Z]{3})[-_\s]*(\d{3})\b/i);
             const histNumMatch = historyText.match(/\b(\d{3})\b/);
             
-            if (histFullMatch) {
-                currentFilters.subject = `${histFullMatch[1].toUpperCase()} ${histFullMatch[2]}`;
-            } else if (histNumMatch) {
+            if (histFullMatch || histNumMatch) {
                 try {
-                    const regexMatch = new RegExp(`^[A-Za-z]{3}\\s*${histNumMatch[1]}$`, 'i');
+                    const courseCode = histFullMatch ? histFullMatch[1] : '';
+                    const courseNum = histFullMatch ? histFullMatch[2] : histNumMatch[1];
+                    const regexStr = courseCode ? `^${courseCode}[-_\\s]*${courseNum}$` : `^[A-Za-z]{3}[-_\\s]*${courseNum}$`;
+                    const regexMatch = new RegExp(regexStr, 'i');
+                    
                     const uniqueSubjects = await Document.distinct('subject', { subject: regexMatch });
-                    if (uniqueSubjects.length === 1) {
-                        currentFilters.subject = uniqueSubjects[0].toUpperCase();
+                    if (uniqueSubjects.length > 0) {
+                        currentFilters.subject = uniqueSubjects[0];
+                    } else if (histFullMatch) {
+                        currentFilters.subject = `${histFullMatch[1].toUpperCase()} ${histFullMatch[2]}`;
                     }
                 } catch (err) {}
             }
