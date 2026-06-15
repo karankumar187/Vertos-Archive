@@ -177,7 +177,7 @@ const MessageBubble = React.memo(function MessageBubble({ msg }) {
                                     {/* Open + Download */}
                                     {primaryUrl && (
                                         <div style={{ display: 'flex', gap: '4px' }}>
-                                            <a href={`https://docs.google.com/viewer?url=${encodeURIComponent(primaryUrl)}&embedded=true`} target="_blank" rel="noopener noreferrer" title="Open Document"
+                                            <a href={primaryUrl} target="_blank" rel="noopener noreferrer" title="Open Document"
                                                 style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '0 8px', height: '22px', background: 'linear-gradient(135deg, #d97706, #b45309)', borderRadius: '4px', textDecoration: 'none', boxShadow: '0 1px 3px rgba(180,83,9,0.2)', transition: 'opacity 0.15s' }}
                                                 onMouseEnter={e => e.currentTarget.style.opacity = '0.85'} onMouseLeave={e => e.currentTarget.style.opacity = '1'}>
                                                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5">
