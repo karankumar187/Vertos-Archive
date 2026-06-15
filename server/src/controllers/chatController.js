@@ -172,18 +172,15 @@ exports.sendMessage = async (req, res) => {
 Answer the user's questions based primarily on the provided context from university documents.
 If the answer is not in the context, say "I don't have enough information in the provided documents to answer that definitively." but you can offer general knowledge if appropriate, making sure to clarify it's not from the course material.
 Use markdown formatting (bold, italics, code blocks, lists) to make your answers easy to read.
-If the user asks for a complete list (e.g., "all questions", "list all"), do not summarize or truncate; provide the exhaustive list from the context.
-CRITICAL INSTRUCTION: EVERY single question you output MUST be numbered sequentially (e.g., "1. [Question text]", "2. [Question text]"). Do NOT output unnumbered questions. Do NOT use bullet points for questions.
-PRACTICE QUESTIONS POLICY: If the user asks for practice questions, first provide any actual questions found in the context (like from past papers or PYQs). If there are no more actual questions available, INVENT and generate your own highly relevant practice questions. When generating new questions, carefully analyze the provided syllabus topics AND the style/difficulty of the provided PYQs, and make sure your new questions are heavily modeled after them so they feel like authentic exam questions.
-MID TERM POLICY: If the user explicitly asks for "mid term" questions, mock tests, or preparation, you MUST output exactly 40 Multiple Choice Questions (MCQs). These 40 questions must ONLY cover Unit 1, Unit 2, and Unit 3 of the requested subject. If the provided documents do not contain 40 actual questions for these units, you MUST intelligently invent/generate the remaining questions based on the syllabus topics for Units 1-3 until you reach exactly 40 questions. Do not stop at 2, 3, or 5 questions.
-IMPORTANT FORMATTING RULE FOR MATH: 
-You MUST use LaTeX for any mathematical expressions, equations, and matrices.
-- Use a single dollar sign ($) for inline math (e.g., $E = mc^2$).
-- Use double dollar signs ($$) for block math and matrices (e.g., $$\\begin{bmatrix} 1 & 2 \\\\ 3 & 4 \\end{bmatrix}$$).
-- NEVER use \\[ or \\] or \\( or \\) for math. Only use $ and $$.
 
 === Context from University Documents ===
-${contextText ? contextText : "No relevant context found in the database."}`;
+${contextText ? contextText : "No relevant context found in the database."}
+
+=== FINAL CRITICAL INSTRUCTIONS ===
+1. QUESTION NUMBERING (MANDATORY): You MUST use a Markdown Heading 3 for EVERY single question. You must start every single question with "### Question 1:", "### Question 2:", etc. This is the ONLY acceptable format for questions. You are FORBIDDEN from outputting unnumbered questions.
+2. PRACTICE QUESTIONS POLICY: If asked for practice questions, first use actual questions from the context. If you run out, INVENT highly relevant practice questions based on syllabus topics to match the style/difficulty of the real ones.
+3. MID TERM POLICY (MANDATORY): If the user asks for "mid term" questions or mock tests, you MUST output EXACTLY 40 Multiple Choice Questions (MCQs) covering ONLY Units 1, 2, and 3. You MUST NOT STOP EARLY. You must generate all 40 questions. If the context does not have 40 questions, you MUST invent the rest based on the syllabus. DO NOT stop at 5 or 10 questions.
+4. MATH FORMATTING: You MUST use LaTeX for math. Use $ for inline (e.g., $E = mc^2$) and $$ for block math. NEVER use \\[, \\], \\(, or \\) for math.`;
 
         const apiMessages = [
             { role: 'system', content: systemPrompt }
@@ -212,6 +209,7 @@ ${contextText ? contextText : "No relevant context found in the database."}`;
         const stream = await openaiClient.chat.completions.create({
             model: "gpt-4o-mini",
             messages: apiMessages,
+            max_tokens: 8000,
             stream: true,
         });
 
