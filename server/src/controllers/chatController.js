@@ -227,7 +227,7 @@ ${contextText ? contextText : "No relevant context found in the database."}
         const isMidTermRequest = /\b(mid[\s-]?term|midterm|mock[\s-]?test|40\s*mcq)\b/i.test(content);
         const isEteRequest = /\b(end[\s-]?term|ete|final[\s-]?exam|final[\s-]?paper|end[\s-]?sem|endsem)\b/i.test(content);
         const isEtpRequest = /\b(etp|end[\s-]?term[\s-]?practical|practical[\s-]?exam|lab[\s-]?exam|viva)\b/i.test(content);
-        const isCaRequest  = /\b(ca|class[\s-]?assessment|class[\s-]?test|unit[\s-]?test|ca[\s-]?\d|ca\d)\b/i.test(content);
+        const isCaRequest  = /\b(ca|class[\s-]?assessment|class[\s-]?test|unit[\s-]?test|ca[\s-]?\d|ca\d)\b/i.test(content) && !/\b(callback|canvas|camel|cabinet|cancel|candidate|calling|calls|called)\b/i.test(content);
 
         let userQueryFinal = content;
         if (isMidTermRequest) {
