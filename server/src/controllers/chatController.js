@@ -56,6 +56,13 @@ exports.sendMessage = async (req, res) => {
 
     // Auto-extract course codes (e.g., "int 221", "CSE332", "174") from user query to strictly filter sources
     let currentFilters = filters || {};
+    
+    // Check for syllabus request early to enforce category filter
+    const isSyllabusRequest = /\b(syllabus|course\s*overview|course\s*outline|course\s*content|what\s*is\s*covered|topics\s*covered|course\s*structure)\b/i.test(content);
+    if (isSyllabusRequest) {
+        currentFilters.category = 'syllabus';
+    }
+
     const fullCourseMatch = content.match(/\b([a-zA-Z]{3})[-_\s]*(\d{3})\b/i);
     const numCourseMatch = content.match(/\b(\d{3})\b/);
     
@@ -193,7 +200,8 @@ ${contextText ? contextText : "No relevant context found in the database."}
 1. RESPONSE MODE: By default, answer the user's question normally using the context. Do NOT generate exam questions unless the user EXPLICITLY asks for questions, practice, mock test, mid term, end term, CA, or ETP.
 2. SYLLABUS POLICY: When the user asks for a syllabus, course overview, or "what is covered in [course]", present the syllabus as a clean, structured overview:
    - Start with the course name, code, and a brief description.
-   - List each unit with its unit number as a heading (e.g., "**Unit 1: [Title]**") followed by the key topics covered.
+   - List EVERY single unit from the context (typically ALL 6 UNITS) with its unit number as a heading (e.g., "**Unit 1: [Title]**") followed by the key topics covered.
+   - Do NOT skip any units. DO NOT stop early.
    - Include credit hours, textbooks, and any other relevant info if available in the context.
    - Do NOT generate questions when the user asks for a syllabus. Just present the syllabus information clearly.
 3. QUESTION NUMBERING (ONLY FOR QUESTION GENERATION): When you ARE generating questions (practice, exam, mock test, etc.), you MUST use a Markdown Heading 3 for EVERY single question: "### Question 1:", "### Question 2:", etc. This rule ONLY applies when generating questions, NOT for regular answers or syllabus responses.
@@ -239,8 +247,7 @@ ${contextText ? contextText : "No relevant context found in the database."}
         }
 
         // Conditionally append exam-specific reminder based on user intent
-        // Check for syllabus request FIRST — it should never trigger exam policies
-        const isSyllabusRequest = /\b(syllabus|course\s*overview|course\s*outline|course\s*content|what\s*is\s*covered|topics\s*covered|course\s*structure)\b/i.test(content);
+        // isSyllabusRequest is already evaluated at the start of the function
         const isMidTermRequest = !isSyllabusRequest && /\b(mid[\s-]?term|midterm|mock[\s-]?test|40\s*mcq)\b/i.test(content);
         const isEteRequest = !isSyllabusRequest && /\b(end[\s-]?term|ete|final[\s-]?exam|final[\s-]?paper|end[\s-]?sem|endsem)\b/i.test(content);
         const isEtpRequest = !isSyllabusRequest && /\b(etp|end[\s-]?term[\s-]?practical|practical[\s-]?exam|lab[\s-]?exam|viva)\b/i.test(content);
@@ -248,7 +255,7 @@ ${contextText ? contextText : "No relevant context found in the database."}
 
         let userQueryFinal = content;
         if (isSyllabusRequest) {
-            userQueryFinal = content + "\n\n[REMINDER: The user is asking about the SYLLABUS. Do NOT generate questions. Present the syllabus as a clean, structured overview with unit-wise topics, course description, textbooks, and other relevant info from the context.]"
+            userQueryFinal = content + "\n\n[REMINDER: The user is asking about the SYLLABUS. Do NOT generate questions. Present the syllabus as a clean, structured overview. Make sure to list ALL UNITS (typically all 6 units) without skipping any and do NOT stop early. Include textbooks if available.]"
         } else if (isMidTermRequest) {
             userQueryFinal = content + "\n\n[REMINDER: MID TERM request detected. Generate EXACTLY 40 MCQs from Units 1, 2 and 3 only. Number as '### Question 1:', '### Question 2:', etc. Do NOT stop early.]"
         } else if (isEtpRequest) {
