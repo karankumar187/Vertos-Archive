@@ -187,29 +187,35 @@ Use markdown formatting (bold, italics, code blocks, lists) to make your answers
 ${contextText ? contextText : "No relevant context found in the database."}
 
 === FINAL CRITICAL INSTRUCTIONS ===
-1. QUESTION NUMBERING (MANDATORY): You MUST use a Markdown Heading 3 for EVERY single question. You must start every single question with "### Question 1:", "### Question 2:", etc. This is the ONLY acceptable format for questions. You are FORBIDDEN from outputting unnumbered questions.
-2. PRACTICE QUESTIONS POLICY: If asked for practice questions, first use actual questions from the context. If you run out, INVENT highly relevant practice questions based on syllabus topics to match the style/difficulty of the real ones.
-3. MID TERM POLICY (MANDATORY): Only apply when the user explicitly asks for mid term or mock test. Output EXACTLY 40 MCQs covering ONLY Units 1, 2, and 3. Number every question as '### Question 1:', '### Question 2:', etc. If context lacks 40 questions, invent the rest from syllabus topics. DO NOT stop early.
-4. END TERM EXAM (ETE) POLICY (MANDATORY): Only apply when the user explicitly asks for end term, ETE, or final exam questions. The ETE covers ALL 6 UNITS of the course. Generate questions in one of these two formats based on what the user asks:
+1. RESPONSE MODE: By default, answer the user's question normally using the context. Do NOT generate exam questions unless the user EXPLICITLY asks for questions, practice, mock test, mid term, end term, CA, or ETP.
+2. SYLLABUS POLICY: When the user asks for a syllabus, course overview, or "what is covered in [course]", present the syllabus as a clean, structured overview:
+   - Start with the course name, code, and a brief description.
+   - List each unit with its unit number as a heading (e.g., "**Unit 1: [Title]**") followed by the key topics covered.
+   - Include credit hours, textbooks, and any other relevant info if available in the context.
+   - Do NOT generate questions when the user asks for a syllabus. Just present the syllabus information clearly.
+3. QUESTION NUMBERING (ONLY FOR QUESTION GENERATION): When you ARE generating questions (practice, exam, mock test, etc.), you MUST use a Markdown Heading 3 for EVERY single question: "### Question 1:", "### Question 2:", etc. This rule ONLY applies when generating questions, NOT for regular answers or syllabus responses.
+4. PRACTICE QUESTIONS POLICY: If asked for practice questions, first use actual questions from the context. If you run out, INVENT highly relevant practice questions based on syllabus topics to match the style/difficulty of the real ones.
+5. MID TERM POLICY (MANDATORY): Only apply when the user explicitly asks for mid term or mock test. Output EXACTLY 40 MCQs covering ONLY Units 1, 2, and 3. Number every question as '### Question 1:', '### Question 2:', etc. If context lacks 40 questions, invent the rest from syllabus topics. DO NOT stop early.
+6. END TERM EXAM (ETE) POLICY (MANDATORY): Only apply when the user explicitly asks for end term, ETE, or final exam questions. The ETE covers ALL 6 UNITS of the course. Generate questions in one of these two formats based on what the user asks:
    - FORMAT A (Full MCQ): Output EXACTLY 60 MCQs across all 6 units. Since Units 1-3 are already covered in the Mid Term, FOCUS MORE on Units 4, 5, and 6 (roughly 8-10 questions each from Units 4/5/6, and 4-6 questions each from Units 1/2/3). Base questions on the provided PYQs and syllabus context — model the style and difficulty after real exam questions. Invent any remaining questions from syllabus topics.
    - FORMAT B (Mixed): Output 30 MCQs across all 6 units (with the same unit weighting — more from Units 4/5/6), followed by subjective/long-answer questions (2-mark, 5-mark, and 10-mark questions) spread across all 6 units. Base all questions on PYQs and syllabus context.
    If the user doesn't specify a format, ask them: "Should I generate a full MCQ paper (60 questions) or a mixed paper (30 MCQs + subjective questions)?"
    If context lacks enough questions, invent the rest from syllabus topics. DO NOT stop early.
-5. END TERM PRACTICAL (ETP) POLICY (MANDATORY): Only apply when the user explicitly asks for end term practical, ETP, or practical exam questions. This exam tests hands-on implementation skills. Generate ONE comprehensive practical question (or a small set of 2-3 related questions) that:
+7. END TERM PRACTICAL (ETP) POLICY (MANDATORY): Only apply when the user explicitly asks for end term practical, ETP, or practical exam questions. This exam tests hands-on implementation skills. Generate ONE comprehensive practical question (or a small set of 2-3 related questions) that:
    - Covers the MOST IMPORTANT practical topics spanning multiple units of the course.
    - Is based on actual PYQs and syllabus practical topics from the provided context.
    - Describes a real-world problem or task the student must implement/solve.
    - Includes clear requirements, expected output/behavior, and any constraints.
    - May include sub-parts (a, b, c) that build on each other to test different skills progressively.
    Model the style after the provided PYQ practical questions. If no PYQs are available, generate a realistic practical question based on syllabus topics.
-6. CLASS ASSESSMENT (CA) POLICY: Only apply when the user explicitly asks for CA, class test, class assessment, or unit test questions. Follow this EXACT flow:
+8. CLASS ASSESSMENT (CA) POLICY: Only apply when the user explicitly asks for CA, class test, class assessment, or unit test questions. Follow this EXACT flow:
    STEP 1 — If the user has NOT specified a course, ask: "Which course is this CA for? (e.g., CSE 332, MTH 174)"
    STEP 2 — If the user has NOT specified which units, ask: "Which units does this CA cover? (e.g., Unit 1 and 2)"
    STEP 3 — If the user has NOT specified the type, ask: "Should I generate MCQ questions or Subjective questions?"
    Only proceed to generate questions once you have all three pieces of information (course, units, type).
    - IF MCQ: Generate EXACTLY 30 MCQs strictly from the specified units only. Base questions on PYQs from those units (to match question style and difficulty) and the syllabus topics. Invent the rest if context lacks 30 questions. Number every question as '### Question 1:', '### Question 2:', etc.
    - IF SUBJECTIVE: Generate a mix of short-answer (2-mark), medium-answer (5-mark), and long-answer (10-mark) questions from the specified units, totalling around 10-15 questions. Base on PYQs and syllabus.
-7. MATH FORMATTING: You MUST use LaTeX for math. Use $ for inline (e.g., $E = mc^2$) and $$ for block math. NEVER use \\[, \\], \\(, or \\) for math.`;
+9. MATH FORMATTING: You MUST use LaTeX for math. Use $ for inline (e.g., $E = mc^2$) and $$ for block math. NEVER use \\[, \\], \\(, or \\) for math.`;
 
         const apiMessages = [
             { role: 'system', content: systemPrompt }
@@ -224,13 +230,17 @@ ${contextText ? contextText : "No relevant context found in the database."}
         }
 
         // Conditionally append exam-specific reminder based on user intent
-        const isMidTermRequest = /\b(mid[\s-]?term|midterm|mock[\s-]?test|40\s*mcq)\b/i.test(content);
-        const isEteRequest = /\b(end[\s-]?term|ete|final[\s-]?exam|final[\s-]?paper|end[\s-]?sem|endsem)\b/i.test(content);
-        const isEtpRequest = /\b(etp|end[\s-]?term[\s-]?practical|practical[\s-]?exam|lab[\s-]?exam|viva)\b/i.test(content);
-        const isCaRequest  = /\b(ca|class[\s-]?assessment|class[\s-]?test|unit[\s-]?test|ca[\s-]?\d|ca\d)\b/i.test(content) && !/\b(callback|canvas|camel|cabinet|cancel|candidate|calling|calls|called)\b/i.test(content);
+        // Check for syllabus request FIRST — it should never trigger exam policies
+        const isSyllabusRequest = /\b(syllabus|course\s*overview|course\s*outline|course\s*content|what\s*is\s*covered|topics\s*covered|course\s*structure)\b/i.test(content);
+        const isMidTermRequest = !isSyllabusRequest && /\b(mid[\s-]?term|midterm|mock[\s-]?test|40\s*mcq)\b/i.test(content);
+        const isEteRequest = !isSyllabusRequest && /\b(end[\s-]?term|ete|final[\s-]?exam|final[\s-]?paper|end[\s-]?sem|endsem)\b/i.test(content);
+        const isEtpRequest = !isSyllabusRequest && /\b(etp|end[\s-]?term[\s-]?practical|practical[\s-]?exam|lab[\s-]?exam|viva)\b/i.test(content);
+        const isCaRequest  = !isSyllabusRequest && /\b(class[\s-]?assessment|class[\s-]?test|unit[\s-]?test|ca[\s-]?\d|ca\d)\b/i.test(content);
 
         let userQueryFinal = content;
-        if (isMidTermRequest) {
+        if (isSyllabusRequest) {
+            userQueryFinal = content + "\n\n[REMINDER: The user is asking about the SYLLABUS. Do NOT generate questions. Present the syllabus as a clean, structured overview with unit-wise topics, course description, textbooks, and other relevant info from the context.]"
+        } else if (isMidTermRequest) {
             userQueryFinal = content + "\n\n[REMINDER: MID TERM request detected. Generate EXACTLY 40 MCQs from Units 1, 2 and 3 only. Number as '### Question 1:', '### Question 2:', etc. Do NOT stop early.]"
         } else if (isEtpRequest) {
             userQueryFinal = content + "\n\n[REMINDER: END TERM PRACTICAL (ETP) request detected. Generate one comprehensive practical question (with sub-parts if needed) covering the most important practical topics across multiple units. Base it on the PYQs and syllabus in the context. Make it feel like a real hands-on implementation task.]"
