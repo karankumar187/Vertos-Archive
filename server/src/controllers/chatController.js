@@ -160,24 +160,28 @@ exports.sendMessage = async (req, res) => {
 
         // 4.5. If no subject is found in current message, fallback to history
         if (!currentFilters.subject) {
-            const historyText = history.map(m => m.content).join(" ");
-            const histFullMatch = historyText.match(/\b([a-zA-Z]{3})[-_\s]*(\d{3})\b/i);
-            const histNumMatch = historyText.match(/\b(\d{3})\b/);
-            
-            if (histFullMatch || histNumMatch) {
-                try {
-                    const courseCode = histFullMatch ? histFullMatch[1] : '';
-                    const courseNum = histFullMatch ? histFullMatch[2] : histNumMatch[1];
-                    const regexStr = courseCode ? `^${courseCode}[-_\\s]*${courseNum}$` : `^[A-Za-z]{3}[-_\\s]*${courseNum}$`;
-                    const regexMatch = new RegExp(regexStr, 'i');
-                    
-                    const uniqueSubjects = await Document.distinct('subject', { subject: regexMatch });
-                    if (uniqueSubjects.length > 0) {
-                        currentFilters.subject = uniqueSubjects[0];
-                    } else if (histFullMatch) {
-                        currentFilters.subject = `${histFullMatch[1].toUpperCase()} ${histFullMatch[2]}`;
-                    }
-                } catch (err) {}
+            // Search from the most recent message backwards
+            for (let i = history.length - 1; i >= 0; i--) {
+                const histFullMatch = history[i].content.match(/\b([a-zA-Z]{3})[-_\s]*(\d{3})\b/i);
+                const histNumMatch = history[i].content.match(/\b(\d{3})\b/);
+                
+                if (histFullMatch || histNumMatch) {
+                    try {
+                        const courseCode = histFullMatch ? histFullMatch[1] : '';
+                        const courseNum = histFullMatch ? histFullMatch[2] : histNumMatch[1];
+                        const regexStr = courseCode ? `^${courseCode}[-_\\s]*${courseNum}$` : `^[A-Za-z]{3}[-_\\s]*${courseNum}$`;
+                        const regexMatch = new RegExp(regexStr, 'i');
+                        
+                        const uniqueSubjects = await Document.distinct('subject', { subject: regexMatch });
+                        if (uniqueSubjects.length > 0) {
+                            currentFilters.subject = uniqueSubjects[0];
+                            break;
+                        } else if (histFullMatch) {
+                            currentFilters.subject = `${histFullMatch[1].toUpperCase()} ${histFullMatch[2]}`;
+                            break;
+                        }
+                    } catch (err) {}
+                }
             }
         }
 
@@ -300,6 +304,12 @@ ${contextText ? contextText : "No relevant context found in the database."}
         } else if (isJustCourseCode && isNoPolicyTriggered) {
             userQueryFinal = content + "\n\n[REMINDER: The user only typed the course code. DO NOT output the syllabus. DO NOT output notes or questions. Just give a 1-sentence brief summary of the course and directly ask the user what they need (e.g., 'Do you need the syllabus, study notes, or practice questions?').]";
         }
+
+        // Force context override to prevent history bleeding
+        if (currentFilters.subject) {
+            userQueryFinal += `\n\n[CRITICAL OVERRIDE: You are currently answering for ${currentFilters.subject}. Base your answer STRICTLY on the 'Context from University Documents' provided in the system prompt. IGNORE any conversation history regarding other courses.]`;
+        }
+
         apiMessages.push({ role: 'user', content: userQueryFinal });
 
         // 7. Setup SSE Headers for streaming
