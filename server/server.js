@@ -123,17 +123,31 @@ app.get('/api/file/view', async (req, res) => {
                 res.status(500).send('Too many redirects');
                 return;
             }
-            https.get(targetUrl, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' } }, (fileRes) => {
+            
+            // Ensure the URL is properly encoded before sending to https.get
+            // Express req.query decodes the URL, so spaces become literal spaces
+            const safeUrl = new URL(targetUrl).href;
+            
+            https.get(safeUrl, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' } }, (fileRes) => {
                 if ([301, 302, 307, 308].includes(fileRes.statusCode) && fileRes.headers.location) {
                     // Follow redirect (handle relative URLs too)
-                    const redirectUrl = new URL(fileRes.headers.location, targetUrl).href;
+                    const redirectUrl = new URL(fileRes.headers.location, safeUrl).href;
                     fetchAndPipe(redirectUrl, redirectCount + 1);
                     fileRes.resume();
                     return;
                 }
                 if (fileRes.statusCode !== 200) {
-                    console.error(`[FileProxy] Cloudinary returned ${fileRes.statusCode} for: ${targetUrl}`);
-                    res.status(502).send(`Upstream error: ${fileRes.statusCode}`);
+                    console.error(`[FileProxy] Cloudinary returned ${fileRes.statusCode} for: ${safeUrl}`);
+                    
+                    // If Cloudinary 404s, send a friendly HTML error instead of a raw text file
+                    res.setHeader('Content-Type', 'text/html');
+                    res.status(502).send(`
+                        <div style="font-family: sans-serif; padding: 40px; text-align: center; color: #333;">
+                            <h2>Document Not Found (404)</h2>
+                            <p>The original file could not be fetched from the server. It may have been deleted or the URL is invalid.</p>
+                            <p style="color: #666; font-size: 0.8em; margin-top: 20px;">Upstream URL: ${safeUrl}</p>
+                        </div>
+                    `);
                     return;
                 }
                 fileRes.pipe(res);
@@ -143,7 +157,8 @@ app.get('/api/file/view', async (req, res) => {
             });
         };
         
-        fetchAndPipe(url);
+        // Start fetch with the sanitized href
+        fetchAndPipe(urlObj.href);
     } catch (err) {
         console.error('[FileProxy] Error:', err.message);
         if (!res.headersSent) res.status(500).send('Error fetching file');
