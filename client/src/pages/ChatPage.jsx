@@ -36,12 +36,20 @@ const preprocessMath = (text) => {
     if (!text) return "";
     let res = text;
     // Fix standard escaped brackets used by some models
-    res = res.replace(/\\\[([\s\S]*?)\\\]/g, '$$$$$1$$$$');
+    res = res.replace(/\\\[([\s\S]*?)\\\]/g, '\n$$$$$1$$$$\n');
     res = res.replace(/\\\((.*?)\\\)/g, '$$$1$$');
+    
+    // Ensure block math $$ is on its own line to prevent remark-math parsing errors
+    res = res.replace(/([^\n])\s*\$\$/g, '$1\n$$$$'); 
+    res = res.replace(/\$\$\s*([^\n])/g, '$$$$\n$1');
+    
+    // Fix common AI math syntax error where \begin is used without $$
+    // We wrap \begin{align}, \begin{matrix}, \begin{vmatrix}, \begin{equation} if they aren't wrapped
+    // To be safe, we'll just rely on the $$ normalization above since the AI is instructed to use $$.
     return res;
 };
 
-const MessageBubble = React.memo(function MessageBubble({ msg }) {
+const MessageBubble = React.memo(function MessageBubble({ msg, onRegenerate }) {
   const isUser = msg.role === "user";
   const [showSources, setShowSources] = useState(false);
   const uniqueSources = msg.sources ? [...new Map(msg.sources.map(s => [s.documentId, s])).values()] : [];
@@ -86,7 +94,7 @@ const MessageBubble = React.memo(function MessageBubble({ msg }) {
           ) : (
              <ReactMarkdown 
                 remarkPlugins={[remarkGfm, remarkMath]}
-                rehypePlugins={[rehypeKatex]}
+                rehypePlugins={[[rehypeKatex, { strict: false, trust: true, throwOnError: false }]]}
                 components={{
                   pre({ children }) {
                     return <>{children}</>;
@@ -218,12 +226,34 @@ const MessageBubble = React.memo(function MessageBubble({ msg }) {
             </div>
         )}
         </div>
-        <p style={{
-          fontFamily: "'Inter', sans-serif",
-          fontSize: "0.7rem",
-          color: "#b0916a",
-          marginTop: "6px",
-        }}>{msg.time}</p>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '6px' }}>
+            <p style={{
+              fontFamily: "'Inter', sans-serif",
+              fontSize: "0.7rem",
+              color: "#b0916a",
+              margin: 0,
+            }}>{msg.time}</p>
+            
+            {!isUser && onRegenerate && (
+                <button
+                    onClick={() => onRegenerate(msg.id)}
+                    style={{
+                        background: "none", border: "none", cursor: "pointer",
+                        display: "flex", alignItems: "center", gap: "4px",
+                        fontSize: "0.7rem", color: "#a07840", padding: "0",
+                        transition: "color 0.2s"
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.color = "#c8861a"}
+                    onMouseLeave={e => e.currentTarget.style.color = "#a07840"}
+                    title="Regenerate response"
+                >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    Regenerate
+                </button>
+            )}
+        </div>
       </div>
 
       {isUser && (
@@ -345,6 +375,28 @@ export default function ChatPage() {
       } catch (err) {
           console.error("Failed to fetch messages", err);
       }
+  };
+
+  // Handle regeneration logic
+  const handleRegenerate = async (msgId) => {
+    const index = messages.findIndex(m => m.id === msgId);
+    if (index === -1) return;
+    
+    let lastUserMsg = null;
+    let spliceIndex = index;
+    for (let i = index - 1; i >= 0; i--) {
+        if (messages[i].role === "user") {
+            lastUserMsg = messages[i];
+            spliceIndex = i;
+            break;
+        }
+    }
+    if (!lastUserMsg) return;
+
+    setMessages(prev => prev.slice(0, spliceIndex)); 
+    setTimeout(() => {
+        sendMessageDirect(lastUserMsg.content, activeCategory);
+    }, 50);
   };
 
   // Internal send — accepts explicit text so we can call before state settles
@@ -615,7 +667,7 @@ export default function ChatPage() {
             scrollBehavior: "smooth"
           }}
         >
-          {messages.map(msg => <MessageBubble key={msg.id} msg={msg} />)}
+          {messages.map(msg => <MessageBubble key={msg.id} msg={msg} onRegenerate={handleRegenerate} />)}
 
           {/* Typing indicator */}
           {loading && messages[messages.length - 1]?.role === "user" && (
