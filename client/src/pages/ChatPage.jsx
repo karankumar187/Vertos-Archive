@@ -49,6 +49,18 @@ const preprocessMath = (text) => {
     return res;
 };
 
+const API_BASE = (import.meta?.env?.VITE_API_URL) || 'http://localhost:5001/api';
+const FILE_PROXY_BASE = API_BASE.replace('/api', '');
+
+// Returns a proxied URL so all file types open correctly in the browser
+const getViewableUrl = (url) => {
+  if (!url || url === '#') return '#';
+  if (url.startsWith('https://res.cloudinary.com/')) {
+    return `${FILE_PROXY_BASE}/api/file/view?url=${encodeURIComponent(url)}`;
+  }
+  return url;
+};
+
 const MessageBubble = React.memo(function MessageBubble({ msg, onRegenerate }) {
   const isUser = msg.role === "user";
   const [showSources, setShowSources] = useState(false);
@@ -145,51 +157,54 @@ const MessageBubble = React.memo(function MessageBubble({ msg, onRegenerate }) {
                 </div>
 
                 {showSources && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '4px' }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' }}>
                     {uniqueSources.map((src, i) => {
                         const fileExt = src.fileType === 'application/pdf' ? 'pdf' : src.fileType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ? 'docx' : 'txt';
                         const isDoc = fileExt === 'pdf' || fileExt === 'docx';
-                        const primaryUrl = src.fileUrl || (src.files && src.files.length > 0 ? src.files[0] : '#');
+                        const primaryRawUrl = src.fileUrl || (src.files && src.files.length > 0 ? src.files[0] : '#');
+                        const primaryUrl = getViewableUrl(primaryRawUrl);
+                        const downloadUrl = primaryRawUrl !== '#' ? primaryRawUrl : null;
 
                         return (
-                            <a key={i} href={primaryUrl} target="_blank" rel="noopener noreferrer" style={{
-                                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                            <div key={i} style={{
+                                display: 'inline-flex', alignItems: 'center', gap: '6px',
                                 background: '#fff', border: '1px solid #e9dcc8',
-                                borderRadius: '6px', padding: '8px 12px',
-                                textDecoration: 'none', transition: 'all 0.15s'
-                            }}
-                            onMouseEnter={e => { e.currentTarget.style.background = '#fcf8f2'; e.currentTarget.style.borderColor = '#d5a865'; }}
-                            onMouseLeave={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = '#e9dcc8'; }}
-                            >
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden' }}>
-                                    <div style={{ background: '#fdfaf5', padding: '6px', borderRadius: '4px', border: '1px solid #f0e6d6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                        {isDoc ? (
-                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9a7845" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
-                                        ) : (
-                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
-                                        )}
-                                    </div>
-                                    <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-                                        <h4 style={{ fontSize: '0.75rem', fontWeight: 600, color: '#1f1209', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                            {src.title}
-                                        </h4>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
-                                            <span style={{ fontSize: '0.62rem', color: '#b48a53', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.02em' }}>
-                                                {src.subject}
-                                            </span>
-                                            <span style={{ color: '#e9dcc8', fontSize: '0.6rem' }}>•</span>
-                                            <span style={{ fontSize: '0.6rem', color: '#9ca3af', textTransform: 'capitalize' }}>
-                                                {src.category || 'document'}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div style={{ flexShrink: 0, paddingLeft: '12px' }}>
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d5a865" strokeWidth="2.5">
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                                    </svg>
-                                </div>
-                            </a>
+                                borderRadius: '6px', padding: '4px 6px 4px 8px',
+                                maxWidth: '200px', flexShrink: 0,
+                            }}>
+                                {/* Doc icon */}
+                                {isDoc ? (
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9a7845" strokeWidth="2.5" style={{ flexShrink: 0 }}><path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+                                ) : (
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2.5" style={{ flexShrink: 0 }}><path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
+                                )}
+
+                                {/* Title */}
+                                <span style={{ fontSize: '0.68rem', fontWeight: 600, color: '#2d1a06', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1, minWidth: 0 }}
+                                    title={src.title}>{src.title}</span>
+
+                                {/* Open button */}
+                                <a href={primaryUrl} target="_blank" rel="noopener noreferrer"
+                                    title="Open"
+                                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '20px', height: '20px', borderRadius: '4px', background: 'rgba(200,134,26,0.08)', border: '1px solid rgba(200,134,26,0.2)', textDecoration: 'none', flexShrink: 0, transition: 'all 0.15s' }}
+                                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(200,134,26,0.18)'; }}
+                                    onMouseLeave={e => { e.currentTarget.style.background = 'rgba(200,134,26,0.08)'; }}
+                                >
+                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#9a7845" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                                </a>
+
+                                {/* Download button */}
+                                {downloadUrl && (
+                                    <a href={downloadUrl} download={src.title || 'document'}
+                                        title="Download"
+                                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '20px', height: '20px', borderRadius: '4px', background: 'rgba(200,134,26,0.08)', border: '1px solid rgba(200,134,26,0.2)', textDecoration: 'none', flexShrink: 0, transition: 'all 0.15s' }}
+                                        onMouseEnter={e => { e.currentTarget.style.background = 'rgba(200,134,26,0.18)'; }}
+                                        onMouseLeave={e => { e.currentTarget.style.background = 'rgba(200,134,26,0.08)'; }}
+                                    >
+                                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#9a7845" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 3v13m0 0l-4-4m4 4l4-4M4 20h16" /></svg>
+                                    </a>
+                                )}
+                            </div>
                         );
                     })}
                 </div>

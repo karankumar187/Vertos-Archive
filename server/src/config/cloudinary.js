@@ -19,11 +19,11 @@ console.log("✅ Cloudinary configured");
  */
 const uploadBufferToCloudinary = (buffer, mimeType, folder = 'vertos_archive_documents') => {
     return new Promise((resolve, reject) => {
-        // Determine resource_type
-        // Note: Cloudinary treats PDFs as 'image' for inline viewing and transformations.
-        // If uploaded as 'raw', Cloudinary forces a download (Content-Disposition: attachment).
-        const isImageOrPdf = mimeType && (mimeType.startsWith('image/') || mimeType === 'application/pdf');
-        const resourceType = isImageOrPdf ? 'image' : 'raw';
+        // Determine resource_type based on mime type.
+        // PDFs uploaded as 'raw' are served with correct Content-Type for browser viewing.
+        // Only true images (jpeg, png, webp) are uploaded as 'image' resource type.
+        const isImage = mimeType && mimeType.startsWith('image/');
+        const resourceType = isImage ? 'image' : 'raw';
 
         const uploadStream = cloudinary.uploader.upload_stream(
             {

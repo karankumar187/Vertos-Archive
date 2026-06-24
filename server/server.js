@@ -84,6 +84,52 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
 
+// File proxy: fetches a Cloudinary file and streams it with correct headers for browser viewing
+app.get('/api/file/view', async (req, res) => {
+    const { url } = req.query;
+    if (!url) return res.status(400).send('Missing url parameter');
+    
+    // Only allow Cloudinary URLs
+    if (!url.startsWith('https://res.cloudinary.com/')) {
+        return res.status(403).send('Forbidden: Only Cloudinary URLs are allowed');
+    }
+    
+    try {
+        const https = require('https');
+        const urlObj = new URL(url);
+        const ext = urlObj.pathname.split('.').pop().toLowerCase();
+        
+        const mimeMap = {
+            pdf: 'application/pdf',
+            doc: 'application/msword',
+            docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            ppt: 'application/vnd.ms-powerpoint',
+            pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp'
+        };
+        const contentType = mimeMap[ext] || 'application/octet-stream';
+        const isInlineable = ['pdf', 'jpg', 'jpeg', 'png', 'webp'].includes(ext);
+        
+        res.setHeader('Content-Type', contentType);
+        res.setHeader('Content-Disposition', isInlineable ? `inline; filename="${urlObj.pathname.split('/').pop()}"` : `attachment; filename="${urlObj.pathname.split('/').pop()}"`);
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+        
+        https.get(url, (fileRes) => {
+            if (fileRes.statusCode !== 200) {
+                res.status(fileRes.statusCode).send('Failed to fetch file from Cloudinary');
+                return;
+            }
+            fileRes.pipe(res);
+        }).on('error', (err) => {
+            console.error('[FileProxy] Error:', err.message);
+            res.status(500).send('Error fetching file');
+        });
+    } catch (err) {
+        console.error('[FileProxy] Error:', err.message);
+        res.status(500).send('Error fetching file');
+    }
+});
+
 // Health check
 app.get('/', (req, res) => {
     res.send('Vertos Archive API is running...');
