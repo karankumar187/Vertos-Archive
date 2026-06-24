@@ -8,6 +8,7 @@ import "katex/dist/katex.min.css";
 import vertoAiAvatar from "../assets/verto-ai.jpg";
 import { chatAPI } from "../services/api";
 import { useAuth } from "../context/AuthContext";
+import CodeBlock from "../components/CodeBlock";
 
 /* ── Data ── */
 const CATEGORIES = [
@@ -93,6 +94,27 @@ const MessageBubble = React.memo(function MessageBubble({ msg }) {
              <ReactMarkdown 
                 remarkPlugins={[remarkGfm, remarkMath]}
                 rehypePlugins={[rehypeKatex]}
+                components={{
+                  pre({ children }) {
+                    return <>{children}</>;
+                  },
+                  code({ className, children, node, ...props }) {
+                    const isBlock = /language-(\w+)/.test(className || "") || 
+                                    (typeof children === "string" && children.includes("\n"));
+                    if (isBlock) {
+                      return (
+                        <CodeBlock className={className} {...props}>
+                          {children}
+                        </CodeBlock>
+                      );
+                    }
+                    return (
+                      <code className={className} {...props}>
+                        {children}
+                      </code>
+                    );
+                  }
+                }}
              >
                {preprocessMath(msg.content)}
              </ReactMarkdown>

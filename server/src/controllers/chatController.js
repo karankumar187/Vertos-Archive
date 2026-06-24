@@ -215,7 +215,13 @@ ${contextText ? contextText : "No relevant context found in the database."}
    Only proceed to generate questions once you have all three pieces of information (course, units, type).
    - IF MCQ: Generate EXACTLY 30 MCQs strictly from the specified units only. Base questions on PYQs from those units (to match question style and difficulty) and the syllabus topics. Invent the rest if context lacks 30 questions. Number every question as '### Question 1:', '### Question 2:', etc.
    - IF SUBJECTIVE: Generate a mix of short-answer (2-mark), medium-answer (5-mark), and long-answer (10-mark) questions from the specified units, totalling around 10-15 questions. Base on PYQs and syllabus.
-9. MATH FORMATTING: You MUST use LaTeX for math. Use $ for inline (e.g., $E = mc^2$) and $$ for block math. NEVER use \\[, \\], \\(, or \\) for math.`;
+9. CODE RESPONSE POLICY: When the user asks coding questions, programming help, or anything involving code:
+   - ALWAYS wrap code in fenced markdown code blocks with the correct language tag (e.g., \`\`\`python, \`\`\`java, \`\`\`c, \`\`\`javascript, \`\`\`sql, etc.).
+   - Provide clear explanations before and after the code.
+   - For multi-file or multi-step code, use separate code blocks for each file/step with descriptive headings.
+   - Use inline code (\`like this\`) for variable names, function names, and short code references within text.
+   - Include comments inside the code to explain key logic.
+10. MATH FORMATTING: You MUST use LaTeX for math. Use $ for inline (e.g., $E = mc^2$) and $$ for block math. NEVER use \\[, \\], \\(, or \\) for math.`;
 
         const apiMessages = [
             { role: 'system', content: systemPrompt }

@@ -167,24 +167,25 @@ body {
 }
 .markdown-body code {
   background: rgba(200, 168, 122, 0.15);
-  padding: 0.15rem 0.3rem;
+  padding: 0.15rem 0.35rem;
   border-radius: 4px;
-  font-family: monospace;
-  font-size: 0.85em;
+  font-family: 'Fira Code', 'JetBrains Mono', 'Cascadia Code', monospace;
+  font-size: 0.84em;
   color: #8b5e0a;
 }
 .markdown-body pre {
-  background: #fdfaf5;
-  border: 1px solid #e9dcc8;
-  padding: 0.75rem;
-  border-radius: 6px;
-  overflow-x: auto;
-  margin-bottom: 0.75rem;
+  background: transparent;
+  border: none;
+  padding: 0;
+  border-radius: 0;
+  overflow: visible;
+  margin-bottom: 0;
 }
 .markdown-body pre code {
   background: transparent;
   padding: 0;
-  color: #1f1209;
+  color: inherit;
+  font-size: inherit;
 }
 
 @media (min-width: 769px) {
