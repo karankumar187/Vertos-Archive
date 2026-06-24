@@ -729,39 +729,7 @@ export default function ChatPage() {
             )}
           </div>
 
-          {/* Category Selector (Text with Diamond Separators) */}
-          <div style={{
-            display: "flex", alignItems: "center", gap: "10px",
-            justifyContent: "center",
-            flexWrap: "wrap",
-            padding: "0 10px"
-          }}>
-            {CATEGORIES.map((c, index) => {
-              const isActive = activeCategory === c;
-              return (
-                <div key={c} style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                  <button
-                    onClick={() => setActiveCategory(isActive ? null : c)}
-                    style={{
-                      background: "none", border: "none", padding: 0,
-                      fontFamily: "'Inter', sans-serif", fontSize: "0.85rem",
-                      fontWeight: isActive ? 600 : 400,
-                      color: isActive ? "#3e2710" : "#6c5339",
-                      cursor: "pointer",
-                      transition: "color 0.2s",
-                    }}
-                    onMouseEnter={e => { if (!isActive) e.currentTarget.style.color = "#4a3520"; }}
-                    onMouseLeave={e => { if (!isActive) e.currentTarget.style.color = "#6c5339"; }}
-                  >
-                    {c}
-                  </button>
-                  {index < CATEGORIES.length - 1 && (
-                    <span style={{ color: "#dcb993", fontSize: "0.75rem", userSelect: "none" }}>✦</span>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+
 
         </div>
       </div>

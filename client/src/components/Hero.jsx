@@ -240,41 +240,23 @@ export default function Hero() {
             const isActive = selected?.id === cat.id;
             return (
               <div key={cat.id} style={{ display: "flex", alignItems: "center" }}>
-                <button
+                <div
                   id={`category-${cat.id}`}
-                  onClick={() => setSelected(isActive ? null : cat)}
                   style={{
                     fontFamily: "'Inter', sans-serif",
                     fontSize: "0.85rem",
-                    fontWeight: isActive ? 600 : 500,
-                    color: isActive ? "#7a4f0d" : "#5c4021",
+                    fontWeight: 500,
+                    color: "#5c4021",
                     letterSpacing: "0.03em",
-                    background: isActive ? "#fef3dc" : "none",
-                    border: isActive ? "1.5px solid #e8c96a" : "1.5px solid transparent",
-                    cursor: "pointer",
+                    background: "none",
+                    border: "1.5px solid transparent",
+                    cursor: "default",
                     padding: "5px 14px",
                     borderRadius: "999px",
-                    transition: "all 0.18s ease",
-                    boxShadow: isActive ? "0 2px 8px rgba(200,134,26,0.15)" : "none",
-                  }}
-                  onMouseEnter={e => {
-                    if (!isActive) {
-                      e.currentTarget.style.color = "#c8861a";
-                      e.currentTarget.style.background = "#fef9f0";
-                      e.currentTarget.style.border = "1.5px solid #e8c96a88";
-                    }
-                  }}
-                  onMouseLeave={e => {
-                    if (!isActive) {
-                      e.currentTarget.style.color = "#5c4021";
-                      e.currentTarget.style.background = "none";
-                      e.currentTarget.style.border = "1.5px solid transparent";
-                    }
                   }}
                 >
-                  {isActive && <span style={{ marginRight: "5px", fontSize: "10px" }}>✦</span>}
                   {cat.label}
-                </button>
+                </div>
                 {index < categories.length - 1 && (
                   <span style={{
                     color: "#c8861a", marginLeft: "8px",
