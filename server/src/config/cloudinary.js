@@ -24,11 +24,19 @@ const uploadBufferToCloudinary = (buffer, mimeType, folder = 'vertos_archive_doc
         // Only true images (jpeg, png, webp) are uploaded as 'image' resource type.
         const isImage = mimeType && mimeType.startsWith('image/');
         const resourceType = isImage ? 'image' : 'raw';
+        
+        let format;
+        if (mimeType === 'application/pdf') format = 'pdf';
+        else if (mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') format = 'docx';
+        else if (mimeType === 'application/msword') format = 'doc';
+        else if (mimeType === 'application/vnd.openxmlformats-officedocument.presentationml.presentation') format = 'pptx';
+        else if (mimeType === 'application/vnd.ms-powerpoint') format = 'ppt';
 
         const uploadStream = cloudinary.uploader.upload_stream(
             {
                 folder,
                 resource_type: resourceType,
+                ...(format && { format })
             },
             (error, result) => {
                 if (error) return reject(error);

@@ -138,12 +138,13 @@ app.get('/api/file/view', async (req, res) => {
                 }
                 
                 if (fileRes.statusCode !== 200) {
-                    // If Cloudinary 404s on a raw URL that lacks an extension, try appending .pdf
+                    // If Cloudinary 404s on a raw URL that lacks an extension, try appending the correct extension
                     // (This fixes files uploaded without extensions due to earlier Cloudinary config)
-                    if (fileRes.statusCode === 404 && !retryWithPdf && !safeUrl.toLowerCase().endsWith('.pdf')) {
-                        console.log(`[FileProxy] 404 for ${safeUrl}, retrying with .pdf...`);
+                    const targetExtStr = `.${ext}`;
+                    if (fileRes.statusCode === 404 && !retryWithPdf && ext && !safeUrl.toLowerCase().endsWith(targetExtStr)) {
+                        console.log(`[FileProxy] 404 for ${safeUrl}, retrying with ${targetExtStr}...`);
                         fileRes.resume();
-                        return fetchAndPipe(targetUrl + '.pdf', 0, true);
+                        return fetchAndPipe(targetUrl + targetExtStr, 0, true);
                     }
 
                     console.error(`[FileProxy] Cloudinary returned ${fileRes.statusCode} for: ${safeUrl}`);
@@ -158,10 +159,10 @@ app.get('/api/file/view', async (req, res) => {
                     return;
                 }
                 
-                // If it succeeds on retry with .pdf, we should make sure we're still sending as inline PDF
+                // If it succeeds on retry with an extension, we should make sure we're still sending as inline document
                 if (retryWithPdf) {
-                    res.setHeader('Content-Type', 'application/pdf');
-                    res.setHeader('Content-Disposition', forceDownload ? 'attachment; filename="document.pdf"' : 'inline; filename="document.pdf"');
+                    res.setHeader('Content-Type', contentType);
+                    res.setHeader('Content-Disposition', forceDownload ? `attachment; filename="document.${ext}"` : `inline; filename="document.${ext}"`);
                 }
                 
                 fileRes.pipe(res);
