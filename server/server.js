@@ -118,28 +118,34 @@ app.get('/api/file/view', async (req, res) => {
         res.setHeader('Access-Control-Allow-Origin', '*');
         
         // Helper to fetch with redirect following
-        const fetchAndPipe = (targetUrl, redirectCount = 0) => {
+        const fetchAndPipe = (targetUrl, redirectCount = 0, retryWithPdf = false) => {
             if (redirectCount > 5) {
                 res.status(500).send('Too many redirects');
                 return;
             }
             
             // Ensure the URL is properly encoded before sending to https.get
-            // Express req.query decodes the URL, so spaces become literal spaces
             const safeUrl = new URL(targetUrl).href;
             
             https.get(safeUrl, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' } }, (fileRes) => {
                 if ([301, 302, 307, 308].includes(fileRes.statusCode) && fileRes.headers.location) {
                     // Follow redirect (handle relative URLs too)
                     const redirectUrl = new URL(fileRes.headers.location, safeUrl).href;
-                    fetchAndPipe(redirectUrl, redirectCount + 1);
+                    fetchAndPipe(redirectUrl, redirectCount + 1, retryWithPdf);
                     fileRes.resume();
                     return;
                 }
+                
                 if (fileRes.statusCode !== 200) {
+                    // If Cloudinary 404s on a raw URL that lacks an extension, try appending .pdf
+                    // (This fixes files uploaded without extensions due to earlier Cloudinary config)
+                    if (fileRes.statusCode === 404 && !retryWithPdf && !safeUrl.toLowerCase().endsWith('.pdf')) {
+                        console.log(`[FileProxy] 404 for ${safeUrl}, retrying with .pdf...`);
+                        fileRes.resume();
+                        return fetchAndPipe(targetUrl + '.pdf', 0, true);
+                    }
+
                     console.error(`[FileProxy] Cloudinary returned ${fileRes.statusCode} for: ${safeUrl}`);
-                    
-                    // If Cloudinary 404s, send a friendly HTML error instead of a raw text file
                     res.setHeader('Content-Type', 'text/html');
                     res.status(502).send(`
                         <div style="font-family: sans-serif; padding: 40px; text-align: center; color: #333;">
@@ -150,6 +156,13 @@ app.get('/api/file/view', async (req, res) => {
                     `);
                     return;
                 }
+                
+                // If it succeeds on retry with .pdf, we should make sure we're still sending as inline PDF
+                if (retryWithPdf) {
+                    res.setHeader('Content-Type', 'application/pdf');
+                    res.setHeader('Content-Disposition', forceDownload ? 'attachment; filename="document.pdf"' : 'inline; filename="document.pdf"');
+                }
+                
                 fileRes.pipe(res);
             }).on('error', (err) => {
                 console.error('[FileProxy] Error:', err.message);
