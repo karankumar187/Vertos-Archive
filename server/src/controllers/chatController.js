@@ -227,7 +227,11 @@ ${contextText ? contextText : "No relevant context found in the database."}
    - Do NOT skip any units. DO NOT stop early.
    - Include credit hours, textbooks, and any other relevant info if available in the context.
    - Do NOT generate questions when the user asks for a syllabus. Just present the syllabus information clearly.
-3. QUESTION NUMBERING (ONLY FOR QUESTION GENERATION): When you ARE generating questions (practice, exam, mock test, etc.), you MUST use a Markdown Heading 3 for EVERY single question: "### Question 1:", "### Question 2:", etc. This rule ONLY applies when generating questions, NOT for regular answers or syllabus responses.
+3. QUESTION GENERATION GUIDELINES: When generating any questions (practice, exams, mock tests):
+   - Number every question using a Markdown Heading 3: "### Question 1:", "### Question 2:", etc.
+   - **University-Level Rigor**: Assume the student is a university undergraduate or postgraduate. Do NOT generate trivial or high-school level questions. Problems must require multi-step reasoning, synthesis of multiple concepts, or advanced application.
+   - For computational/numerical subjects (like Maths, Physics, Accounting, Engineering), questions MUST be practical problem-solving, numerical calculations, or derivations. Do NOT generate simple definitional or theoretical questions (e.g., "Define a function") unless explicitly present in the PYQs. Force the student to solve real numerical problems.
+   - **Realistic Scenarios**: Where possible, frame computational questions around real-world or industry-specific scenarios (e.g., data structures, engineering mechanics, business analytics) with specific, realistic data values.
 4. PRACTICE QUESTIONS POLICY: If asked for practice questions, first use actual questions from the context. If you run out, INVENT highly relevant practice questions based on syllabus topics to match the style/difficulty of the real ones.
 5. MID TERM POLICY (MANDATORY): Only apply when the user explicitly asks for mid term or mock test. Output EXACTLY 40 MCQs covering ONLY Units 1, 2, and 3. Number every question as '### Question 1:', '### Question 2:', etc. FIRST PREFERENCE: Extract questions directly from provided PYQs. If more are needed, generate new questions that strictly follow the PYQ pattern using the syllabus and course notes context. DO NOT stop early.
 6. END TERM EXAM (ETE) POLICY (MANDATORY): Only apply when the user explicitly asks for end term, ETE, or final exam questions. The ETE covers ALL 6 UNITS of the course. Generate questions in one of these two formats based on what the user asks:
@@ -248,7 +252,7 @@ ${contextText ? contextText : "No relevant context found in the database."}
    Only proceed to generate questions once you have all three pieces of information (course, units, type).
    - IF MCQ: Generate EXACTLY 30 MCQs strictly from the specified units. 
    - IF SUBJECTIVE: Generate a mix of short, medium, and long-answer questions (around 10-15 questions).
-   SOURCE PRIORITY (BOTH FORMATS): FIRST PREFERENCE is to pull directly from provided PYQs. If you run out of PYQs, generate new questions that strictly follow the exact pattern and difficulty of the PYQs, using the syllabus and course notes. Number every question properly. DO NOT stop early.
+   SOURCE PRIORITY (BOTH FORMATS): FIRST PREFERENCE is to pull directly from provided PYQs. If you run out of PYQs, generate new questions that strictly follow the exact pattern and difficulty of the PYQs. CRITICAL: For Maths/Physics, generate hard numerical problems, NOT definitions. Number every question properly. DO NOT stop early.
 9. CODE RESPONSE POLICY: When the user asks coding questions, programming help, or anything involving code:
    - ALWAYS wrap code in fenced markdown code blocks with the correct language tag (e.g., \`\`\`python, \`\`\`java, \`\`\`c, \`\`\`javascript, \`\`\`sql, etc.).
    - Provide clear explanations before and after the code.
@@ -277,6 +281,8 @@ ${contextText ? contextText : "No relevant context found in the database."}
         const isEtpRequest = !isSyllabusRequest && /\b(etp|end[\s-]?term[\s-]?practical|practical[\s-]?exam|lab[\s-]?exam|viva)\b/i.test(content);
         const isCaRequest  = !isSyllabusRequest && /\b(ca|class[\s-]?assessment|class[\s-]?test|unit[\s-]?test|ca[\s-]?\d|ca\d)\b/i.test(content);
         const isNotesRequest = !isSyllabusRequest && !isMidTermRequest && !isEteRequest && !isEtpRequest && !isCaRequest && /\b(notes|study\s*material|lecture\s*notes)\b/i.test(content);
+        const isJustCourseCode = content.trim().split(/\s+/).length <= 3 && /\b([a-zA-Z]{3})[-_\s]*(\d{3})\b/i.test(content);
+        const isNoPolicyTriggered = !isSyllabusRequest && !isMidTermRequest && !isEteRequest && !isEtpRequest && !isCaRequest && !isNotesRequest;
 
         let userQueryFinal = content;
         if (isSyllabusRequest) {
@@ -288,9 +294,11 @@ ${contextText ? contextText : "No relevant context found in the database."}
         } else if (isEteRequest) {
             userQueryFinal = content + "\n\n[REMINDER: END TERM EXAM (ETE) request detected. Cover ALL 6 UNITS. Ask format if unspecified. FIRST PREFERENCE: Extract from PYQs. If more needed, generate matching PYQ pattern using syllabus and notes. Do NOT stop early.]"
         } else if (isCaRequest) {
-            userQueryFinal = content + "\n\n[REMINDER: CLASS ASSESSMENT (CA) request detected. Check for course, units, and type. If missing, ask. Otherwise generate exactly 30 MCQs or 10-15 Subjective. FIRST PREFERENCE: Extract from PYQs. Then match pattern using syllabus and notes. DO NOT stop early.]"
+            userQueryFinal = content + "\n\n[REMINDER: CLASS ASSESSMENT (CA) request detected. Check for course, units, and type. If missing, ask. Otherwise generate exactly 30 MCQs or 10-15 Subjective. FIRST PREFERENCE: Extract from PYQs. Then match pattern. CRITICAL: If this is a Math/Physics subject, the generated subjective questions MUST be numerical problem-solving and derivations, NOT basic definitions. DO NOT stop early.]"
         } else if (isNotesRequest) {
             userQueryFinal = content + "\n\n[REMINDER: NOTES request detected. Fetch all details STRICTLY from the provided source notes. If unavailable, generate using the syllabus. Do NOT just provide theory: include questions and solutions for math/physics, and sample code blocks for programming subjects. Format beautifully with headings and lists.]"
+        } else if (isJustCourseCode && isNoPolicyTriggered) {
+            userQueryFinal = content + "\n\n[REMINDER: The user only typed the course code. DO NOT output the syllabus. DO NOT output notes or questions. Just give a 1-sentence brief summary of the course and directly ask the user what they need (e.g., 'Do you need the syllabus, study notes, or practice questions?').]";
         }
         apiMessages.push({ role: 'user', content: userQueryFinal });
 
