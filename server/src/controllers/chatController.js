@@ -244,7 +244,7 @@ ${contextText ? contextText : "No relevant context found in the database."}
         const isMidTermRequest = !isSyllabusRequest && /\b(mid[\s-]?term|midterm|mock[\s-]?test|40\s*mcq)\b/i.test(content);
         const isEteRequest = !isSyllabusRequest && /\b(end[\s-]?term|ete|final[\s-]?exam|final[\s-]?paper|end[\s-]?sem|endsem)\b/i.test(content);
         const isEtpRequest = !isSyllabusRequest && /\b(etp|end[\s-]?term[\s-]?practical|practical[\s-]?exam|lab[\s-]?exam|viva)\b/i.test(content);
-        const isCaRequest  = !isSyllabusRequest && /\b(class[\s-]?assessment|class[\s-]?test|unit[\s-]?test|ca[\s-]?\d|ca\d)\b/i.test(content);
+        const isCaRequest  = !isSyllabusRequest && /\b(ca|class[\s-]?assessment|class[\s-]?test|unit[\s-]?test|ca[\s-]?\d|ca\d)\b/i.test(content);
 
         let userQueryFinal = content;
         if (isSyllabusRequest) {
@@ -256,7 +256,7 @@ ${contextText ? contextText : "No relevant context found in the database."}
         } else if (isEteRequest) {
             userQueryFinal = content + "\n\n[REMINDER: END TERM EXAM (ETE) request detected. Cover ALL 6 UNITS. If user wants full MCQ: 60 questions with more focus on Units 4/5/6. If mixed: 30 MCQs + subjective questions across all 6 units. If not specified, ask the user which format they prefer. Number every question as '### Question 1:', etc. Do NOT stop early.]"
         } else if (isCaRequest) {
-            userQueryFinal = content + "\n\n[REMINDER: CLASS ASSESSMENT (CA) request detected. Follow the CA POLICY exactly: check if the user has provided (1) course name, (2) specific units, and (3) question type (MCQ or Subjective). Ask for any missing info before generating. If MCQ: 30 questions from specified units only. If Subjective: 10-15 questions (2-mark, 5-mark, 10-mark mix). Base all questions on PYQs and syllabus.]"
+            userQueryFinal = content + "\n\n[REMINDER: CLASS ASSESSMENT (CA) request detected. Follow the CA POLICY exactly: check if the user has provided (1) course name, (2) specific units, and (3) question type (MCQ or Subjective). Ask for any missing info before generating. If MCQ: Generate EXACTLY 30 MCQs from specified units only. DO NOT stop early. If Subjective: 10-15 questions (2-mark, 5-mark, 10-mark mix). Base all questions on PYQs and syllabus.]"
         }
         apiMessages.push({ role: 'user', content: userQueryFinal });
 

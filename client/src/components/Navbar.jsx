@@ -7,7 +7,6 @@ const NAV_LINKS = [
   { to: "/chat", label: "Chat" },
   { to: "/upload", label: "Upload" },
   { to: "/leaderboard", label: "Leaderboard" },
-  { to: "/dashboard", label: "Dashboard" },
 ];
 
 /** Renders a single dropdown menu item */
@@ -212,6 +211,7 @@ export default function Navbar() {
                     </div>
                   </div>
 
+                  <DropdownItem icon="📊" label="Dashboard" onClick={() => { navigate("/dashboard"); setDropOpen(false); }} />
                   <DropdownItem icon="👤" label="My Profile" onClick={() => { navigate("/profile"); setDropOpen(false); }} />
                   <DropdownItem icon="🔑" label="Change Password" onClick={() => { navigate("/change-password"); setDropOpen(false); }} />
                   {user.role === "admin" && (
