@@ -50,22 +50,24 @@ const preprocessMath = (text) => {
 };
 
 const API_BASE = (import.meta?.env?.VITE_API_URL) || 'http://localhost:5001/api';
-const FILE_PROXY_BASE = API_BASE.replace('/api', '');
-
-// Returns a proxied URL so all file types open correctly in the browser
+// Returns a URL that reliably opens the document in the browser using Google Docs Viewer
 const getViewableUrl = (url) => {
   if (!url || url === '#') return '#';
   if (url.startsWith('https://res.cloudinary.com/')) {
-    return `${FILE_PROXY_BASE}/api/file/view?url=${encodeURIComponent(url)}`;
+    // If it's a direct image, just return the URL
+    if (url.match(/\.(jpeg|jpg|gif|png|webp)$/i)) return url;
+    // For PDFs, DOCX, PPT, use Google Docs Viewer for guaranteed browser rendering
+    return `https://docs.google.com/viewer?url=${encodeURIComponent(url)}`;
   }
   return url;
 };
 
-// Returns a proxied download URL that forces Content-Disposition: attachment
+// Returns a Cloudinary URL that forces download using fl_attachment
 const getDownloadUrl = (url) => {
   if (!url || url === '#') return '#';
   if (url.startsWith('https://res.cloudinary.com/')) {
-    return `${FILE_PROXY_BASE}/api/file/view?url=${encodeURIComponent(url)}&download=1`;
+    // Inject fl_attachment after /upload/ to force Content-Disposition: attachment
+    return url.replace('/upload/', '/upload/fl_attachment/');
   }
   return url;
 };
