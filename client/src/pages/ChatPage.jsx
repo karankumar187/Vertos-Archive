@@ -35,16 +35,9 @@ const SUGGESTIONS = [
 const preprocessMath = (text) => {
     if (!text) return "";
     let res = text;
-    // Fix standard escaped brackets
+    // Fix standard escaped brackets used by some models
     res = res.replace(/\\\[([\s\S]*?)\\\]/g, '$$$$$1$$$$');
     res = res.replace(/\\\((.*?)\\\)/g, '$$$1$$');
-    
-    // Fix raw [ ... ] for block math if it contains \begin, \frac, \int, ^, \, or =
-    // Only if not followed by ( to avoid breaking markdown links
-    res = res.replace(/\[\s*([^[\]]*?[\^\\=][^[\]]*?)\s*\](?!\()/g, '$$$$ $1 $$$$');
-
-    // Fix raw ( ... ) for inline math if it contains ^, \, or =
-    res = res.replace(/\(\s*([^()]*?[\^\\=][^()]*?)\s*\)/g, '$$ $1 $$');
     return res;
 };
 
@@ -69,7 +62,7 @@ const MessageBubble = React.memo(function MessageBubble({ msg }) {
         }} />
       )}
 
-      <div style={{ maxWidth: "85%", display: "flex", flexDirection: "column", alignItems: isUser ? "flex-end" : "flex-start" }}>
+      <div style={{ maxWidth: "85%", display: "flex", flexDirection: "column", alignItems: isUser ? "flex-end" : "flex-start", minWidth: 0 }}>
         <div style={{
           padding: "12px 16px",
           background: isUser
@@ -78,12 +71,15 @@ const MessageBubble = React.memo(function MessageBubble({ msg }) {
           border: isUser ? "none" : "1px solid #e9dcc8",
           borderRadius: isUser ? "14px 14px 4px 14px" : "4px 14px 14px 14px",
           boxShadow: isUser ? "0 4px 14px rgba(180,83,9,0.22)" : "0 2px 10px rgba(160,110,40,0.07)",
+          width: "100%",
+          overflowX: "auto"
         }}>
           <div style={{
           fontFamily: "'Inter', sans-serif",
           fontSize: "0.875rem",
           color: isUser ? "#fff" : "#1f1209",
           lineHeight: 1.7,
+          width: "100%"
         }} className="markdown-body">
           {isUser ? (
              <p style={{ whiteSpace: "pre-wrap", margin: 0 }}>{msg.content}</p>

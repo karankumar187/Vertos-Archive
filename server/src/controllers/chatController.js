@@ -89,20 +89,43 @@ exports.sendMessage = async (req, res) => {
 
     if (!currentFilters.subject) {
         // Fallback to alias mapping if they type the course name instead of the code
-        const courseAliases = {
-            'mvc': 'INT 221',
-            'mvc programming': 'INT 221',
-            'developing': 'CSE 225',
-            'dbms': 'CSE 332',
-            'database': 'CSE 332'
-        };
-        
-        const lowerContent = content.toLowerCase();
-        for (const [alias, subjectCode] of Object.entries(courseAliases)) {
-            if (new RegExp(`\\b${alias}\\b`, 'i').test(lowerContent)) {
-                currentFilters.subject = subjectCode;
-                break;
+        try {
+            // Fetch dynamically from syllabus documents
+            const syllabi = await Document.find({ category: 'syllabus' }).select('title subject -_id').lean();
+            
+            // Base aliases
+            const courseAliases = {
+                'mvc': 'INT 221',
+                'mvc programming': 'INT 221',
+                'developing': 'CSE 225',
+                'dbms': 'CSE 332',
+                'database': 'CSE 332'
+            };
+
+            // Dynamically add aliases from uploaded syllabus documents
+            for (const doc of syllabi) {
+                if (doc.title && doc.subject) {
+                    const cleanAlias = doc.title.toLowerCase()
+                                        .replace(/\b(syllabus|for|course)\b/g, '')
+                                        .trim()
+                                        .replace(/\s+/g, ' '); // Clean extra spaces
+                    if (cleanAlias.length > 3) {
+                        courseAliases[cleanAlias] = doc.subject;
+                    }
+                }
             }
+            
+            const lowerContent = content.toLowerCase();
+            for (const [alias, subjectCode] of Object.entries(courseAliases)) {
+                // Escape regex specials from the alias to prevent invalid regex
+                const escapedAlias = alias.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                if (new RegExp(`\\b${escapedAlias}\\b`, 'i').test(lowerContent)) {
+                    currentFilters.subject = subjectCode;
+                    break;
+                }
+            }
+        } catch (err) {
+            console.error('Error with dynamic course aliases:', err);
         }
     }
 
