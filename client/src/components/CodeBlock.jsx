@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
+import { oneLight } from "react-syntax-highlighter/dist/esm/styles/prism";
 
 const CodeBlock = ({ children, className, ...props }) => {
   const [copied, setCopied] = useState(false);
@@ -33,8 +33,8 @@ const CodeBlock = ({ children, className, ...props }) => {
         borderRadius: "10px",
         overflow: "hidden",
         margin: "12px 0",
-        boxShadow: "0 4px 16px rgba(0,0,0,0.20)",
-        border: "1px solid #2d2d2d",
+        boxShadow: "0 4px 16px rgba(200, 134, 26, 0.08)",
+        border: "1px solid #e9dcc8",
       }}
     >
       {/* Header bar */}
@@ -43,15 +43,15 @@ const CodeBlock = ({ children, className, ...props }) => {
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          background: "#1e1e1e",
+          background: "#fdfaf5",
           padding: "8px 14px",
-          borderBottom: "1px solid #333",
+          borderBottom: "1px solid #e9dcc8",
         }}
       >
         <span
           style={{
             fontSize: "0.72rem",
-            color: "#9ca3af",
+            color: "#8c6b45",
             fontFamily: "'Inter', sans-serif",
             fontWeight: 500,
             textTransform: "uppercase",
@@ -66,12 +66,12 @@ const CodeBlock = ({ children, className, ...props }) => {
             display: "flex",
             alignItems: "center",
             gap: "5px",
-            background: copied ? "rgba(34,197,94,0.15)" : "rgba(255,255,255,0.06)",
-            border: copied ? "1px solid rgba(34,197,94,0.3)" : "1px solid rgba(255,255,255,0.1)",
+            background: copied ? "rgba(34,197,94,0.1)" : "rgba(200, 134, 26, 0.05)",
+            border: copied ? "1px solid rgba(34,197,94,0.3)" : "1px solid rgba(200, 134, 26, 0.2)",
             borderRadius: "6px",
             padding: "4px 10px",
             cursor: "pointer",
-            color: copied ? "#22c55e" : "#9ca3af",
+            color: copied ? "#15803d" : "#8c6b45",
             fontSize: "0.72rem",
             fontFamily: "'Inter', sans-serif",
             fontWeight: 500,
@@ -79,14 +79,14 @@ const CodeBlock = ({ children, className, ...props }) => {
           }}
           onMouseEnter={(e) => {
             if (!copied) {
-              e.target.style.background = "rgba(255,255,255,0.1)";
-              e.target.style.color = "#d1d5db";
+              e.target.style.background = "rgba(200, 134, 26, 0.12)";
+              e.target.style.color = "#7a4f0d";
             }
           }}
           onMouseLeave={(e) => {
             if (!copied) {
-              e.target.style.background = "rgba(255,255,255,0.06)";
-              e.target.style.color = "#9ca3af";
+              e.target.style.background = "rgba(200, 134, 26, 0.05)";
+              e.target.style.color = "#8c6b45";
             }
           }}
         >
@@ -106,7 +106,7 @@ const CodeBlock = ({ children, className, ...props }) => {
 
       {/* Code content */}
       <SyntaxHighlighter
-        style={oneDark}
+        style={oneLight}
         language={language || "text"}
         PreTag="div"
         customStyle={{
@@ -114,12 +114,12 @@ const CodeBlock = ({ children, className, ...props }) => {
           padding: "16px",
           fontSize: "0.82rem",
           lineHeight: 1.65,
-          background: "#282c34",
+          background: "#ffffff",
           fontFamily: "'Fira Code', 'JetBrains Mono', 'Cascadia Code', monospace",
         }}
         showLineNumbers={codeString.split("\n").length > 3}
         lineNumberStyle={{
-          color: "#4b5563",
+          color: "#c2b8ab",
           fontSize: "0.72rem",
           paddingRight: "16px",
           minWidth: "2.5em",
