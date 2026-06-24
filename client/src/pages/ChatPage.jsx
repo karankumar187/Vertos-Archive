@@ -61,6 +61,15 @@ const getViewableUrl = (url) => {
   return url;
 };
 
+// Returns a proxied download URL that forces Content-Disposition: attachment
+const getDownloadUrl = (url) => {
+  if (!url || url === '#') return '#';
+  if (url.startsWith('https://res.cloudinary.com/')) {
+    return `${FILE_PROXY_BASE}/api/file/view?url=${encodeURIComponent(url)}&download=1`;
+  }
+  return url;
+};
+
 const MessageBubble = React.memo(function MessageBubble({ msg, onRegenerate }) {
   const isUser = msg.role === "user";
   const [showSources, setShowSources] = useState(false);
@@ -163,7 +172,7 @@ const MessageBubble = React.memo(function MessageBubble({ msg, onRegenerate }) {
                         const isDoc = fileExt === 'pdf' || fileExt === 'docx';
                         const primaryRawUrl = src.fileUrl || (src.files && src.files.length > 0 ? src.files[0] : '#');
                         const primaryUrl = getViewableUrl(primaryRawUrl);
-                        const downloadUrl = primaryRawUrl !== '#' ? primaryRawUrl : null;
+                        const downloadUrl = primaryRawUrl !== '#' ? getDownloadUrl(primaryRawUrl) : null;
 
                         return (
                             <div key={i} style={{
@@ -195,7 +204,7 @@ const MessageBubble = React.memo(function MessageBubble({ msg, onRegenerate }) {
 
                                 {/* Download button */}
                                 {downloadUrl && (
-                                    <a href={downloadUrl} download={src.title || 'document'}
+                                    <a href={downloadUrl} target="_blank" rel="noopener noreferrer"
                                         title="Download"
                                         style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '20px', height: '20px', borderRadius: '4px', background: 'rgba(200,134,26,0.08)', border: '1px solid rgba(200,134,26,0.2)', textDecoration: 'none', flexShrink: 0, transition: 'all 0.15s' }}
                                         onMouseEnter={e => { e.currentTarget.style.background = 'rgba(200,134,26,0.18)'; }}

@@ -84,9 +84,9 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
 
-// File proxy: fetches a Cloudinary file and streams it with correct headers for browser viewing
+// File proxy: fetches a Cloudinary file and streams it with correct headers for browser viewing/download
 app.get('/api/file/view', async (req, res) => {
-    const { url } = req.query;
+    const { url, download } = req.query;
     if (!url) return res.status(400).send('Missing url parameter');
     
     // Only allow Cloudinary URLs
@@ -97,7 +97,8 @@ app.get('/api/file/view', async (req, res) => {
     try {
         const https = require('https');
         const urlObj = new URL(url);
-        const ext = urlObj.pathname.split('.').pop().toLowerCase();
+        const filename = urlObj.pathname.split('/').pop() || 'document';
+        const ext = filename.split('.').pop().toLowerCase();
         
         const mimeMap = {
             pdf: 'application/pdf',
@@ -109,24 +110,43 @@ app.get('/api/file/view', async (req, res) => {
         };
         const contentType = mimeMap[ext] || 'application/octet-stream';
         const isInlineable = ['pdf', 'jpg', 'jpeg', 'png', 'webp'].includes(ext);
+        const forceDownload = download === '1';
         
         res.setHeader('Content-Type', contentType);
-        res.setHeader('Content-Disposition', isInlineable ? `inline; filename="${urlObj.pathname.split('/').pop()}"` : `attachment; filename="${urlObj.pathname.split('/').pop()}"`);
+        res.setHeader('Content-Disposition', (forceDownload || !isInlineable) ? `attachment; filename="${filename}"` : `inline; filename="${filename}"`);
         res.setHeader('Cache-Control', 'public, max-age=86400');
+        res.setHeader('Access-Control-Allow-Origin', '*');
         
-        https.get(url, (fileRes) => {
-            if (fileRes.statusCode !== 200) {
-                res.status(fileRes.statusCode).send('Failed to fetch file from Cloudinary');
+        // Helper to fetch with redirect following
+        const fetchAndPipe = (targetUrl, redirectCount = 0) => {
+            if (redirectCount > 5) {
+                res.status(500).send('Too many redirects');
                 return;
             }
-            fileRes.pipe(res);
-        }).on('error', (err) => {
-            console.error('[FileProxy] Error:', err.message);
-            res.status(500).send('Error fetching file');
-        });
+            const parsedUrl = new URL(targetUrl);
+            https.get({ hostname: parsedUrl.hostname, path: parsedUrl.pathname + parsedUrl.search, headers: { 'User-Agent': 'VertosArchive/1.0' } }, (fileRes) => {
+                if ([301, 302, 307, 308].includes(fileRes.statusCode) && fileRes.headers.location) {
+                    // Follow redirect
+                    fetchAndPipe(fileRes.headers.location, redirectCount + 1);
+                    fileRes.resume();
+                    return;
+                }
+                if (fileRes.statusCode !== 200) {
+                    console.error(`[FileProxy] Cloudinary returned ${fileRes.statusCode} for: ${targetUrl}`);
+                    res.status(502).send(`Upstream error: ${fileRes.statusCode}`);
+                    return;
+                }
+                fileRes.pipe(res);
+            }).on('error', (err) => {
+                console.error('[FileProxy] Error:', err.message);
+                if (!res.headersSent) res.status(500).send('Error fetching file');
+            });
+        };
+        
+        fetchAndPipe(url);
     } catch (err) {
         console.error('[FileProxy] Error:', err.message);
-        res.status(500).send('Error fetching file');
+        if (!res.headersSent) res.status(500).send('Error fetching file');
     }
 });
 
