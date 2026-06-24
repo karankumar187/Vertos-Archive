@@ -226,7 +226,7 @@ const MessageBubble = React.memo(function MessageBubble({ msg, onRegenerate }) {
             </div>
         )}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '6px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: '12px', marginTop: '6px' }}>
             <p style={{
               fontFamily: "'Inter', sans-serif",
               fontSize: "0.7rem",
@@ -239,18 +239,17 @@ const MessageBubble = React.memo(function MessageBubble({ msg, onRegenerate }) {
                     onClick={() => onRegenerate(msg.id)}
                     style={{
                         background: "none", border: "none", cursor: "pointer",
-                        display: "flex", alignItems: "center", gap: "4px",
-                        fontSize: "0.7rem", color: "#a07840", padding: "0",
+                        display: "flex", alignItems: "center", padding: "4px",
+                        color: "#a07840",
                         transition: "color 0.2s"
                     }}
                     onMouseEnter={e => e.currentTarget.style.color = "#c8861a"}
                     onMouseLeave={e => e.currentTarget.style.color = "#a07840"}
                     title="Regenerate response"
                 >
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                     </svg>
-                    Regenerate
                 </button>
             )}
         </div>
