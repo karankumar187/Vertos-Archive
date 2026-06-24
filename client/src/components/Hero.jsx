@@ -8,8 +8,6 @@ const categories = [
   { id: "notes",           label: "Notes" },
   { id: "syllabus",        label: "Syllabus" },
   { id: "previous-papers", label: "Previous Papers" },
-  { id: "placements",      label: "Placements" },
-  { id: "faculty",         label: "Faculty" },
   { id: "university-info", label: "University Info" },
 ];
 
@@ -21,8 +19,6 @@ export default function Hero() {
   const [suggestions, setSuggestions]   = useState([
     "What are important DBMS topics?",
     "Show previous year ETP papers",
-    "Generate placement MCQs",
-    "Faculty details for CSE",
     "Hostel rules and regulations",
     "What scholarships are available?",
     "Upcoming events at LPU",
@@ -139,8 +135,8 @@ export default function Hero() {
           textAlign: "center", lineHeight: 1.75,
           maxWidth: "680px", marginBottom: "24px",
         }}>
-          Ask anything about notes, previous year papers, placements,
-          faculty, or any information about Lovely Professional University.
+          Ask anything about notes, previous year papers,
+          or any information about Lovely Professional University.
         </p>
 
         {/* ── Search bar ── */}

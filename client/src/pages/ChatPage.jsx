@@ -15,24 +15,21 @@ const CATEGORIES = [
   "Notes",
   "Syllabus",
   "Previous Papers",
-  "Placements",
-  "Faculty",
   "University Info",
 ];
 
 const WELCOME = {
   role: "assistant",
   id: "w0",
-  content: "Welcome to **Verto AI**! I'm your AI-powered university assistant. Ask me anything about LPU — notes, PYQs, syllabus, placements, faculty, or campus life.",
+  content: "Welcome to **Verto AI**! I'm your AI-powered university assistant. Ask me anything about LPU — notes, PYQs, syllabus, or campus life.",
   time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
 };
 
 const SUGGESTIONS = [
   "What are important DBMS topics for finals?",
   "Show previous year ETP papers",
-  "Tell me about LPU placement drives",
   "How do I apply for hostel?",
-  "Faculty details for CSE department",
+  "Tell me about the library facilities",
 ];
 
 const preprocessMath = (text) => {

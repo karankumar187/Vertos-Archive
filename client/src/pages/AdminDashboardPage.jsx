@@ -5,8 +5,6 @@ const CATEGORIES = [
   { label: "Notes",          value: "notes" },
   { label: "Syllabus",       value: "syllabus" },
   { label: "Previous Papers",value: "pyq" },
-  { label: "Placements",     value: "placements" },
-  { label: "Faculty",        value: "faculty" },
   { label: "University Info",value: "university" },
 ];
 
