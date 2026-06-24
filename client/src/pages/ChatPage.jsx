@@ -53,19 +53,19 @@ const API_BASE = (import.meta?.env?.VITE_API_URL) || 'http://localhost:5001/api'
 const FILE_PROXY_BASE = API_BASE.replace('/api', '');
 
 // Returns a proxied URL so all file types open correctly in the browser
-const getViewableUrl = (url) => {
+const getViewableUrl = (url, ext = '') => {
   if (!url || url === '#') return '#';
   if (url.startsWith('https://res.cloudinary.com/')) {
-    return `${FILE_PROXY_BASE}/api/file/view?url=${encodeURIComponent(url)}`;
+    return `${FILE_PROXY_BASE}/api/file/view?url=${encodeURIComponent(url)}&ext=${ext}`;
   }
   return url;
 };
 
 // Returns a proxied download URL that forces Content-Disposition: attachment
-const getDownloadUrl = (url) => {
+const getDownloadUrl = (url, ext = '') => {
   if (!url || url === '#') return '#';
   if (url.startsWith('https://res.cloudinary.com/')) {
-    return `${FILE_PROXY_BASE}/api/file/view?url=${encodeURIComponent(url)}&download=1`;
+    return `${FILE_PROXY_BASE}/api/file/view?url=${encodeURIComponent(url)}&ext=${ext}&download=1`;
   }
   return url;
 };
@@ -171,8 +171,8 @@ const MessageBubble = React.memo(function MessageBubble({ msg, onRegenerate }) {
                         const fileExt = src.fileType === 'application/pdf' ? 'pdf' : src.fileType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ? 'docx' : 'txt';
                         const isDoc = fileExt === 'pdf' || fileExt === 'docx';
                         const primaryRawUrl = src.fileUrl || (src.files && src.files.length > 0 ? src.files[0] : '#');
-                        const primaryUrl = getViewableUrl(primaryRawUrl);
-                        const downloadUrl = primaryRawUrl !== '#' ? getDownloadUrl(primaryRawUrl) : null;
+                        const primaryUrl = getViewableUrl(primaryRawUrl, fileExt);
+                        const downloadUrl = primaryRawUrl !== '#' ? getDownloadUrl(primaryRawUrl, fileExt) : null;
 
                         return (
                             <div key={i} style={{

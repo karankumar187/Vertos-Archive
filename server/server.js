@@ -98,7 +98,8 @@ app.get('/api/file/view', async (req, res) => {
         const https = require('https');
         const urlObj = new URL(url);
         const filename = urlObj.pathname.split('/').pop() || 'document';
-        const ext = filename.split('.').pop().toLowerCase();
+        const urlExt = filename.split('.').pop().toLowerCase();
+        const ext = req.query.ext || urlExt;
         
         const mimeMap = {
             pdf: 'application/pdf',
