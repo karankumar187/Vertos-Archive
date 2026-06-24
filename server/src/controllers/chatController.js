@@ -187,7 +187,7 @@ exports.sendMessage = async (req, res) => {
 
         // 5. Perform Hybrid Search to get context
         // Search across vector DB and MongoDB text index using the enriched filters
-        const searchResults = await performHybridSearch(content, currentFilters);
+        let searchResults = await performHybridSearch(content, currentFilters);
 
         // Build context string from search results
         let contextText = "";
@@ -255,9 +255,11 @@ ${contextText ? contextText : "No relevant context found in the database."}
    STEP 2 — If the user has NOT specified which units, ask: "Which units does this CA cover? (e.g., Unit 1 and 2)"
    STEP 3 — If the user has NOT specified the type, ask: "Should I generate MCQ questions or Subjective questions?"
    Only proceed to generate questions once you have all three pieces of information (course, units, type).
-   - IF MCQ: Generate EXACTLY 30 MCQs strictly from the specified units. 
-   - IF SUBJECTIVE: Generate a mix of short, medium, and long-answer questions (around 10-15 questions).
-   SOURCE PRIORITY (BOTH FORMATS): FIRST PREFERENCE is to pull directly from provided PYQs. If you run out of PYQs, generate new questions that strictly follow the exact pattern and difficulty of the PYQs. CRITICAL: For Maths/Physics, generate hard numerical problems. For Programming subjects, generate actual coding/implementation questions. Do NOT generate basic definitions. Number every question properly. DO NOT stop early.
+   - IF MCQ: Generate EXACTLY 30 MCQs strictly from the specified units.
+   - IF SUBJECTIVE for CODING/PROGRAMMING subjects (INT, CSE, MVC, Java, Python, Web Dev, etc.): Generate 10-15 CODE IMPLEMENTATION questions. Each question MUST ask the student to write actual working code — e.g., "Write a Laravel route that...", "Create a PHP function that...", "Implement a controller method that...". Take the topics from the specified units in the syllabus. Use PYQ patterns and notes as reference for the types of programs asked. Do NOT ask definitions like "What is MVC?" or "Explain routing". Every question must require the student to write code.
+   - IF SUBJECTIVE for MATHS/PHYSICS/NUMERICAL subjects: Generate 10-15 numerical problem-solving, calculation, or derivation questions. Do NOT ask definitions.
+   - IF SUBJECTIVE for OTHER subjects: Generate a mix of short (2-mark), medium (5-mark), and long-answer (10-mark) questions.
+   SOURCE PRIORITY (ALL FORMATS): FIRST PREFERENCE is to pull directly from provided PYQs. If you run out of PYQs, generate new questions that strictly follow the exact pattern and difficulty of the PYQs, using the syllabus topics and notes as reference. Number every question properly. DO NOT stop early.
 9. CODE RESPONSE POLICY: When the user asks coding questions, programming help, or anything involving code:
    - ALWAYS wrap code in fenced markdown code blocks with the correct language tag (e.g., \`\`\`python, \`\`\`java, \`\`\`c, \`\`\`javascript, \`\`\`sql, etc.).
    - Provide clear explanations before and after the code.
@@ -287,6 +289,7 @@ ${contextText ? contextText : "No relevant context found in the database."}
         let isCaRequest  = !isSyllabusRequest && /\b(ca|class[\s-]?assessment|class[\s-]?test|unit[\s-]?test|ca[\s-]?\d|ca\d)\b/i.test(content);
         
         // Inherit policy if the user is answering a clarification question from the assistant
+        let inheritedOriginalQuery = null;
         if (content.length < 80 && history.length > 1) {
             let lastAssistantMsg = null;
             for (let i = history.length - 2; i >= 0; i--) {
@@ -299,12 +302,41 @@ ${contextText ? contextText : "No relevant context found in the database."}
                 if (/\b(CA|Class Assessment)\b/i.test(lastAssistantMsg)) isCaRequest = true;
                 if (/\b(ETE|End Term|Final Exam)\b/i.test(lastAssistantMsg)) isEteRequest = true;
                 if (/\b(Mid Term|Mock Test)\b/i.test(lastAssistantMsg)) isMidTermRequest = true;
+                
+                // Find the original user request that started this flow to enrich the search
+                for (let i = history.length - 3; i >= 0; i--) {
+                    if (history[i].role === 'user' && history[i].content.length > content.length) {
+                        inheritedOriginalQuery = history[i].content;
+                        break;
+                    }
+                }
             }
         }
 
         let isNotesRequest = !isSyllabusRequest && !isMidTermRequest && !isEteRequest && !isEtpRequest && !isCaRequest && /\b(notes|study\s*material|lecture\s*notes)\b/i.test(content);
         const isJustCourseCode = content.trim().split(/\s+/).length <= 3 && /\b([a-zA-Z]{3})[-_\s]*(\d{3})\b/i.test(content);
         const isNoPolicyTriggered = !isSyllabusRequest && !isMidTermRequest && !isEteRequest && !isEtpRequest && !isCaRequest && !isNotesRequest;
+
+        // Re-run search with the original query if the short follow-up yielded no results
+        if (inheritedOriginalQuery && sourceData.length === 0) {
+            const reSearchResults = await performHybridSearch(inheritedOriginalQuery, currentFilters);
+            if (reSearchResults && reSearchResults.length > 0) {
+                contextText = reSearchResults.map((result, i) => `[Source ${i + 1} - ${result.metadata.title}]:\n${result.text}`).join('\n\n');
+                reSearchResults.forEach(res => {
+                    sourceData.push({
+                        chunkId: res.chunkId,
+                        documentId: res.documentId,
+                        title: res.metadata.title,
+                        text: res.text,
+                        fileUrl: res.metadata.fileUrl || '',
+                        fileType: res.metadata.fileType || '',
+                        category: res.metadata.category || '',
+                        subject: res.metadata.subject || '',
+                        files: res.metadata.files || [],
+                    });
+                });
+            }
+        }
 
         let userQueryFinal = content;
         if (isSyllabusRequest) {
@@ -316,7 +348,7 @@ ${contextText ? contextText : "No relevant context found in the database."}
         } else if (isEteRequest) {
             userQueryFinal = content + "\n\n[REMINDER: END TERM EXAM (ETE) request detected. Cover ALL 6 UNITS. Ask format if unspecified. FIRST PREFERENCE: Extract from PYQs. If more needed, generate matching PYQ pattern using syllabus and notes. Do NOT stop early.]"
         } else if (isCaRequest) {
-            userQueryFinal = content + "\n\n[REMINDER: CLASS ASSESSMENT (CA) request detected. Check for course, units, and type. If missing, ask. Otherwise generate exactly 30 MCQs or 10-15 Subjective. FIRST PREFERENCE: Extract from PYQs. Then match pattern. CRITICAL: If this is a Math/Physics subject, subjective questions MUST be numerical. If this is a Programming subject, subjective questions MUST ask the user to write code or implement features. DO NOT generate basic theoretical definitions. DO NOT stop early.]"
+            userQueryFinal = content + "\n\n[REMINDER: CLASS ASSESSMENT (CA) request detected. Check for course, units, and type from conversation history. If any are missing, ask. Otherwise generate questions immediately. FIRST PREFERENCE: Extract from PYQs. Then match PYQ pattern using syllabus topics and notes. CRITICAL RULES BY SUBJECT TYPE: (1) For CODING subjects (INT, CSE, MVC, Java, Python): Subjective questions MUST be CODE IMPLEMENTATION — ask the student to WRITE working code. e.g., 'Write a route...', 'Create a function...', 'Implement a controller...'. Do NOT ask definitions. (2) For MATHS/PHYSICS: Subjective must be numerical problems. (3) For MCQs in any subject: Generate EXACTLY 30 MCQs. DO NOT stop early.]"
         } else if (isNotesRequest) {
             userQueryFinal = content + "\n\n[REMINDER: NOTES request detected. Fetch all details STRICTLY from the provided source notes. If unavailable, generate using the syllabus. Do NOT just provide theory: include questions and solutions for math/physics, and sample code blocks for programming subjects. Format beautifully with headings and lists.]"
         } else if (isJustCourseCode && isNoPolicyTriggered) {
