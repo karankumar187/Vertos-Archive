@@ -123,11 +123,11 @@ app.get('/api/file/view', async (req, res) => {
                 res.status(500).send('Too many redirects');
                 return;
             }
-            const parsedUrl = new URL(targetUrl);
-            https.get({ hostname: parsedUrl.hostname, path: parsedUrl.pathname + parsedUrl.search, headers: { 'User-Agent': 'VertosArchive/1.0' } }, (fileRes) => {
+            https.get(targetUrl, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' } }, (fileRes) => {
                 if ([301, 302, 307, 308].includes(fileRes.statusCode) && fileRes.headers.location) {
-                    // Follow redirect
-                    fetchAndPipe(fileRes.headers.location, redirectCount + 1);
+                    // Follow redirect (handle relative URLs too)
+                    const redirectUrl = new URL(fileRes.headers.location, targetUrl).href;
+                    fetchAndPipe(redirectUrl, redirectCount + 1);
                     fileRes.resume();
                     return;
                 }
