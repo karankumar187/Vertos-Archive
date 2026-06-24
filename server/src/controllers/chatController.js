@@ -229,26 +229,26 @@ ${contextText ? contextText : "No relevant context found in the database."}
    - Do NOT generate questions when the user asks for a syllabus. Just present the syllabus information clearly.
 3. QUESTION NUMBERING (ONLY FOR QUESTION GENERATION): When you ARE generating questions (practice, exam, mock test, etc.), you MUST use a Markdown Heading 3 for EVERY single question: "### Question 1:", "### Question 2:", etc. This rule ONLY applies when generating questions, NOT for regular answers or syllabus responses.
 4. PRACTICE QUESTIONS POLICY: If asked for practice questions, first use actual questions from the context. If you run out, INVENT highly relevant practice questions based on syllabus topics to match the style/difficulty of the real ones.
-5. MID TERM POLICY (MANDATORY): Only apply when the user explicitly asks for mid term or mock test. Output EXACTLY 40 MCQs covering ONLY Units 1, 2, and 3. Number every question as '### Question 1:', '### Question 2:', etc. If context lacks 40 questions, invent the rest from syllabus topics. DO NOT stop early.
+5. MID TERM POLICY (MANDATORY): Only apply when the user explicitly asks for mid term or mock test. Output EXACTLY 40 MCQs covering ONLY Units 1, 2, and 3. Number every question as '### Question 1:', '### Question 2:', etc. FIRST PREFERENCE: Extract questions directly from provided PYQs. If more are needed, generate new questions that strictly follow the PYQ pattern using the syllabus and course notes context. DO NOT stop early.
 6. END TERM EXAM (ETE) POLICY (MANDATORY): Only apply when the user explicitly asks for end term, ETE, or final exam questions. The ETE covers ALL 6 UNITS of the course. Generate questions in one of these two formats based on what the user asks:
-   - FORMAT A (Full MCQ): Output EXACTLY 60 MCQs across all 6 units. Since Units 1-3 are already covered in the Mid Term, FOCUS MORE on Units 4, 5, and 6 (roughly 8-10 questions each from Units 4/5/6, and 4-6 questions each from Units 1/2/3). Base questions on the provided PYQs and syllabus context — model the style and difficulty after real exam questions. Invent any remaining questions from syllabus topics.
-   - FORMAT B (Mixed): Output 30 MCQs across all 6 units (with the same unit weighting — more from Units 4/5/6), followed by subjective/long-answer questions (2-mark, 5-mark, and 10-mark questions) spread across all 6 units. Base all questions on PYQs and syllabus context.
+   - FORMAT A (Full MCQ): Output EXACTLY 60 MCQs across all 6 units. FOCUS MORE on Units 4, 5, and 6 (8-10 from Units 4/5/6, and 4-6 from Units 1/2/3). 
+   - FORMAT B (Mixed): Output 30 MCQs across all 6 units, followed by subjective questions (2-mark, 5-mark, 10-mark) across all 6 units.
    If the user doesn't specify a format, ask them: "Should I generate a full MCQ paper (60 questions) or a mixed paper (30 MCQs + subjective questions)?"
-   If context lacks enough questions, invent the rest from syllabus topics. DO NOT stop early.
+   SOURCE PRIORITY: FIRST PREFERENCE is to use actual questions from provided PYQs. If you need more questions to reach the count, generate new ones that perfectly match the PYQ difficulty and pattern using the syllabus and notes. DO NOT stop early.
 7. END TERM PRACTICAL (ETP) POLICY (MANDATORY): Only apply when the user explicitly asks for end term practical, ETP, or practical exam questions. This exam tests hands-on implementation skills. Generate ONE comprehensive practical question (or a small set of 2-3 related questions) that:
-   - Covers the MOST IMPORTANT practical topics spanning multiple units of the course.
-   - Is based on actual PYQs and syllabus practical topics from the provided context.
+   - Covers the MOST IMPORTANT practical topics spanning multiple units.
    - Describes a real-world problem or task the student must implement/solve.
    - Includes clear requirements, expected output/behavior, and any constraints.
-   - May include sub-parts (a, b, c) that build on each other to test different skills progressively.
-   Model the style after the provided PYQ practical questions. If no PYQs are available, generate a realistic practical question based on syllabus topics.
+   - May include sub-parts (a, b, c).
+   SOURCE PRIORITY: FIRST PREFERENCE is to use actual PYQ practical questions. If none are available, create a realistic question matching the PYQ pattern by synthesizing the syllabus practical topics and course notes.
 8. CLASS ASSESSMENT (CA) POLICY: Only apply when the user explicitly asks for CA, class test, class assessment, or unit test questions. Follow this EXACT flow:
    STEP 1 — If the user has NOT specified a course, ask: "Which course is this CA for? (e.g., CSE 332, MTH 174)"
    STEP 2 — If the user has NOT specified which units, ask: "Which units does this CA cover? (e.g., Unit 1 and 2)"
    STEP 3 — If the user has NOT specified the type, ask: "Should I generate MCQ questions or Subjective questions?"
    Only proceed to generate questions once you have all three pieces of information (course, units, type).
-   - IF MCQ: Generate EXACTLY 30 MCQs strictly from the specified units only. Base questions on PYQs from those units (to match question style and difficulty) and the syllabus topics. Invent the rest if context lacks 30 questions. Number every question as '### Question 1:', '### Question 2:', etc.
-   - IF SUBJECTIVE: Generate a mix of short-answer (2-mark), medium-answer (5-mark), and long-answer (10-mark) questions from the specified units, totalling around 10-15 questions. Base on PYQs and syllabus.
+   - IF MCQ: Generate EXACTLY 30 MCQs strictly from the specified units. 
+   - IF SUBJECTIVE: Generate a mix of short, medium, and long-answer questions (around 10-15 questions).
+   SOURCE PRIORITY (BOTH FORMATS): FIRST PREFERENCE is to pull directly from provided PYQs. If you run out of PYQs, generate new questions that strictly follow the exact pattern and difficulty of the PYQs, using the syllabus and course notes. Number every question properly. DO NOT stop early.
 9. CODE RESPONSE POLICY: When the user asks coding questions, programming help, or anything involving code:
    - ALWAYS wrap code in fenced markdown code blocks with the correct language tag (e.g., \`\`\`python, \`\`\`java, \`\`\`c, \`\`\`javascript, \`\`\`sql, etc.).
    - Provide clear explanations before and after the code.
@@ -282,13 +282,13 @@ ${contextText ? contextText : "No relevant context found in the database."}
         if (isSyllabusRequest) {
             userQueryFinal = content + "\n\n[REMINDER: The user is asking about the SYLLABUS. Do NOT generate questions. Present the syllabus as a clean, structured overview. Make sure to list ALL UNITS (typically all 6 units) without skipping any and do NOT stop early. Include textbooks if available.]"
         } else if (isMidTermRequest) {
-            userQueryFinal = content + "\n\n[REMINDER: MID TERM request detected. Generate EXACTLY 40 MCQs from Units 1, 2 and 3 only. Number as '### Question 1:', '### Question 2:', etc. Do NOT stop early.]"
+            userQueryFinal = content + "\n\n[REMINDER: MID TERM request detected. Generate EXACTLY 40 MCQs from Units 1, 2 and 3 only. Number as '### Question 1:', '### Question 2:', etc. FIRST PREFERENCE: Use PYQs. Then use syllabus and notes to match the PYQ pattern. Do NOT stop early.]"
         } else if (isEtpRequest) {
-            userQueryFinal = content + "\n\n[REMINDER: END TERM PRACTICAL (ETP) request detected. Generate one comprehensive practical question (with sub-parts if needed) covering the most important practical topics across multiple units. Base it on the PYQs and syllabus in the context. Make it feel like a real hands-on implementation task.]"
+            userQueryFinal = content + "\n\n[REMINDER: END TERM PRACTICAL (ETP) request detected. Generate one comprehensive practical question. FIRST PREFERENCE: Use actual PYQs. If none, match PYQ pattern using syllabus and notes.]"
         } else if (isEteRequest) {
-            userQueryFinal = content + "\n\n[REMINDER: END TERM EXAM (ETE) request detected. Cover ALL 6 UNITS. If user wants full MCQ: 60 questions with more focus on Units 4/5/6. If mixed: 30 MCQs + subjective questions across all 6 units. If not specified, ask the user which format they prefer. Number every question as '### Question 1:', etc. Do NOT stop early.]"
+            userQueryFinal = content + "\n\n[REMINDER: END TERM EXAM (ETE) request detected. Cover ALL 6 UNITS. Ask format if unspecified. FIRST PREFERENCE: Extract from PYQs. If more needed, generate matching PYQ pattern using syllabus and notes. Do NOT stop early.]"
         } else if (isCaRequest) {
-            userQueryFinal = content + "\n\n[REMINDER: CLASS ASSESSMENT (CA) request detected. Follow the CA POLICY exactly: check if the user has provided (1) course name, (2) specific units, and (3) question type (MCQ or Subjective). Ask for any missing info before generating. If MCQ: Generate EXACTLY 30 MCQs from specified units only. DO NOT stop early. If Subjective: 10-15 questions (2-mark, 5-mark, 10-mark mix). Base all questions on PYQs and syllabus.]"
+            userQueryFinal = content + "\n\n[REMINDER: CLASS ASSESSMENT (CA) request detected. Check for course, units, and type. If missing, ask. Otherwise generate exactly 30 MCQs or 10-15 Subjective. FIRST PREFERENCE: Extract from PYQs. Then match pattern using syllabus and notes. DO NOT stop early.]"
         } else if (isNotesRequest) {
             userQueryFinal = content + "\n\n[REMINDER: NOTES request detected. Fetch all details STRICTLY from the provided source notes. If unavailable, generate using the syllabus. Do NOT just provide theory: include questions and solutions for math/physics, and sample code blocks for programming subjects. Format beautifully with headings and lists.]"
         }
