@@ -239,10 +239,11 @@ ${contextText ? contextText : "No relevant context found in the database."}
    - **Realistic Scenarios**: Where possible, frame computational questions around real-world or industry-specific scenarios (e.g., data structures, engineering mechanics, business analytics) with specific, realistic data values.
 4. PRACTICE QUESTIONS POLICY: If asked for practice questions, first use actual questions from the context. If you run out, INVENT highly relevant practice questions based on syllabus topics to match the style/difficulty of the real ones.
 5. MID TERM POLICY (MANDATORY): Only apply when the user explicitly asks for mid term or mock test. Output EXACTLY 40 MCQs covering ONLY Units 1, 2, and 3. Number every question as '### Question 1:', '### Question 2:', etc. FIRST PREFERENCE: Extract questions directly from provided PYQs. If more are needed, generate new questions that strictly follow the PYQ pattern using the syllabus and course notes context. DO NOT stop early.
-6. END TERM EXAM (ETE) POLICY (MANDATORY): Only apply when the user explicitly asks for end term, ETE, or final exam questions. The ETE covers ALL 6 UNITS of the course. Generate questions in one of these two formats based on what the user asks:
+6. END TERM EXAM (ETE) POLICY (MANDATORY): Only apply when the user explicitly asks for end term, ETE, or final exam questions. The ETE covers ALL 6 UNITS of the course. Generate questions in one of these three formats based on what the user asks:
    - FORMAT A (Full MCQ): Output EXACTLY 60 MCQs across all 6 units. FOCUS MORE on Units 4, 5, and 6 (8-10 from Units 4/5/6, and 4-6 from Units 1/2/3). 
    - FORMAT B (Mixed): Output 30 MCQs across all 6 units, followed by subjective questions (2-mark, 5-mark, 10-mark) across all 6 units.
-   If the user doesn't specify a format, ask them: "Should I generate a full MCQ paper (60 questions) or a mixed paper (30 MCQs + subjective questions)?"
+   - FORMAT C (Subjective): Output exactly 7 long subjective questions (10-marks each) spanning across all 6 units.
+   If the user doesn't specify a format, ask them: "Should I generate a full MCQ paper (60 questions), a mixed paper (30 MCQs + subjective), or a fully subjective paper (7 long questions)?"
    SOURCE PRIORITY: FIRST PREFERENCE is to use actual questions from provided PYQs. If you need more questions to reach the count, generate new ones that perfectly match the PYQ difficulty and pattern using the syllabus and notes. DO NOT stop early.
 7. END TERM PRACTICAL (ETP) POLICY (MANDATORY): Only apply when the user explicitly asks for end term practical, ETP, or practical exam questions. This exam tests hands-on implementation skills. Generate ONE comprehensive practical question (or a small set of 2-3 related questions) that:
    - Covers the MOST IMPORTANT practical topics spanning multiple units.
@@ -299,10 +300,16 @@ ${contextText ? contextText : "No relevant context found in the database."}
                     break;
                 }
             }
-            if (lastAssistantMsg && /\b(mcq|subjective|format|multiple-choice|unit|units|type)\b/i.test(lastAssistantMsg)) {
-                if (/\b(CA|Class Assessment)\b/i.test(lastAssistantMsg)) isCaRequest = true;
-                if (/\b(ETE|End Term|Final Exam)\b/i.test(lastAssistantMsg)) isEteRequest = true;
-                if (/\b(Mid Term|Mock Test)\b/i.test(lastAssistantMsg)) isMidTermRequest = true;
+            const isPyqFollowUp = lastAssistantMsg && /\bare you looking for pyqs\b/i.test(lastAssistantMsg);
+            
+            if (isPyqFollowUp || (lastAssistantMsg && /\b(mcq|subjective|format|multiple-choice|unit|units|type)\b/i.test(lastAssistantMsg))) {
+                
+                // Only inherit flags if it's NOT the PYQ question (since the PYQ question lists all exams, forcing flags would trigger all policies)
+                if (!isPyqFollowUp) {
+                    if (/\b(CA|Class Assessment)\b/i.test(lastAssistantMsg)) isCaRequest = true;
+                    if (/\b(ETE|End Term|Final Exam)\b/i.test(lastAssistantMsg)) isEteRequest = true;
+                    if (/\b(Mid Term|Mock Test)\b/i.test(lastAssistantMsg)) isMidTermRequest = true;
+                }
                 
                 // Find the original user request that started this flow to enrich the search
                 for (let i = history.length - 3; i >= 0; i--) {
@@ -349,7 +356,7 @@ ${contextText ? contextText : "No relevant context found in the database."}
         } else if (isEtpRequest) {
             userQueryFinal = content + "\n\n[REMINDER: END TERM PRACTICAL (ETP) request detected. Generate one comprehensive practical question. FIRST PREFERENCE: Use actual PYQs. If none, match PYQ pattern using syllabus and notes.]"
         } else if (isEteRequest) {
-            userQueryFinal = content + "\n\n[REMINDER: END TERM EXAM (ETE) request detected. Cover ALL 6 UNITS. Ask format if unspecified. FIRST PREFERENCE: Extract from PYQs. If more needed, generate matching PYQ pattern using syllabus and notes. Do NOT stop early.]"
+            userQueryFinal = content + "\n\n[REMINDER: END TERM EXAM (ETE) request detected. Cover ALL 6 UNITS. Ask format if unspecified (60 MCQ, Mixed, or Fully Subjective). FIRST PREFERENCE: Extract from PYQs. If more needed, generate matching PYQ pattern using syllabus and notes. Do NOT stop early.]"
         } else if (isCaRequest) {
             const userSpecifiedType = /\b(mcq|subjective|objective|coding|numerical|implementation|multiple[\s-]?choice)\b/i.test(content);
             if (userSpecifiedType) {
