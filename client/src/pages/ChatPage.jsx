@@ -537,8 +537,8 @@ export default function ChatPage() {
     }}>
       {/* Fixed Background Image */}
       <div style={{ position: "fixed", inset: 0, backgroundImage: `url(${campusSketch})`, backgroundSize: "cover", backgroundPosition: "center", backgroundRepeat: "no-repeat", zIndex: 0, pointerEvents: "none", opacity: 0.9 }} />
-      {/* Fade overlay */}
-      <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0, background: "linear-gradient(to bottom, #faf8f4 0%, #faf8f4 40%, rgba(250,248,244,0.85) 65%, rgba(250,248,244,0.2) 100%)" }}/>
+      {/* Fade overlay — light wash only over the main chat area, not the sidebar */}
+      <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0, background: "rgba(250, 246, 238, 0.28)" }}/>
 
       {/* Mobile Backdrop */}
       <div className={`mobile-backdrop ${sidebarOpen ? 'open' : ''}`} onClick={() => setSidebarOpen(false)} style={{ zIndex: 20 }} />
@@ -598,9 +598,11 @@ export default function ChatPage() {
                     style={{
                         display: "block", width: "100%", textAlign: "left",
                         padding: "9px 12px", borderRadius: "8px",
-                        background: activeConversationId === conv._id ? "#fdf5e8" : "transparent",
-                        border: "none",
-                        fontFamily: "'Inter', sans-serif", fontSize: "0.78rem", color: "#5c4021",
+                        background: activeConversationId === conv._id ? "rgba(200, 134, 26, 0.22)" : "transparent",
+                        border: activeConversationId === conv._id ? "1px solid rgba(200, 134, 26, 0.45)" : "1px solid transparent",
+                        fontFamily: "'Inter', sans-serif", fontSize: "0.78rem",
+                        color: activeConversationId === conv._id ? "#7a3e00" : "#3d2a0e",
+                        fontWeight: activeConversationId === conv._id ? 700 : 500,
                         cursor: "pointer", marginBottom: "2px",
                         whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis"
                     }}
