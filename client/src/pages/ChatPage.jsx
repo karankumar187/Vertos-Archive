@@ -547,9 +547,10 @@ export default function ChatPage() {
       <aside className={`mobile-sidebar ${sidebarOpen ? 'open' : ''}`} style={{
         width: "230px",
         flexShrink: 0,
-        background: "rgba(255, 255, 255, 0.85)",
-        backdropFilter: "blur(12px)",
-        borderRight: "1px solid rgba(233, 220, 200, 0.6)",
+        background: "rgba(245, 238, 225, 0.55)",
+        backdropFilter: "blur(18px)",
+        WebkitBackdropFilter: "blur(18px)",
+        borderRight: "1px solid rgba(210, 185, 145, 0.35)",
         display: "flex",
         flexDirection: "column",
         overflow: "hidden",
@@ -559,7 +560,7 @@ export default function ChatPage() {
         {/* Brand in sidebar */}
         <div style={{
           padding: "20px 18px 16px",
-          borderBottom: "1px solid #f0e8d8",
+          borderBottom: "1px solid rgba(210, 185, 145, 0.35)",
         }}>
           <p style={{ fontFamily: "'Playfair Display', serif", fontSize: "1rem", fontWeight: 700, color: "#1f1209" }}>
             <span style={{ color: "#c8861a" }}>Verto</span> AI
