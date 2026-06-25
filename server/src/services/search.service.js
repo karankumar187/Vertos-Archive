@@ -44,8 +44,10 @@ exports.performHybridSearch = async (query, filters = {}) => {
         // Fetch more than we need (top 60) so we can rank them and capture large multi-page documents
         let vectorResults = await searchQdrant(queryEmbedding, 60, qdrantFilter);
         
-        // Filter out weak vector matches to ensure search relevance
-        vectorResults = vectorResults.filter(point => point.score >= 0.35);
+        // Filter out weak vector matches to ensure search relevance.
+        // If it's a syllabus request, bypass the threshold so we don't drop units that have low semantic similarity to the word "syllabus".
+        const isSyllabus = filters.category === 'syllabus';
+        vectorResults = vectorResults.filter(point => isSyllabus || point.score >= 0.25);
         
         // 4. Execute Keyword Search (MongoDB)
         // Prepare MongoDB filter by removing any empty values
