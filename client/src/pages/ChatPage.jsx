@@ -6,6 +6,7 @@ import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import "katex/dist/katex.min.css";
 import vertoAiAvatar from "../assets/verto-ai.jpg";
+import campusSketch from "../assets/campus-sketch.png";
 import { chatAPI } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import CodeBlock from "../components/CodeBlock";
@@ -70,7 +71,7 @@ const getDownloadUrl = (url, ext = '') => {
   return url;
 };
 
-const MessageBubble = React.memo(function MessageBubble({ msg, onRegenerate }) {
+const MessageBubble = React.memo(function MessageBubble({ msg, onRegenerate, user }) {
   const isUser = msg.role === "user";
   const [showSources, setShowSources] = useState(false);
   const uniqueSources = msg.sources ? [...new Map(msg.sources.map(s => [s.documentId, s])).values()] : [];
@@ -251,14 +252,22 @@ const MessageBubble = React.memo(function MessageBubble({ msg, onRegenerate }) {
       </div>
 
       {isUser && (
-        <div style={{
-          width: "34px", height: "34px", flexShrink: 0,
-          background: "linear-gradient(135deg, #c8a87a, #9a7845)",
-          borderRadius: "50%",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          color: "#fff", fontWeight: 700, fontSize: "0.875rem",
-          fontFamily: "'Inter', sans-serif",
-        }}>K</div>
+        user?.avatar ? (
+          <img src={user.avatar} alt="User" style={{
+            width: "34px", height: "34px", flexShrink: 0,
+            borderRadius: "50%", objectFit: "cover",
+            boxShadow: "0 2px 8px rgba(180,83,9,0.15)"
+          }} />
+        ) : (
+          <div style={{
+            width: "34px", height: "34px", flexShrink: 0,
+            background: "linear-gradient(135deg, #c8a87a, #9a7845)",
+            borderRadius: "50%",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            color: "#fff", fontWeight: 700, fontSize: "0.875rem",
+            fontFamily: "'Inter', sans-serif",
+          }}>{user?.name?.charAt(0).toUpperCase() || "U"}</div>
+        )
       )}
     </div>
   );
@@ -522,21 +531,30 @@ export default function ChatPage() {
     <div style={{
       height: "calc(100vh - 68px)",
       display: "flex",
-      background: "#faf8f4",
+      background: "transparent",
       overflow: "hidden",
+      position: "relative"
     }}>
+      {/* Fixed Background Image */}
+      <div style={{ position: "fixed", inset: 0, backgroundImage: `url(${campusSketch})`, backgroundSize: "cover", backgroundPosition: "center", backgroundRepeat: "no-repeat", zIndex: 0, pointerEvents: "none", opacity: 0.9 }} />
+      {/* Fade overlay */}
+      <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0, background: "linear-gradient(to bottom, #faf8f4 0%, #faf8f4 40%, rgba(250,248,244,0.85) 65%, rgba(250,248,244,0.2) 100%)" }}/>
+
       {/* Mobile Backdrop */}
-      <div className={`mobile-backdrop ${sidebarOpen ? 'open' : ''}`} onClick={() => setSidebarOpen(false)} />
+      <div className={`mobile-backdrop ${sidebarOpen ? 'open' : ''}`} onClick={() => setSidebarOpen(false)} style={{ zIndex: 20 }} />
 
       {/* ── Sidebar ── */}
       <aside className={`mobile-sidebar ${sidebarOpen ? 'open' : ''}`} style={{
         width: "230px",
         flexShrink: 0,
-        background: "#ffffff",
-        borderRight: "1px solid #e9dcc8",
+        background: "rgba(255, 255, 255, 0.85)",
+        backdropFilter: "blur(12px)",
+        borderRight: "1px solid rgba(233, 220, 200, 0.6)",
         display: "flex",
         flexDirection: "column",
         overflow: "hidden",
+        position: "relative",
+        zIndex: 1,
       }}>
         {/* Brand in sidebar */}
         <div style={{
@@ -611,29 +629,11 @@ export default function ChatPage() {
             </div>
         )}
 
-        {/* Footer in sidebar */}
-        <div style={{
-          marginTop: "auto", padding: "14px 16px",
-          borderTop: "1px solid #f0e8d8",
-          background: "#fdfaf5",
-        }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <div style={{
-              width: "32px", height: "32px", borderRadius: "50%", flexShrink: 0,
-              background: "linear-gradient(135deg, #d97706, #b45309)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              color: "#fff", fontWeight: 700, fontSize: "0.8rem",
-            }}>{user?.name?.charAt(0) || 'U'}</div>
-            <div style={{ minWidth: 0, overflow: 'hidden' }}>
-              <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.78rem", fontWeight: 600, color: "#1f1209", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{user?.name || 'User'}</p>
-              <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.68rem", color: "#9a7845", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{user?.email || ''}</p>
-            </div>
-          </div>
-        </div>
+
       </aside>
 
       {/* ── Main Chat Area ── */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", position: "relative" }}>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", position: "relative", zIndex: 1 }}>
         
         {/* Mobile Sidebar Toggle - Floating */}
         <div className="mobile-only-flex" style={{ position: "absolute", top: "16px", left: "16px", zIndex: 10 }}>
@@ -661,7 +661,7 @@ export default function ChatPage() {
             scrollBehavior: "smooth"
           }}
         >
-          {messages.map(msg => <MessageBubble key={msg.id} msg={msg} onRegenerate={handleRegenerate} />)}
+          {messages.map(msg => <MessageBubble key={msg.id} msg={msg} onRegenerate={handleRegenerate} user={user} />)}
 
           {/* Typing indicator */}
           {loading && messages[messages.length - 1]?.role === "user" && (
