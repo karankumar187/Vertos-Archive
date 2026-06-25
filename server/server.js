@@ -3,6 +3,11 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const session = require('express-session');
 const { MongoStore } = require('connect-mongo');
+const helmet = require('helmet');
+const mongoSanitize = require('express-mongo-sanitize');
+const xss = require('xss');
+const hpp = require('hpp');
+const rateLimit = require('express-rate-limit');
 const passport = require('./src/config/passport');
 const connectDB = require('./src/config/db');
 const authRoutes = require('./src/routes/auth');
@@ -10,6 +15,14 @@ const config = require('./src/config/config');
 
 // Load environment variables
 dotenv.config();
+
+// Production Guard: Ensure secrets exist
+if (process.env.NODE_ENV === 'production') {
+    if (!process.env.JWT_SECRET || !process.env.SESSION_SECRET) {
+        console.error('FATAL ERROR: JWT_SECRET or SESSION_SECRET is not defined in production.');
+        process.exit(1);
+    }
+}
 
 const { initQdrant } = require('./src/services/qdrant.service');
 
@@ -43,9 +56,43 @@ app.use(cors({
     credentials: true,
 }));
 
-// Body parsers
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Set security HTTP headers
+app.use(helmet());
+
+// Global Rate Limiting
+const limiter = rateLimit({
+    windowMs: 10 * 60 * 1000, // 10 minutes
+    limit: 100, // Limit each IP to 100 requests per `window`
+    message: 'Too many requests from this IP, please try again later.'
+});
+app.use('/api', limiter);
+
+// Body parsers (limit to 10kb to mitigate DoS)
+app.use(express.json({ limit: '10kb' }));
+app.use(express.urlencoded({ extended: true, limit: '10kb' }));
+
+// Data sanitization against NoSQL query injection
+app.use(mongoSanitize());
+
+// Data sanitization against XSS
+const sanitizeObject = (obj) => {
+    for (let key in obj) {
+        if (typeof obj[key] === 'string') {
+            obj[key] = xss(obj[key]);
+        } else if (typeof obj[key] === 'object' && obj[key] !== null) {
+            sanitizeObject(obj[key]);
+        }
+    }
+};
+app.use((req, res, next) => {
+    if (req.body) sanitizeObject(req.body);
+    if (req.query) sanitizeObject(req.query);
+    if (req.params) sanitizeObject(req.params);
+    next();
+});
+
+// Prevent parameter pollution
+app.use(hpp());
 
 // Trust Render's reverse proxy for secure cookies and HTTPS resolution
 app.set('trust proxy', 1);
@@ -62,6 +109,7 @@ app.use(session({
     cookie: {
         secure: config.NODE_ENV === 'production',
         httpOnly: true,
+        sameSite: config.NODE_ENV === 'production' ? 'strict' : 'lax',
         maxAge: 24 * 60 * 60 * 1000,
     },
 }));

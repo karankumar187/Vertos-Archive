@@ -24,6 +24,7 @@ Vertos Archive is a full-stack, AI-powered academic resource platform built for 
 
 ### 🤖 AI Chat — Verto AI
 - **Hybrid RAG Engine** — Combines semantic vector search (Qdrant) and keyword search (MongoDB `$text`) via Reciprocal Rank Fusion (RRF) for highly relevant answers
+- **Smart Exam Generation** — Context-aware generation of CA, Mid-Term, ETE, and ETP papers strictly aligned with syllabus topics and PYQ patterns
 - **Streaming responses** — Server-Sent Events (SSE) for real-time token-by-token output
 - **Source citations** — Every answer links back to the exact documents used
 - **Category filters** — Filter by Notes, Syllabus, PYQs, Placements, Faculty, University Info
@@ -59,6 +60,12 @@ Vertos Archive is a full-stack, AI-powered academic resource platform built for 
 - Profile page with upload history and contribution stats
 - Role-based access (Student / Admin)
 
+### 🔒 Enterprise-Grade Security
+- **Anti-Prompt Injection** — Capped payload sizes, newline stripping, and XML-tag sanitization to block LLM jailbreaks
+- **Attack Mitigation** — Global API rate limiting, strict brute-force auth protection (10 req/15m), and 10kb body size limits
+- **Data Sanitization** — Recursive XSS cleaning, HTTP Parameter Pollution defense, and NoSQL injection sanitization
+- **Hardened Sessions & Crypto** — Strict sameSite cookies, 12-round bcrypt password hashing, and fail-safe production startup guards
+
 ---
 
 ## 🏗️ Tech Stack
@@ -71,7 +78,7 @@ Vertos Archive is a full-stack, AI-powered academic resource platform built for 
 | **Vector DB** | Qdrant Cloud (semantic search) |
 | **AI / LLM** | OpenAI GPT-4o-mini (chat, OCR, insights, embeddings) |
 | **File Storage** | Cloudinary (PDFs, images, Office files) |
-| **Auth** | JWT + Passport.js (Google OAuth 2.0) |
+| **Auth & Security** | JWT, Passport.js, Helmet, Express-Rate-Limit, Bcrypt (12 rounds) |
 | **Sessions** | express-session + connect-mongo |
 | **File Parsing** | pdf-parse, officeparser, GPT-4o Vision |
 

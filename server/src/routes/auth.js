@@ -1,5 +1,6 @@
 const express = require('express');
 const { body } = require('express-validator');
+const rateLimit = require('express-rate-limit');
 const passport = require('passport');
 const jwt = require('jsonwebtoken');
 const { register, login, getMe, updateProfile, changePassword } = require('../controllers/authController');
@@ -15,7 +16,7 @@ const generateToken = (id) => jwt.sign({ id }, JWT_SECRET, { expiresIn: JWT_EXPI
 const registerValidation = [
     body('name').trim().notEmpty().withMessage('Name is required').isLength({ max: 50 }),
     body('email').trim().notEmpty().isEmail().withMessage('Valid email required'),
-    body('password').notEmpty().isLength({ min: 6 }).withMessage('Password min 6 chars'),
+    body('password').notEmpty().isLength({ min: 8 }).withMessage('Password min 8 chars'),
 ];
 
 const loginValidation = [
@@ -25,12 +26,19 @@ const loginValidation = [
 
 const passwordValidation = [
     body('currentPassword').notEmpty().withMessage('Current password is required'),
-    body('newPassword').notEmpty().isLength({ min: 6 }).withMessage('New password min 6 chars'),
+    body('newPassword').notEmpty().isLength({ min: 8 }).withMessage('New password min 8 chars'),
 ];
 
+// ─── Brute-Force Rate Limiting ────────────────────────────────────────────────
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    limit: 10, // 10 requests per window
+    message: 'Too many authentication attempts, please try again after 15 minutes'
+});
+
 // ─── Local Auth Routes ──────────────────────────────────────────────────────
-router.post('/register', registerValidation, register);
-router.post('/login', loginValidation, login);
+router.post('/register', authLimiter, registerValidation, register);
+router.post('/login', authLimiter, loginValidation, login);
 router.get('/me', protect, getMe);
 router.put('/profile', protect, updateProfile);
 router.put('/change-password', protect, passwordValidation, changePassword);
