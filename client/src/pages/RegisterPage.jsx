@@ -59,7 +59,7 @@ export default function RegisterPage() {
         password: form.password,
       });
       await login(res.data.token);
-      navigate("/dashboard", { replace: true });
+      navigate("/", { replace: true });
     } catch (err) {
       const msg = err.response?.data?.message || "Registration failed. Please try again.";
       setError(msg);

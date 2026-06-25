@@ -21,7 +21,7 @@ export default function AuthCallbackPage() {
     }
 
     login(token).then(() => {
-      navigate("/dashboard", { replace: true });
+      navigate("/", { replace: true });
     });
   }, []);   // eslint-disable-line react-hooks/exhaustive-deps
 
