@@ -103,7 +103,7 @@ exports.login = async (req, res, next) => {
 // @route GET /api/auth/me
 exports.getMe = async (req, res, next) => {
     try {
-        const user = await User.findById(req.user.id);
+        const user = await User.findById(req.user._id);
         if (!user) return res.status(404).json({ success: false, message: 'User not found' });
         res.status(200).json({ success: true, user: userPayload(user) });
     } catch (err) {
@@ -115,7 +115,7 @@ exports.getMe = async (req, res, next) => {
 // @route PUT /api/auth/profile
 exports.updateProfile = async (req, res, next) => {
     try {
-        const user = await User.findById(req.user.id);
+        const user = await User.findById(req.user._id);
         if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
         const { name, reg_no, avatar } = req.body;
@@ -138,7 +138,7 @@ exports.updateProfile = async (req, res, next) => {
 // @route PUT /api/auth/change-password
 exports.changePassword = async (req, res, next) => {
     try {
-        const user = await User.findById(req.user.id).select('+password');
+        const user = await User.findById(req.user._id).select('+password');
         if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
         if (user.authProvider === 'google' && !user.password) {
