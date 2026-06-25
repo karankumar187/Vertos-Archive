@@ -267,7 +267,8 @@ ${contextText ? contextText : "No relevant context found in the database."}
    - Use inline code (\`like this\`) for variable names, function names, and short code references within text.
    - Include comments inside the code to explain key logic.
 10. MATH FORMATTING: You MUST use LaTeX for math. Use $ for inline (e.g., $E = mc^2$) and $$ for block math. NEVER use \\[, \\], \\(, or \\) for math.
-11. NOTES POLICY: When the user asks for notes or study material, strictly fetch all details from the provided source notes. If notes are unavailable, generate comprehensive notes using the syllabus context. Do NOT just provide theory: for math and physics subjects, include relevant questions and step-by-step solutions; for coding subjects, include functional sample codes. Structure the notes beautifully.`;
+11. NOTES POLICY: When the user asks for notes or study material, strictly fetch all details from the provided source notes. If notes are unavailable, generate comprehensive notes using the syllabus context. Do NOT just provide theory: for math and physics subjects, include relevant questions and step-by-step solutions; for coding subjects, include functional sample codes. Structure the notes beautifully.
+12. GENERIC PYQ POLICY: If the user asks for PYQs, past year questions, or practice questions, but DOES NOT specify which exam type (CA, Mid Term, ETE, or ETP), you MUST ask them: "Are you looking for PYQs for a CA, Mid Term, ETE, or ETP?" Do not generate a massive list of questions until they specify the exam type.`;
 
         const apiMessages = [
             { role: 'system', content: systemPrompt }
@@ -314,8 +315,10 @@ ${contextText ? contextText : "No relevant context found in the database."}
         }
 
         let isNotesRequest = !isSyllabusRequest && !isMidTermRequest && !isEteRequest && !isEtpRequest && !isCaRequest && /\b(notes|study\s*material|lecture\s*notes)\b/i.test(content);
+        let isGenericPyqRequest = !isSyllabusRequest && !isMidTermRequest && !isEteRequest && !isEtpRequest && !isCaRequest && /\b(pyq|pyqs|previous year|past year|practice questions?)\b/i.test(content);
+        
         const isJustCourseCode = content.trim().split(/\s+/).length <= 3 && /\b([a-zA-Z]{3})[-_\s]*(\d{3})\b/i.test(content);
-        const isNoPolicyTriggered = !isSyllabusRequest && !isMidTermRequest && !isEteRequest && !isEtpRequest && !isCaRequest && !isNotesRequest;
+        const isNoPolicyTriggered = !isSyllabusRequest && !isMidTermRequest && !isEteRequest && !isEtpRequest && !isCaRequest && !isNotesRequest && !isGenericPyqRequest;
 
         // Re-run search with the original query if the short follow-up yielded no results
         if (inheritedOriginalQuery && sourceData.length === 0) {
@@ -356,6 +359,8 @@ ${contextText ? contextText : "No relevant context found in the database."}
             }
         } else if (isNotesRequest) {
             userQueryFinal = content + "\n\n[REMINDER: NOTES request detected. Fetch all details STRICTLY from the provided source notes. If unavailable, generate using the syllabus. Do NOT just provide theory: include questions and solutions for math/physics, and sample code blocks for programming subjects. Format beautifully with headings and lists.]"
+        } else if (isGenericPyqRequest) {
+            userQueryFinal = content + "\n\n[REMINDER: GENERIC PYQ request detected. The user asked for PYQs but DID NOT specify the exam type. You MUST ask them: 'Are you looking for PYQs for a CA, Mid Term, ETE, or ETP?' Do NOT generate any questions yet.]"
         } else if (isJustCourseCode && isNoPolicyTriggered) {
             userQueryFinal = content + "\n\n[REMINDER: The user only typed the course code. DO NOT output the syllabus. DO NOT output notes or questions. Just give a 1-sentence brief summary of the course and directly ask the user what they need (e.g., 'Do you need the syllabus, study notes, or practice questions?').]";
         }
