@@ -92,7 +92,7 @@ app.use((req, res, next) => {
 });
 
 // Prevent parameter pollution
-app.use(hpp());
+// app.use(hpp()); // Disabled: Incompatible with Express 5 (attempts to overwrite read-only req.query)
 
 // Trust Render's reverse proxy for secure cookies and HTTPS resolution
 app.set('trust proxy', 1);
