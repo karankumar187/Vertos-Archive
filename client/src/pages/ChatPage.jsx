@@ -439,6 +439,65 @@ export default function ChatPage() {
             body: JSON.stringify({ content: q, filters })
         });
 
+        if (response.status === 404) {
+            // Stale conversation ID — clear it and retry with a brand-new conversation
+            console.warn('[Chat] Conversation not found (404), creating a new one and retrying...');
+            localStorage.removeItem('activeConversationId');
+            setActiveConversationId(null);
+            const freshId = await createNewConversation();
+            if (!freshId) throw new Error("Failed to create conversation");
+            // Retry the same message in the new conversation
+            const retryResponse = await fetch(`${VITE_API_URL}/chat/conversations/${freshId}/message`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                signal: controller.signal,
+                body: JSON.stringify({ content: q, filters })
+            });
+            if (!retryResponse.ok) throw new Error("Failed to send message");
+            // Swap the response object so the stream reader below works seamlessly
+            Object.defineProperty(response, 'body', { get: () => retryResponse.body });
+            // Actually just reassign and use retryResponse from here
+            const retryReader = retryResponse.body.getReader();
+            const retryDecoder = new TextDecoder();
+            let retryDone = false;
+            let retryBuffer = '';
+            let retryIsSourcesEvent = false;
+            while (!retryDone) {
+                const { value, done: rd } = await retryReader.read();
+                retryDone = rd;
+                if (value) {
+                    retryBuffer += retryDecoder.decode(value, { stream: true });
+                    const lines = retryBuffer.split('\n');
+                    retryBuffer = lines.pop();
+                    lines.forEach(line => {
+                        if (line.startsWith('event: sources')) { retryIsSourcesEvent = true; }
+                        else if (line.startsWith('data: ')) {
+                            const dataStr = line.replace('data: ', '').trim();
+                            if (dataStr === '[DONE]') { setLoading(false); loadConversations(); return; }
+                            try {
+                                const parsed = JSON.parse(dataStr);
+                                if (retryIsSourcesEvent) {
+                                    if (!assistantMsgId) { assistantMsgId = `a_${Date.now()}`; setMessages(prev => [...prev, { role: "assistant", id: assistantMsgId, content: "", time: now, sources: parsed }]); }
+                                    else { setMessages(prev => prev.map(m => m.id === assistantMsgId ? { ...m, sources: parsed } : m)); }
+                                    retryIsSourcesEvent = false;
+                                } else if (parsed.token) {
+                                    if (!assistantMsgId) { assistantMsgId = `a_${Date.now()}`; setMessages(prev => [...prev, { role: "assistant", id: assistantMsgId, content: parsed.token, time: now, sources: [] }]); }
+                                    else { setMessages(prev => prev.map(m => m.id === assistantMsgId ? { ...m, content: m.content + parsed.token } : m)); }
+                                } else if (parsed.message) {
+                                    if (!assistantMsgId) { assistantMsgId = `a_${Date.now()}`; setMessages(prev => [...prev, { role: "assistant", id: assistantMsgId, content: "**Error:** " + parsed.message, time: now, sources: [] }]); }
+                                }
+                            } catch (e) { console.error("Retry parse error", e); }
+                        }
+                    });
+                }
+            }
+            setAbortController(null);
+            return;
+        }
+
         if (!response.ok) {
             throw new Error("Failed to send message");
         }

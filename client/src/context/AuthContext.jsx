@@ -39,6 +39,8 @@ export function AuthProvider({ children }) {
     /** Call after a successful login — stores token and loads user */
     const login = useCallback(async (token) => {
         localStorage.setItem('token', token);
+        // Clear stale conversation from any previous session
+        localStorage.removeItem('activeConversationId');
         await fetchUser();
     }, [fetchUser]);
 
