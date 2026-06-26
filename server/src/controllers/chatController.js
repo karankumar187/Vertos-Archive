@@ -424,18 +424,18 @@ ${contextText ? contextText : "No relevant context found in the database."}
         await assistantMessage.save();
 
         // End stream
-        res.write(`event: done\n`);
         res.write(`data: [DONE]\n\n`);
         res.end();
 
     } catch (error) {
-        console.error('Error in sendMessage:', error);
+        console.error('Error in sendMessage:', error?.message || error);
+        console.error('Error stack:', error?.stack);
         if (!res.headersSent) {
             res.status(500).json({ success: false, message: 'Server error processing message' });
         } else {
-            // If headers are already sent, stream an error event
-            res.write(`event: error\n`);
-            res.write(`data: ${JSON.stringify({ message: 'Error generating response.' })}\n\n`);
+            // Headers already sent — write a plain data error so the frontend catches it
+            res.write(`data: ${JSON.stringify({ message: 'Error generating response. Please try again.' })}\n\n`);
+            res.write(`data: [DONE]\n\n`);
             res.end();
         }
     }
