@@ -584,7 +584,16 @@ export default function ChatPage() {
       e.preventDefault();
       sendMessage();
     }
+    // Shift+Enter: default behaviour (inserts newline) — no extra handling needed
   };
+
+  // Auto-resize textarea like ChatGPT
+  useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.style.height = 'auto';
+      inputRef.current.style.height = Math.min(inputRef.current.scrollHeight, 200) + 'px';
+    }
+  }, [input]);
 
   return (
     <div style={{
@@ -758,30 +767,31 @@ export default function ChatPage() {
           <div ref={endRef} />
         </div>
 
-        {/* Input bar - Sleek Floating Style */}
+        {/* Input bar */}
         <div style={{
           background: "transparent",
-          display: "flex",
-          flexDirection: "column",
-          padding: "8px 24px 12px 24px",
+          padding: "8px 20px 16px 20px",
           position: "relative",
           zIndex: 5,
         }}>
-          {/* Search Input Box */}
-          <div style={{
-            display: "flex", alignItems: "center", gap: "10px",
-            background: "#fff",
-            border: "1px solid #e8decb",
-            borderRadius: "999px",
-            padding: "4px 8px 4px 16px",
-            boxShadow: "0 2px 12px rgba(160,110,40,0.06)",
-            transition: "border-color 0.2s, box-shadow 0.2s",
-            marginBottom: "12px",
-          }}
-            onFocusCapture={e => { e.currentTarget.style.borderColor = "#c8861a"; e.currentTarget.style.boxShadow = "0 0 0 2px rgba(200,134,26,0.08)"; }}
-            onBlurCapture={e => { e.currentTarget.style.borderColor = "#e8decb"; e.currentTarget.style.boxShadow = "0 2px 12px rgba(160,110,40,0.06)"; }}
+          <div
+            id="chat-input-wrapper"
+            style={{
+              display: "flex",
+              alignItems: "flex-end",
+              gap: "10px",
+              background: "rgba(255,255,255,0.92)",
+              backdropFilter: "blur(10px)",
+              WebkitBackdropFilter: "blur(10px)",
+              border: "1.5px solid #e8decb",
+              borderRadius: "16px",
+              padding: "10px 10px 10px 18px",
+              boxShadow: "0 4px 24px rgba(160,110,40,0.10)",
+              transition: "border-color 0.2s, box-shadow 0.2s",
+            }}
+            onFocusCapture={e => { e.currentTarget.style.borderColor = "#c8861a"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(200,134,26,0.10), 0 4px 24px rgba(160,110,40,0.10)"; }}
+            onBlurCapture={e => { e.currentTarget.style.borderColor = "#e8decb"; e.currentTarget.style.boxShadow = "0 4px 24px rgba(160,110,40,0.10)"; }}
           >
-            <span style={{ color: "#c8861a", fontWeight: 400, fontSize: "1.4rem", marginRight: "4px", paddingBottom: "2px" }}>+</span>
             <textarea
               id="chat-input"
               ref={inputRef}
@@ -791,54 +801,84 @@ export default function ChatPage() {
               placeholder={activeCategory ? `Ask about ${activeCategory}…` : "Ask anything about LPU…"}
               rows={1}
               style={{
-                flex: 1, background: "none", border: "none", outline: "none", resize: "none",
-                fontFamily: "'Inter', sans-serif", fontSize: "0.9rem", color: "#1f1209",
-                lineHeight: 1.5,
-                padding: "8px 0",
-                maxHeight: "100px",
+                flex: 1,
+                background: "none",
+                border: "none",
+                outline: "none",
+                resize: "none",
+                fontFamily: "'Inter', sans-serif",
+                fontSize: "0.92rem",
+                color: "#1f1209",
+                lineHeight: 1.6,
+                padding: "4px 0",
+                minHeight: "28px",
+                maxHeight: "200px",
                 overflowY: "auto",
               }}
             />
-            {loading ? (
-              <button
-                id="chat-stop"
-                onClick={stopGeneration}
-                style={{
-                  flexShrink: 0,
-                  width: "32px", height: "32px",
-                  background: "transparent",
-                  border: "none",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  cursor: "pointer",
-                  transition: "all 0.2s",
-                }}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#dcb993" strokeWidth="2.5">
-                  <rect x="6" y="6" width="12" height="12" rx="2" ry="2" />
-                </svg>
-              </button>
-            ) : (
-              <button
-                id="chat-send"
-                onClick={() => sendMessage()}
-                disabled={!input.trim()}
-                style={{
-                  flexShrink: 0,
-                  width: "32px", height: "32px",
-                  background: "transparent",
-                  border: "none",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  cursor: input.trim() ? "pointer" : "not-allowed",
-                  transition: "all 0.2s",
-                }}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={input.trim() ? "#c8861a" : "#dcb993"} strokeWidth="2">
+            <div style={{ display: "flex", alignItems: "center", gap: "4px", flexShrink: 0, paddingBottom: "2px" }}>
+              {/* Shift+Enter hint */}
+              {input.length > 0 && (
+                <span style={{
+                  fontSize: "0.65rem", color: "#b09060",
+                  fontFamily: "'Inter', sans-serif",
+                  whiteSpace: "nowrap", marginRight: "4px",
+                }}>⇧ Enter = new line</span>
+              )}
+              {loading ? (
+                <button
+                  id="chat-stop"
+                  onClick={stopGeneration}
+                  title="Stop generating"
+                  style={{
+                    width: "36px", height: "36px",
+                    background: "linear-gradient(135deg, #d97706, #b45309)",
+                    border: "none", borderRadius: "10px",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    cursor: "pointer",
+                    boxShadow: "0 2px 8px rgba(180,83,9,0.25)",
+                    transition: "all 0.2s",
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.transform = "scale(1.05)"}
+                  onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="white">
+                    <rect x="5" y="5" width="14" height="14" rx="2"/>
+                  </svg>
+                </button>
+              ) : (
+                <button
+                  id="chat-send"
+                  onClick={() => sendMessage()}
+                  disabled={!input.trim()}
+                  title="Send (Enter)"
+                  style={{
+                    width: "36px", height: "36px",
+                    background: input.trim()
+                      ? "linear-gradient(135deg, #d97706, #b45309)"
+                      : "rgba(200,134,26,0.12)",
+                    border: "none", borderRadius: "10px",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    cursor: input.trim() ? "pointer" : "not-allowed",
+                    boxShadow: input.trim() ? "0 2px 8px rgba(180,83,9,0.25)" : "none",
+                    transition: "all 0.2s",
+                  }}
+                  onMouseEnter={e => { if (input.trim()) e.currentTarget.style.transform = "scale(1.05)"; }}
+                  onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                    stroke={input.trim() ? "#fff" : "#c8861a"} strokeWidth="2.2">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M12 5l7 7-7 7" />
-                </svg>
-              </button>
-            )}
+                  </svg>
+                </button>
+              )}
+            </div>
           </div>
-
-
-
+          {/* Bottom hint */}
+          <p style={{
+            textAlign: "center", fontFamily: "'Inter', sans-serif",
+            fontSize: "0.65rem", color: "#b09060", marginTop: "8px",
+          }}>Verto AI may make mistakes — always verify with official sources.</p>
         </div>
       </div>
 
