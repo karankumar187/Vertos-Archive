@@ -283,7 +283,15 @@ export default function ChatPage() {
   const [activeCategory, setActiveCategory] = useState(null);
   
   const [conversations, setConversations] = useState([]);
-  const [activeConversationId, setActiveConversationId] = useState(localStorage.getItem('activeConversationId') || null);
+  // If coming from homepage with a query (?q= or ?category=), always start fresh
+  const [activeConversationId, setActiveConversationId] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('q') || params.get('category')) {
+      localStorage.removeItem('activeConversationId');
+      return null;
+    }
+    return localStorage.getItem('activeConversationId') || null;
+  });
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const endRef = useRef(null);
@@ -305,9 +313,13 @@ export default function ChatPage() {
 
   useEffect(() => {
       loadConversations();
-      const savedId = localStorage.getItem('activeConversationId');
-      if (savedId) {
-          selectConversation(savedId);
+      // Only restore previous conversation if we're NOT starting fresh from homepage
+      const params = new URLSearchParams(window.location.search);
+      if (!params.get('q') && !params.get('category')) {
+          const savedId = localStorage.getItem('activeConversationId');
+          if (savedId) {
+              selectConversation(savedId);
+          }
       }
   }, []);
 
