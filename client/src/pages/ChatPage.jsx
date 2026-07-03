@@ -597,8 +597,15 @@ export default function ChatPage() {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
+    } else if ((e.key === "Enter" && e.shiftKey) || e.key === "Backspace" || e.key === "Delete") {
+      // Resize only on newline or deletion to avoid layout thrashing on every keystroke
+      setTimeout(() => {
+        if (inputRef.current) {
+          inputRef.current.style.height = 'auto';
+          inputRef.current.style.height = Math.min(inputRef.current.scrollHeight, 200) + 'px';
+        }
+      }, 0);
     }
-    // Shift+Enter: default behaviour (inserts newline) — no extra handling needed
   };
 
 
@@ -803,13 +810,7 @@ export default function ChatPage() {
               id="chat-input"
               ref={inputRef}
               value={input}
-              onChange={e => {
-                setInput(e.target.value);
-                // Auto-resize: direct DOM mutation — no re-render
-                const el = e.target;
-                el.style.height = 'auto';
-                el.style.height = Math.min(el.scrollHeight, 200) + 'px';
-              }}
+              onChange={e => setInput(e.target.value)}
               onKeyDown={onKeyDown}
               placeholder={activeCategory ? `Ask about ${activeCategory}…` : "Ask anything about LPU…"}
               rows={1}
