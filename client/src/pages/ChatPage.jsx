@@ -423,6 +423,8 @@ export default function ChatPage() {
     // Optimistically add user message
     setMessages(prev => [...prev, { role: "user", id: `u_${Date.now()}`, content: q, time: now }]);
     setInput("");
+    // Reset textarea height back to 1 row after sending
+    if (inputRef.current) { inputRef.current.style.height = 'auto'; }
     setLoading(true);
     setTimeout(() => endRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
 
@@ -599,13 +601,6 @@ export default function ChatPage() {
     // Shift+Enter: default behaviour (inserts newline) — no extra handling needed
   };
 
-  // Auto-resize textarea like ChatGPT
-  useEffect(() => {
-    if (inputRef.current) {
-      inputRef.current.style.height = 'auto';
-      inputRef.current.style.height = Math.min(inputRef.current.scrollHeight, 200) + 'px';
-    }
-  }, [input]);
 
   return (
     <div style={{
@@ -808,7 +803,13 @@ export default function ChatPage() {
               id="chat-input"
               ref={inputRef}
               value={input}
-              onChange={e => setInput(e.target.value)}
+              onChange={e => {
+                setInput(e.target.value);
+                // Auto-resize: direct DOM mutation — no re-render
+                const el = e.target;
+                el.style.height = 'auto';
+                el.style.height = Math.min(el.scrollHeight, 200) + 'px';
+              }}
               onKeyDown={onKeyDown}
               placeholder={activeCategory ? `Ask about ${activeCategory}…` : "Ask anything about LPU…"}
               rows={1}
