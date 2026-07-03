@@ -273,11 +273,151 @@ const MessageBubble = React.memo(function MessageBubble({ msg, onRegenerate, use
   );
 });
 
+// Extracted to isolate state and prevent the entire ChatPage from re-rendering on every keystroke
+const ChatInput = ({ onSend, loading, onStop, activeCategory }) => {
+  const [input, setInput] = useState("");
+  const inputRef = useRef(null);
+
+  const handleSend = () => {
+    if (!input.trim()) return;
+    const text = input;
+    setInput("");
+    if (inputRef.current) inputRef.current.style.height = 'auto';
+    onSend(text);
+  };
+
+  const onKeyDown = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    } else if ((e.key === "Enter" && e.shiftKey) || e.key === "Backspace" || e.key === "Delete") {
+      setTimeout(() => {
+        if (inputRef.current) {
+          inputRef.current.style.height = 'auto';
+          inputRef.current.style.height = Math.min(inputRef.current.scrollHeight, 200) + 'px';
+        }
+      }, 0);
+    }
+  };
+
+  return (
+    <div style={{
+      background: "transparent",
+      padding: "8px 20px 16px 20px",
+      position: "relative",
+      zIndex: 5,
+    }}>
+      <div
+        id="chat-input-wrapper"
+        style={{
+          display: "flex",
+          alignItems: "flex-end",
+          gap: "10px",
+          background: "rgba(255,255,255,0.92)",
+          backdropFilter: "blur(10px)",
+          WebkitBackdropFilter: "blur(10px)",
+          border: "1.5px solid #e8decb",
+          borderRadius: "16px",
+          padding: "10px 10px 10px 18px",
+          boxShadow: "0 4px 24px rgba(160,110,40,0.10)",
+          transition: "border-color 0.2s, box-shadow 0.2s",
+        }}
+        onFocusCapture={e => { e.currentTarget.style.borderColor = "#c8861a"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(200,134,26,0.10), 0 4px 24px rgba(160,110,40,0.10)"; }}
+        onBlurCapture={e => { e.currentTarget.style.borderColor = "#e8decb"; e.currentTarget.style.boxShadow = "0 4px 24px rgba(160,110,40,0.10)"; }}
+      >
+        <textarea
+          id="chat-input"
+          ref={inputRef}
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={onKeyDown}
+          placeholder={activeCategory ? `Ask about ${activeCategory}…` : "Ask anything about LPU…"}
+          rows={1}
+          style={{
+            flex: 1,
+            background: "none",
+            border: "none",
+            outline: "none",
+            resize: "none",
+            fontFamily: "'Inter', sans-serif",
+            fontSize: "0.92rem",
+            color: "#1f1209",
+            lineHeight: 1.6,
+            padding: "4px 0",
+            minHeight: "28px",
+            maxHeight: "200px",
+            overflowY: "auto",
+          }}
+        />
+        <div style={{ display: "flex", alignItems: "center", gap: "4px", flexShrink: 0, paddingBottom: "2px" }}>
+          {input.length > 0 && (
+            <span style={{
+              fontSize: "0.65rem", color: "#b09060",
+              fontFamily: "'Inter', sans-serif",
+              whiteSpace: "nowrap", marginRight: "4px",
+            }}>⇧ Enter = new line</span>
+          )}
+          {loading ? (
+            <button
+              id="chat-stop"
+              onClick={onStop}
+              title="Stop generating"
+              style={{
+                width: "36px", height: "36px",
+                background: "linear-gradient(135deg, #d97706, #b45309)",
+                border: "none", borderRadius: "10px",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                cursor: "pointer",
+                boxShadow: "0 2px 8px rgba(180,83,9,0.25)",
+                transition: "all 0.2s",
+              }}
+              onMouseEnter={e => e.currentTarget.style.transform = "scale(1.05)"}
+              onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="white">
+                <rect x="5" y="5" width="14" height="14" rx="2"/>
+              </svg>
+            </button>
+          ) : (
+            <button
+              id="chat-send"
+              onClick={handleSend}
+              disabled={!input.trim()}
+              title="Send (Enter)"
+              style={{
+                width: "36px", height: "36px",
+                background: input.trim()
+                  ? "linear-gradient(135deg, #d97706, #b45309)"
+                  : "rgba(200,134,26,0.12)",
+                border: "none", borderRadius: "10px",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                cursor: input.trim() ? "pointer" : "not-allowed",
+                boxShadow: input.trim() ? "0 2px 8px rgba(180,83,9,0.25)" : "none",
+                transition: "all 0.2s",
+              }}
+              onMouseEnter={e => { if (input.trim()) e.currentTarget.style.transform = "scale(1.05)"; }}
+              onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                stroke={input.trim() ? "#fff" : "#c8861a"} strokeWidth="2.2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M12 5l7 7-7 7" />
+              </svg>
+            </button>
+          )}
+        </div>
+      </div>
+      <p style={{
+        textAlign: "center", fontFamily: "'Inter', sans-serif",
+        fontSize: "0.65rem", color: "#b09060", marginTop: "8px",
+      }}>Verto AI may make mistakes — always verify with official sources.</p>
+    </div>
+  );
+};
+
 export default function ChatPage() {
   const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const [messages, setMessages] = useState([WELCOME]);
-  const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [abortController, setAbortController] = useState(null);
   const [activeCategory, setActiveCategory] = useState(null);
@@ -296,7 +436,6 @@ export default function ChatPage() {
 
   const endRef = useRef(null);
   const chatScrollRef = useRef(null);
-  const inputRef = useRef(null);
   const didAutoSend = useRef(false);
 
   // Load sidebar conversations
@@ -422,9 +561,6 @@ export default function ChatPage() {
     
     // Optimistically add user message
     setMessages(prev => [...prev, { role: "user", id: `u_${Date.now()}`, content: q, time: now }]);
-    setInput("");
-    // Reset textarea height back to 1 row after sending
-    if (inputRef.current) { inputRef.current.style.height = 'auto'; }
     setLoading(true);
     setTimeout(() => endRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
 
@@ -591,22 +727,7 @@ export default function ChatPage() {
     }
   };
 
-  const sendMessage = (text) => sendMessageDirect(text || input, activeCategory);
-
-  const onKeyDown = (e) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    } else if ((e.key === "Enter" && e.shiftKey) || e.key === "Backspace" || e.key === "Delete") {
-      // Resize only on newline or deletion to avoid layout thrashing on every keystroke
-      setTimeout(() => {
-        if (inputRef.current) {
-          inputRef.current.style.height = 'auto';
-          inputRef.current.style.height = Math.min(inputRef.current.scrollHeight, 200) + 'px';
-        }
-      }, 0);
-    }
-  };
+  const sendMessage = (text) => sendMessageDirect(text, activeCategory);
 
 
   return (
@@ -781,119 +902,12 @@ export default function ChatPage() {
           <div ref={endRef} />
         </div>
 
-        {/* Input bar */}
-        <div style={{
-          background: "transparent",
-          padding: "8px 20px 16px 20px",
-          position: "relative",
-          zIndex: 5,
-        }}>
-          <div
-            id="chat-input-wrapper"
-            style={{
-              display: "flex",
-              alignItems: "flex-end",
-              gap: "10px",
-              background: "rgba(255,255,255,0.92)",
-              backdropFilter: "blur(10px)",
-              WebkitBackdropFilter: "blur(10px)",
-              border: "1.5px solid #e8decb",
-              borderRadius: "16px",
-              padding: "10px 10px 10px 18px",
-              boxShadow: "0 4px 24px rgba(160,110,40,0.10)",
-              transition: "border-color 0.2s, box-shadow 0.2s",
-            }}
-            onFocusCapture={e => { e.currentTarget.style.borderColor = "#c8861a"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(200,134,26,0.10), 0 4px 24px rgba(160,110,40,0.10)"; }}
-            onBlurCapture={e => { e.currentTarget.style.borderColor = "#e8decb"; e.currentTarget.style.boxShadow = "0 4px 24px rgba(160,110,40,0.10)"; }}
-          >
-            <textarea
-              id="chat-input"
-              ref={inputRef}
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              onKeyDown={onKeyDown}
-              placeholder={activeCategory ? `Ask about ${activeCategory}…` : "Ask anything about LPU…"}
-              rows={1}
-              style={{
-                flex: 1,
-                background: "none",
-                border: "none",
-                outline: "none",
-                resize: "none",
-                fontFamily: "'Inter', sans-serif",
-                fontSize: "0.92rem",
-                color: "#1f1209",
-                lineHeight: 1.6,
-                padding: "4px 0",
-                minHeight: "28px",
-                maxHeight: "200px",
-                overflowY: "auto",
-              }}
-            />
-            <div style={{ display: "flex", alignItems: "center", gap: "4px", flexShrink: 0, paddingBottom: "2px" }}>
-              {/* Shift+Enter hint */}
-              {input.length > 0 && (
-                <span style={{
-                  fontSize: "0.65rem", color: "#b09060",
-                  fontFamily: "'Inter', sans-serif",
-                  whiteSpace: "nowrap", marginRight: "4px",
-                }}>⇧ Enter = new line</span>
-              )}
-              {loading ? (
-                <button
-                  id="chat-stop"
-                  onClick={stopGeneration}
-                  title="Stop generating"
-                  style={{
-                    width: "36px", height: "36px",
-                    background: "linear-gradient(135deg, #d97706, #b45309)",
-                    border: "none", borderRadius: "10px",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    cursor: "pointer",
-                    boxShadow: "0 2px 8px rgba(180,83,9,0.25)",
-                    transition: "all 0.2s",
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.transform = "scale(1.05)"}
-                  onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="white">
-                    <rect x="5" y="5" width="14" height="14" rx="2"/>
-                  </svg>
-                </button>
-              ) : (
-                <button
-                  id="chat-send"
-                  onClick={() => sendMessage()}
-                  disabled={!input.trim()}
-                  title="Send (Enter)"
-                  style={{
-                    width: "36px", height: "36px",
-                    background: input.trim()
-                      ? "linear-gradient(135deg, #d97706, #b45309)"
-                      : "rgba(200,134,26,0.12)",
-                    border: "none", borderRadius: "10px",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    cursor: input.trim() ? "pointer" : "not-allowed",
-                    boxShadow: input.trim() ? "0 2px 8px rgba(180,83,9,0.25)" : "none",
-                    transition: "all 0.2s",
-                  }}
-                  onMouseEnter={e => { if (input.trim()) e.currentTarget.style.transform = "scale(1.05)"; }}
-                  onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-                    stroke={input.trim() ? "#fff" : "#c8861a"} strokeWidth="2.2">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M12 5l7 7-7 7" />
-                  </svg>
-                </button>
-              )}
-            </div>
-          </div>
-          {/* Bottom hint */}
-          <p style={{
-            textAlign: "center", fontFamily: "'Inter', sans-serif",
-            fontSize: "0.65rem", color: "#b09060", marginTop: "8px",
-          }}>Verto AI may make mistakes — always verify with official sources.</p>
-        </div>
+        <ChatInput 
+          onSend={sendMessage} 
+          loading={loading} 
+          onStop={stopGeneration} 
+          activeCategory={activeCategory} 
+        />
       </div>
 
       <style>{`
