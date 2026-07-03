@@ -290,14 +290,8 @@ const ChatInput = ({ onSend, loading, onStop, activeCategory }) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSend();
-    } else if ((e.key === "Enter" && e.shiftKey) || e.key === "Backspace" || e.key === "Delete") {
-      setTimeout(() => {
-        if (inputRef.current) {
-          inputRef.current.style.height = 'auto';
-          inputRef.current.style.height = Math.min(inputRef.current.scrollHeight, 200) + 'px';
-        }
-      }, 0);
     }
+    // Shift+Enter natively inserts a newline, which triggers onChange and resizes automatically
   };
 
   return (
@@ -329,7 +323,13 @@ const ChatInput = ({ onSend, loading, onStop, activeCategory }) => {
           id="chat-input"
           ref={inputRef}
           value={input}
-          onChange={e => setInput(e.target.value)}
+          onChange={e => {
+            setInput(e.target.value);
+            // Instantly auto-resize the textarea based on content
+            const el = e.target;
+            el.style.height = 'auto';
+            el.style.height = Math.min(el.scrollHeight, 200) + 'px';
+          }}
           onKeyDown={onKeyDown}
           placeholder={activeCategory ? `Ask about ${activeCategory}…` : "Ask anything about LPU…"}
           rows={1}
