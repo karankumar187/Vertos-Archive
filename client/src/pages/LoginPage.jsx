@@ -130,7 +130,7 @@ export default function LoginPage() {
           background: "linear-gradient(to right, #d97706, #c8861a, #d4a96a, #c8861a, #d97706)",
         }} />
 
-        <div style={{ padding: "36px 40px 40px" }}>
+        <div className="mobile-p-sm" style={{ padding: "36px 40px 40px" }}>
           {/* Header */}
           <div style={{ textAlign: "center", marginBottom: "32px" }}>
             <div style={{

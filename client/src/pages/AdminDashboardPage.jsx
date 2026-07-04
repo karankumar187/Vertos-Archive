@@ -53,7 +53,7 @@ function ReviewModal({ doc, mode, onClose, onSuccess }) {
             background: 'rgba(31,18,9,0.55)', backdropFilter: 'blur(4px)',
             display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px',
         }} onClick={onClose}>
-            <div style={{
+            <div className="mobile-p-sm" style={{
                 background: '#fff', borderRadius: '18px', padding: '32px',
                 width: '100%', maxWidth: '560px',
                 boxShadow: '0 20px 60px rgba(30,10,0,0.22)',
@@ -103,7 +103,7 @@ function ReviewModal({ doc, mode, onClose, onSuccess }) {
                                 onBlur={e => e.target.style.borderColor = '#ddd0b8'}
                             />
                         </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                        <div className="mobile-grid-1" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                             <div>
                                 <label style={{ fontFamily: "'Inter', sans-serif", fontSize: '0.75rem', fontWeight: 600, color: '#5c4021', letterSpacing: '0.05em', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>
                                     Subject / Course Code
@@ -279,7 +279,7 @@ export default function AdminDashboardPage() {
                 </div>
             </div>
 
-            <div style={{ background: "#ffffff", border: "1px solid #e9dcc8", borderRadius: "16px", overflow: "hidden", boxShadow: "0 4px 20px rgba(160,110,40,0.06)" }}>
+            <div style={{ background: "#ffffff", border: "1px solid #e9dcc8", borderRadius: "16px", overflowX: "auto", overflowY: "hidden", boxShadow: "0 4px 20px rgba(160,110,40,0.06)" }}>
                 {loading ? (
                     <div style={{ padding: "40px", textAlign: "center", color: "#8b6535", fontFamily: "'Inter', sans-serif" }}>Loading queue...</div>
                 ) : activeTab === 'pending' && pendingDocs.length === 0 ? (

@@ -158,7 +158,7 @@ export default function UploadPage() {
               {/* Gold top bar */}
               <div style={{ height: "3px", background: "linear-gradient(to right, #d97706, #c8861a, #d4a96a, #c8861a, #d97706)" }} />
 
-              <div style={{ padding: "32px 36px", display: "flex", flexDirection: "column", gap: "22px" }}>
+              <div className="mobile-p-sm" style={{ padding: "32px 36px", display: "flex", flexDirection: "column", gap: "22px" }}>
 
                 {/* ── Drop zone ── */}
                 <div>

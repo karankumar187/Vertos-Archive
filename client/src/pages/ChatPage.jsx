@@ -295,8 +295,7 @@ const ChatInput = ({ onSend, loading, onStop, activeCategory }) => {
   };
 
   return (
-    <div style={{
-      background: "transparent",
+    <div className="mobile-p-sm" style={{
       padding: "8px 20px 16px 20px",
       position: "relative",
       zIndex: 5,

@@ -9,7 +9,7 @@ export default function Footer() {
         background: "linear-gradient(to right, transparent 0%, #c8861a 30%, #d4a96a 50%, #c8861a 70%, transparent 100%)",
       }} />
 
-      <div style={{
+      <div className="mobile-col" style={{
         maxWidth: "1280px", margin: "0 auto",
         padding: "18px 32px",
         display: "flex", flexDirection: "row",
