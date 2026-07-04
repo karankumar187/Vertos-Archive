@@ -282,10 +282,17 @@ export default function AdminDashboardPage() {
         ? pendingDocs 
         : pendingDocs.filter(doc => doc.category === pendingCategoryFilter);
 
+    // Normalize course code: strip spaces, hyphens, underscores, uppercase
+    // e.g. "INT-221", "INT 221", "INT221" all become "INT221"
+    const normalizeCourse = (subject) =>
+        (subject || 'Unknown').toUpperCase().replace(/[\s\-_]+/g, '');
+
     const groupedLiveDocs = liveDocs.reduce((acc, doc) => {
-        const subject = (doc.subject || 'Unknown').toUpperCase();
-        if (!acc[subject]) acc[subject] = [];
-        acc[subject].push(doc);
+        const key = normalizeCourse(doc.subject);
+        if (!acc[key]) {
+            acc[key] = { displayLabel: (doc.subject || 'Unknown').toUpperCase(), docs: [] };
+        }
+        acc[key].docs.push(doc);
         return acc;
     }, {});
     const sortedCourses = Object.keys(groupedLiveDocs).sort();
@@ -439,10 +446,10 @@ export default function AdminDashboardPage() {
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                         <span style={{ fontSize: '1.2rem' }}>📚</span>
                                         <h3 style={{ fontFamily: "'Inter', sans-serif", fontSize: '1rem', fontWeight: 600, color: '#3d2800', margin: 0 }}>
-                                            {course}
+                                            {groupedLiveDocs[course].displayLabel}
                                         </h3>
                                         <span style={{ background: '#fdf3e1', color: '#b47a18', padding: '2px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 600 }}>
-                                            {groupedLiveDocs[course].length} docs
+                                            {groupedLiveDocs[course].docs.length} docs
                                         </span>
                                     </div>
                                     <span style={{ color: '#9a7845', transform: expandedCourse === course ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>▼</span>
@@ -462,7 +469,7 @@ export default function AdminDashboardPage() {
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {groupedLiveDocs[course].map(doc => (
+                                                {groupedLiveDocs[course].docs.map(doc => (
                                                     <tr key={doc._id} style={{ borderBottom: "1px solid #f0e6d2", transition: "background 0.2s" }}
                                                         onMouseEnter={e => e.currentTarget.style.background = "#fcfaf7"} onMouseLeave={e => e.currentTarget.style.background = "#fff"}>
                                                         
