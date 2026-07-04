@@ -204,6 +204,8 @@ export default function AdminDashboardPage() {
     const [loading, setLoading] = useState(true);
     const [duplicateChecks, setDuplicateChecks] = useState({});
     const [modal, setModal] = useState(null); // { doc, mode: 'approve'|'reject' }
+    const [expandedCourse, setExpandedCourse] = useState(null);
+    const [textPreviewDoc, setTextPreviewDoc] = useState(null);
 
     useEffect(() => {
         if (activeTab === 'pending') {
@@ -274,6 +276,14 @@ export default function AdminDashboardPage() {
             setDuplicateChecks(prev => ({ ...prev, [doc._id]: '❌ Failed' }));
         }
     };
+
+    const groupedLiveDocs = liveDocs.reduce((acc, doc) => {
+        const subject = (doc.subject || 'Unknown').toUpperCase();
+        if (!acc[subject]) acc[subject] = [];
+        acc[subject].push(doc);
+        return acc;
+    }, {});
+    const sortedCourses = Object.keys(groupedLiveDocs).sort();
 
     return (
         <div style={{ maxWidth: "1200px", margin: "40px auto", padding: "0 24px", width: "100%" }}>
@@ -393,57 +403,104 @@ export default function AdminDashboardPage() {
                         </tbody>
                     </table>
                 ) : (
-                    <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: "'Inter', sans-serif", fontSize: "0.9rem" }}>
-                        <thead>
-                            <tr style={{ background: "#fdfaf5", borderBottom: "1px solid #e9dcc8", textAlign: "left", color: "#8b6535", textTransform: "uppercase", fontSize: "0.75rem", letterSpacing: "0.05em" }}>
-                                <th style={{ padding: "16px 20px" }}>Document</th>
-                                <th style={{ padding: "16px 20px" }}>Category / Subject</th>
-                                <th style={{ padding: "16px 20px" }}>Uploader</th>
-                                <th style={{ padding: "16px 20px" }}>Uploaded</th>
-                                <th style={{ padding: "16px 20px" }}>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                        {liveDocs.map(doc => (
-                            <tr key={doc._id} style={{ borderBottom: "1px solid #f0e6d2", background: "#fff", transition: "background 0.2s" }}
-                                onMouseEnter={e => e.currentTarget.style.background = "#fcfaf7"} onMouseLeave={e => e.currentTarget.style.background = "#fff"}>
-                                
-                                <td style={{ padding: "16px 20px" }}>
-                                    <p style={{ fontWeight: 600, color: "#2d1f0a", marginBottom: "4px" }}>{doc.title}</p>
-                                    <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-                                        <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer" style={{ color: "#c8861a", fontSize: "0.8rem", textDecoration: "none", fontWeight: 500 }}>
-                                            Preview ↗
-                                        </a>
-                                        {doc.pageCount && <span style={{ color: "#9a7845", fontSize: "0.8rem" }}>{doc.pageCount} Pages</span>}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        {sortedCourses.length === 0 && (
+                            <p style={{ textAlign: "center", padding: "40px", color: "#9a7845", fontSize: "0.9rem" }}>No live documents found.</p>
+                        )}
+                        {sortedCourses.map(course => (
+                            <div key={course} style={{ background: '#fff', border: '1px solid #e9dcc8', borderRadius: '12px', overflow: 'hidden' }}>
+                                {/* Course Header */}
+                                <button 
+                                    onClick={() => setExpandedCourse(expandedCourse === course ? null : course)}
+                                    style={{ 
+                                        width: '100%', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                        background: expandedCourse === course ? '#fcfaf7' : '#fff', border: 'none', cursor: 'pointer',
+                                        transition: 'background 0.2s', textAlign: 'left'
+                                    }}
+                                    onMouseEnter={e => { if (expandedCourse !== course) e.currentTarget.style.background = '#fcfaf7'; }}
+                                    onMouseLeave={e => { if (expandedCourse !== course) e.currentTarget.style.background = '#fff'; }}
+                                >
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                        <span style={{ fontSize: '1.2rem' }}>📚</span>
+                                        <h3 style={{ fontFamily: "'Inter', sans-serif", fontSize: '1rem', fontWeight: 600, color: '#3d2800', margin: 0 }}>
+                                            {course}
+                                        </h3>
+                                        <span style={{ background: '#fdf3e1', color: '#b47a18', padding: '2px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 600 }}>
+                                            {groupedLiveDocs[course].length} docs
+                                        </span>
                                     </div>
-                                </td>
-
-                                <td style={{ padding: "16px 20px" }}>
-                                    <span style={{ display: "inline-block", background: "#fdf3e1", color: "#b47a18", padding: "4px 10px", borderRadius: "20px", fontSize: "0.75rem", fontWeight: 600, textTransform: "capitalize", marginBottom: "4px" }}>
-                                        {doc.category}
-                                    </span>
-                                    <p style={{ color: "#7a5a2a", fontSize: "0.85rem", fontWeight: 500 }}>{doc.subject}</p>
-                                </td>
-
-                                <td style={{ padding: "16px 20px" }}>
-                                    <p style={{ color: "#3d2800", fontWeight: 500 }}>{doc.uploaderID?.name || 'Unknown'}</p>
-                                    <p style={{ color: "#9a7845", fontSize: "0.8rem" }}>{doc.uploaderID?.email || ''}</p>
-                                </td>
-
-                                <td style={{ padding: "16px 20px", color: "#7a5a2a", fontSize: "0.85rem" }}>
-                                    {new Date(doc.createdAt).toLocaleDateString('en-GB')}
-                                </td>
-
-                                <td style={{ padding: "16px 20px" }}>
-                                    <button onClick={() => handleDeleteDoc(doc._id)}
-                                        style={{ padding: '6px 14px', background: '#fff', border: '1px solid #fecaca', borderRadius: '6px', color: '#dc2626', fontWeight: 600, cursor: 'pointer', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                        <span>🗑️</span> Delete
-                                    </button>
-                                </td>
-                            </tr>
+                                    <span style={{ color: '#9a7845', transform: expandedCourse === course ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>▼</span>
+                                </button>
+                                
+                                {/* Expanded Documents */}
+                                {expandedCourse === course && (
+                                    <div style={{ borderTop: '1px solid #e9dcc8', background: '#fff', overflowX: 'auto' }}>
+                                        <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: "'Inter', sans-serif", fontSize: "0.85rem", minWidth: '700px' }}>
+                                            <thead>
+                                                <tr style={{ background: "#fdfaf5", borderBottom: "1px solid #f0e6d2", textAlign: "left", color: "#8b6535", textTransform: "uppercase", fontSize: "0.7rem", letterSpacing: "0.05em" }}>
+                                                    <th style={{ padding: "12px 20px" }}>Document</th>
+                                                    <th style={{ padding: "12px 20px" }}>Category</th>
+                                                    <th style={{ padding: "12px 20px" }}>Uploader</th>
+                                                    <th style={{ padding: "12px 20px" }}>Uploaded</th>
+                                                    <th style={{ padding: "12px 20px", textAlign: 'right' }}>Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {groupedLiveDocs[course].map(doc => (
+                                                    <tr key={doc._id} style={{ borderBottom: "1px solid #f0e6d2", transition: "background 0.2s" }}
+                                                        onMouseEnter={e => e.currentTarget.style.background = "#fcfaf7"} onMouseLeave={e => e.currentTarget.style.background = "#fff"}>
+                                                        
+                                                        <td style={{ padding: "12px 20px" }}>
+                                                            <p style={{ fontWeight: 600, color: "#2d1f0a", marginBottom: "4px" }}>{doc.title}</p>
+                                                            {doc.pageCount && <span style={{ color: "#9a7845", fontSize: "0.75rem" }}>{doc.pageCount} Pages</span>}
+                                                        </td>
+                        
+                                                        <td style={{ padding: "12px 20px" }}>
+                                                            <span style={{ display: "inline-block", background: "#fdf3e1", color: "#b47a18", padding: "4px 8px", borderRadius: "12px", fontSize: "0.7rem", fontWeight: 600, textTransform: "capitalize" }}>
+                                                                {doc.category}
+                                                            </span>
+                                                        </td>
+                        
+                                                        <td style={{ padding: "12px 20px" }}>
+                                                            <p style={{ color: "#3d2800", fontWeight: 500 }}>{doc.uploaderID?.name || 'Unknown'}</p>
+                                                            <p style={{ color: "#9a7845", fontSize: "0.75rem" }}>{doc.uploaderID?.email || ''}</p>
+                                                        </td>
+                        
+                                                        <td style={{ padding: "12px 20px", color: "#7a5a2a" }}>
+                                                            {new Date(doc.createdAt).toLocaleDateString('en-GB')}
+                                                        </td>
+                        
+                                                        <td style={{ padding: "12px 20px", textAlign: 'right' }}>
+                                                            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                                                                <button onClick={() => setTextPreviewDoc(doc)}
+                                                                    style={{ padding: '6px 12px', background: '#fdfaf5', border: '1px solid #e9dcc8', borderRadius: '6px', color: '#8b6535', fontWeight: 600, cursor: 'pointer', fontSize: '0.75rem', transition: 'all 0.2s' }}
+                                                                    onMouseEnter={e => e.currentTarget.style.background = '#f5eedb'}
+                                                                    onMouseLeave={e => e.currentTarget.style.background = '#fdfaf5'}>
+                                                                    View Data
+                                                                </button>
+                                                                <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer" 
+                                                                    style={{ padding: '6px 12px', background: '#fdfaf5', border: '1px solid #e8c96a', borderRadius: '6px', color: '#c8861a', fontWeight: 600, cursor: 'pointer', fontSize: '0.75rem', textDecoration: 'none', transition: 'all 0.2s' }}
+                                                                    onMouseEnter={e => e.currentTarget.style.background = '#fcf0c2'}
+                                                                    onMouseLeave={e => e.currentTarget.style.background = '#fdfaf5'}>
+                                                                    Preview ↗
+                                                                </a>
+                                                                <button onClick={() => handleDeleteDoc(doc._id)}
+                                                                    style={{ padding: '6px 12px', background: '#fff', border: '1px solid #fecaca', borderRadius: '6px', color: '#dc2626', fontWeight: 600, cursor: 'pointer', fontSize: '0.75rem', transition: 'all 0.2s' }}
+                                                                    onMouseEnter={e => e.currentTarget.style.background = '#fef2f2'}
+                                                                    onMouseLeave={e => e.currentTarget.style.background = '#fff'}>
+                                                                    Delete
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
+                            </div>
                         ))}
-                        </tbody>
-                    </table>
+                    </div>
                 )}
             </div>
 
@@ -456,6 +513,52 @@ export default function AdminDashboardPage() {
                     onSuccess={handleSuccess}
                 />
             )}
+            {/* Text Preview Modal */}
+            {textPreviewDoc && (
+                <TextPreviewModal
+                    doc={textPreviewDoc}
+                    onClose={() => setTextPreviewDoc(null)}
+                />
+            )}
+        </div>
+    );
+}
+
+function TextPreviewModal({ doc, onClose }) {
+    return (
+        <div style={{
+            position: 'fixed', inset: 0, zIndex: 1000,
+            background: 'rgba(31,18,9,0.55)', backdropFilter: 'blur(4px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px',
+        }} onClick={onClose}>
+            <div style={{
+                background: '#fff', borderRadius: '18px', padding: '32px',
+                width: '100%', maxWidth: '700px', maxHeight: '85vh', display: 'flex', flexDirection: 'column',
+                boxShadow: '0 20px 60px rgba(30,10,0,0.22)',
+                border: '1px solid #e9dcc8',
+            }} onClick={e => e.stopPropagation()}>
+                {/* Header */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+                    <div>
+                        <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: '1.4rem', fontWeight: 700, color: '#1f1209', marginBottom: '4px' }}>
+                            Extracted Data
+                        </h2>
+                        <p style={{ fontFamily: "'Inter', sans-serif", fontSize: '0.85rem', color: '#8b6535' }}>
+                            {doc.title}
+                        </p>
+                    </div>
+                    <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#9a7845' }}>×</button>
+                </div>
+                
+                {/* Content */}
+                <div style={{ 
+                    flex: 1, background: '#fdfaf5', border: '1px solid #e9dcc8', borderRadius: '8px', 
+                    padding: '16px', overflowY: 'auto',
+                    fontFamily: "'Inter', sans-serif", fontSize: '0.85rem', color: '#333', lineHeight: 1.6, whiteSpace: 'pre-wrap'
+                }}>
+                    {doc.extractedText ? doc.extractedText : <span style={{ color: '#9a7845', fontStyle: 'italic' }}>Extracted text is sparse or pending OCR. It will be generated during pipeline processing.</span>}
+                </div>
+            </div>
         </div>
     );
 }
