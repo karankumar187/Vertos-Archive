@@ -16,6 +16,7 @@ function ReviewModal({ doc, mode, onClose, onSuccess }) {
         reviewComment: '',
     });
     const [loading, setLoading] = useState(false);
+    const [showExtractedText, setShowExtractedText] = useState(false);
 
     const isApprove = mode === 'approve';
 
@@ -75,16 +76,35 @@ function ReviewModal({ doc, mode, onClose, onSuccess }) {
                     </p>
                 </div>
 
-                {/* Preview File Link */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px', padding: '10px 14px', background: '#fdfaf5', border: '1px solid #e9dcc8', borderRadius: '8px' }}>
-                    <span style={{ fontSize: '1rem' }}>📄</span>
-                    <span style={{ fontFamily: "'Inter', sans-serif", fontSize: '0.82rem', fontWeight: 600, color: '#3d2800', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {doc.title}
-                    </span>
-                    <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer"
-                        style={{ fontFamily: "'Inter', sans-serif", fontSize: '0.78rem', color: '#c8861a', fontWeight: 600, textDecoration: 'none', flexShrink: 0, border: '1px solid #e8c96a', borderRadius: '6px', padding: '3px 10px' }}>
-                        Preview ↗
-                    </a>
+                {/* Preview File Link & Extracted Text */}
+                <div style={{ marginBottom: '20px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', background: '#fdfaf5', border: '1px solid #e9dcc8', borderRadius: showExtractedText ? '8px 8px 0 0' : '8px' }}>
+                        <span style={{ fontSize: '1rem' }}>📄</span>
+                        <span style={{ fontFamily: "'Inter', sans-serif", fontSize: '0.82rem', fontWeight: 600, color: '#3d2800', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {doc.title}
+                        </span>
+                        <button onClick={() => setShowExtractedText(!showExtractedText)}
+                            style={{ fontFamily: "'Inter', sans-serif", fontSize: '0.78rem', color: '#8b6535', fontWeight: 600, background: 'transparent', border: 'none', cursor: 'pointer', padding: '3px 6px' }}>
+                            {showExtractedText ? 'Hide Data' : 'View Data'}
+                        </button>
+                        <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer"
+                            style={{ fontFamily: "'Inter', sans-serif", fontSize: '0.78rem', color: '#c8861a', fontWeight: 600, textDecoration: 'none', flexShrink: 0, border: '1px solid #e8c96a', borderRadius: '6px', padding: '3px 10px' }}>
+                            Preview ↗
+                        </a>
+                    </div>
+                    
+                    {showExtractedText && (
+                        <div style={{ background: '#fcfaf7', border: '1px solid #e9dcc8', borderTop: 'none', borderRadius: '0 0 8px 8px', padding: '12px' }}>
+                            <p style={{ fontFamily: "'Inter', sans-serif", fontSize: '0.75rem', fontWeight: 600, color: '#8b6535', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Extracted Data (Preview)</p>
+                            <div style={{ 
+                                background: '#fff', border: '1px solid #eee', borderRadius: '6px', 
+                                padding: '12px', maxHeight: '180px', overflowY: 'auto',
+                                fontFamily: "'Inter', sans-serif", fontSize: '0.8rem', color: '#333', lineHeight: 1.6, whiteSpace: 'pre-wrap'
+                            }}>
+                                {doc.extractedText ? doc.extractedText : <span style={{ color: '#9a7845', fontStyle: 'italic' }}>Extracted text is sparse or pending OCR. It will be generated during pipeline processing.</span>}
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Editable fields — only shown for approve */}
