@@ -206,6 +206,7 @@ export default function AdminDashboardPage() {
     const [modal, setModal] = useState(null); // { doc, mode: 'approve'|'reject' }
     const [expandedCourse, setExpandedCourse] = useState(null);
     const [textPreviewDoc, setTextPreviewDoc] = useState(null);
+    const [pendingCategoryFilter, setPendingCategoryFilter] = useState('all');
 
     useEffect(() => {
         if (activeTab === 'pending') {
@@ -277,6 +278,10 @@ export default function AdminDashboardPage() {
         }
     };
 
+    const filteredPendingDocs = pendingCategoryFilter === 'all' 
+        ? pendingDocs 
+        : pendingDocs.filter(doc => doc.category === pendingCategoryFilter);
+
     const groupedLiveDocs = liveDocs.reduce((acc, doc) => {
         const subject = (doc.subject || 'Unknown').toUpperCase();
         if (!acc[subject]) acc[subject] = [];
@@ -297,8 +302,19 @@ export default function AdminDashboardPage() {
                     </p>
                 </div>
                 
-                <div style={{ display: 'flex', gap: '8px', background: '#fdfaf5', padding: '6px', borderRadius: '12px', border: '1px solid #e9dcc8' }}>
-                    <button onClick={() => setActiveTab('pending')}
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    {activeTab === 'pending' && (
+                        <select 
+                            value={pendingCategoryFilter}
+                            onChange={(e) => setPendingCategoryFilter(e.target.value)}
+                            style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #ddd0b8', background: '#fff', color: '#5c4021', fontFamily: "'Inter', sans-serif", fontSize: '0.85rem', outline: 'none', cursor: 'pointer' }}
+                        >
+                            <option value="all">All Categories</option>
+                            {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                        </select>
+                    )}
+                    <div style={{ display: 'flex', gap: '8px', background: '#fdfaf5', padding: '6px', borderRadius: '12px', border: '1px solid #e9dcc8' }}>
+                        <button onClick={() => setActiveTab('pending')}
                         style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', background: activeTab === 'pending' ? '#c8861a' : 'transparent', color: activeTab === 'pending' ? '#fff' : '#8b6535', fontWeight: 600, cursor: 'pointer', transition: '0.2s' }}>
                         Pending Queue
                     </button>
@@ -312,11 +328,11 @@ export default function AdminDashboardPage() {
             <div style={{ background: "#ffffff", border: "1px solid #e9dcc8", borderRadius: "16px", overflowX: "auto", overflowY: "hidden", boxShadow: "0 4px 20px rgba(160,110,40,0.06)" }}>
                 {loading ? (
                     <div style={{ padding: "40px", textAlign: "center", color: "#8b6535", fontFamily: "'Inter', sans-serif" }}>Loading queue...</div>
-                ) : activeTab === 'pending' && pendingDocs.length === 0 ? (
+                ) : activeTab === 'pending' && filteredPendingDocs.length === 0 ? (
                     <div style={{ padding: "60px 40px", textAlign: "center" }}>
                         <div style={{ fontSize: "40px", marginBottom: "16px" }}>🎉</div>
-                        <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.4rem", color: "#1f1209" }}>All caught up!</h3>
-                        <p style={{ fontFamily: "'Inter', sans-serif", color: "#9a7845", marginTop: "8px" }}>There are no pending documents in the queue.</p>
+                        <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.4rem", color: "#1f1209" }}>{pendingDocs.length === 0 ? 'All caught up!' : 'No documents found'}</h3>
+                        <p style={{ fontFamily: "'Inter', sans-serif", color: "#9a7845", marginTop: "8px" }}>{pendingDocs.length === 0 ? 'There are no pending documents in the queue.' : 'No pending documents match the selected category.'}</p>
                     </div>
                 ) : activeTab === 'live' && liveDocs.length === 0 ? (
                     <div style={{ padding: "60px 40px", textAlign: "center" }}>
@@ -334,7 +350,7 @@ export default function AdminDashboardPage() {
                             </tr>
                         </thead>
                         <tbody>
-                            {pendingDocs.map(doc => (
+                            {filteredPendingDocs.map(doc => (
                                 <tr key={doc._id} style={{ borderBottom: "1px solid #f0e8d8", transition: "background 0.15s" }}
                                     onMouseEnter={e => e.currentTarget.style.background = "#fdfaf8"}
                                     onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
