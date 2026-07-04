@@ -9,6 +9,10 @@ const conversationSchema = new mongoose.Schema({
     title: {
         type: String,
         default: 'New Conversation',
+    },
+    activeCourse: {
+        type: String,
+        default: null,
     }
 }, {
     timestamps: true

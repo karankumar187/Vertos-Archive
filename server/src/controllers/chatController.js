@@ -162,8 +162,20 @@ exports.sendMessage = async (req, res) => {
             .lean();
         history.reverse();
 
-        // 4.5. If no subject is found in current message, fallback to history
-        if (!currentFilters.subject) {
+        // 4.5. Manage Active Course Context (Sticky Context)
+        let activeCourseUpdated = false;
+
+        // If the user's current message explicitly mentioned a subject, update the conversation's active course
+        if (currentFilters.subject && currentFilters.subject !== conversation.activeCourse) {
+            conversation.activeCourse = currentFilters.subject;
+            activeCourseUpdated = true;
+        } 
+        // Otherwise, if we didn't find one in the current message but have one saved, use the saved context
+        else if (!currentFilters.subject && conversation.activeCourse) {
+            currentFilters.subject = conversation.activeCourse;
+        } 
+        // Finally, if both are empty (e.g. an old conversation before this feature), fallback to history parsing
+        else if (!currentFilters.subject && !conversation.activeCourse) {
             // Search from the most recent message backwards
             for (let i = history.length - 1; i >= 0; i--) {
                 const histFullMatch = history[i].content.match(/\b([a-zA-Z]{3})[-_\s]*(\d{3})\b/i);
@@ -179,14 +191,22 @@ exports.sendMessage = async (req, res) => {
                         const uniqueSubjects = await Document.distinct('subject', { subject: regexMatch });
                         if (uniqueSubjects.length > 0) {
                             currentFilters.subject = uniqueSubjects[0];
+                            conversation.activeCourse = currentFilters.subject;
+                            activeCourseUpdated = true;
                             break;
                         } else if (histFullMatch) {
                             currentFilters.subject = `${histFullMatch[1].toUpperCase()} ${histFullMatch[2]}`;
+                            conversation.activeCourse = currentFilters.subject;
+                            activeCourseUpdated = true;
                             break;
                         }
                     } catch (err) {}
                 }
             }
+        }
+
+        if (activeCourseUpdated) {
+            await conversation.save();
         }
 
         // 5. Perform Hybrid Search to get context
