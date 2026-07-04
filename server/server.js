@@ -179,12 +179,26 @@ app.get('/api/file/view', async (req, res) => {
                 return;
             }
             
-            // Ensure the URL is properly encoded before sending to https.get
-            const safeUrl = new URL(targetUrl).href;
+            // Helper to get authenticated URL for raw files (which are often blocked on free Cloudinary CDN)
+            const getSafeTargetUrl = (u) => {
+                if (!u.includes('/raw/')) return u;
+                const match = u.match(/\/raw\/(upload|authenticated)\/(?:s--[a-zA-Z0-9_-]+--\/)?(?:v\d+\/)?(.+?)$/);
+                if (match) {
+                    const cloudinary = require('./src/config/cloudinary').cloudinary;
+                    const type = match[1];
+                    const publicId = match[2];
+                    const extMatch = publicId.match(/\.([a-z0-9]+)$/i);
+                    const format = extMatch ? extMatch[1] : '';
+                    return cloudinary.utils.private_download_url(publicId, format, { type, resource_type: "raw" });
+                }
+                return u;
+            };
+
+            const safeUrl = new URL(getSafeTargetUrl(targetUrl)).href;
             
             https.get(safeUrl, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' } }, (fileRes) => {
                 if ([301, 302, 307, 308].includes(fileRes.statusCode) && fileRes.headers.location) {
-                    // Follow redirect (handle relative URLs too)
+                    // Follow redirect
                     const redirectUrl = new URL(fileRes.headers.location, safeUrl).href;
                     fetchAndPipe(redirectUrl, redirectCount + 1, retryWithPdf);
                     fileRes.resume();
@@ -192,11 +206,10 @@ app.get('/api/file/view', async (req, res) => {
                 }
                 
                 if (fileRes.statusCode !== 200) {
-                    // If Cloudinary 404s on a raw URL that lacks an extension, try appending the correct extension
-                    // (This fixes files uploaded without extensions due to earlier Cloudinary config)
+                    // If 404 (or 401 ACL failure) on a raw URL that lacks an extension, try appending the correct extension
                     const targetExtStr = `.${ext}`;
-                    if (fileRes.statusCode === 404 && !retryWithPdf && ext && !safeUrl.toLowerCase().endsWith(targetExtStr)) {
-                        console.log(`[FileProxy] 404 for ${safeUrl}, retrying with ${targetExtStr}...`);
+                    if ([401, 404].includes(fileRes.statusCode) && !retryWithPdf && ext && !targetUrl.toLowerCase().endsWith(targetExtStr)) {
+                        console.log(`[FileProxy] ${fileRes.statusCode} for ${targetUrl}, retrying with ${targetExtStr}...`);
                         fileRes.resume();
                         return fetchAndPipe(targetUrl + targetExtStr, 0, true);
                     }
@@ -206,14 +219,13 @@ app.get('/api/file/view', async (req, res) => {
                     res.status(502).send(`
                         <div style="font-family: sans-serif; padding: 40px; text-align: center; color: #333;">
                             <h2>Document Not Found (404)</h2>
-                            <p>The original file could not be fetched from the server. It may have been deleted or the URL is invalid.</p>
-                            <p style="color: #666; font-size: 0.8em; margin-top: 20px;">Upstream URL: ${safeUrl}</p>
+                            <p>The original file could not be fetched from the server. It may have been deleted, restricted, or the URL is invalid.</p>
+                            <p style="color: #666; font-size: 0.8em; margin-top: 20px;">Upstream URL: ${targetUrl}</p>
                         </div>
                     `);
                     return;
                 }
                 
-                // If it succeeds on retry with an extension, we should make sure we're still sending as inline document
                 if (retryWithPdf) {
                     res.setHeader('Content-Type', contentType);
                     res.setHeader('Content-Disposition', forceDownload ? `attachment; filename="document.${ext}"` : `inline; filename="document.${ext}"`);

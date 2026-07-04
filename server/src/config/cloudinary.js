@@ -32,12 +32,20 @@ const uploadBufferToCloudinary = (buffer, mimeType, folder = 'vertos_archive_doc
         else if (mimeType === 'application/vnd.openxmlformats-officedocument.presentationml.presentation') format = 'pptx';
         else if (mimeType === 'application/vnd.ms-powerpoint') format = 'ppt';
 
+        const uploadOptions = {
+            folder,
+            resource_type: resourceType,
+            ...(format && { format })
+        };
+        
+        // For 'raw' resources (like PDFs), Cloudinary often blocks public CDN delivery by default.
+        // We upload them as authenticated so we can generate API download URLs later.
+        if (resourceType === 'raw') {
+            uploadOptions.type = 'authenticated';
+        }
+
         const uploadStream = cloudinary.uploader.upload_stream(
-            {
-                folder,
-                resource_type: resourceType,
-                ...(format && { format })
-            },
+            uploadOptions,
             (error, result) => {
                 if (error) return reject(error);
                 resolve(result);
