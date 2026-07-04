@@ -13,6 +13,10 @@ const conversationSchema = new mongoose.Schema({
     activeCourse: {
         type: String,
         default: null,
+    },
+    isStarred: {
+        type: Boolean,
+        default: false,
     }
 }, {
     timestamps: true

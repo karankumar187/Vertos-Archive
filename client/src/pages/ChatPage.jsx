@@ -433,6 +433,7 @@ export default function ChatPage() {
     return localStorage.getItem('activeConversationId') || null;
   });
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [dropdownOpenId, setDropdownOpenId] = useState(null);
 
   const endRef = useRef(null);
   const chatScrollRef = useRef(null);
@@ -447,6 +448,34 @@ export default function ChatPage() {
           }
       } catch (err) {
           console.error("Failed to load conversations", err);
+      }
+  };
+
+  const handleDeleteConversation = async (id, e) => {
+      e.stopPropagation();
+      setDropdownOpenId(null);
+      try {
+          await chatAPI.deleteConversation(id);
+          setConversations(prev => prev.filter(c => c._id !== id));
+          if (activeConversationId === id) {
+              handleNewChatClick();
+          }
+      } catch (err) {
+          console.error("Failed to delete conversation", err);
+          alert("Failed to delete conversation.");
+      }
+  };
+
+  const handleToggleStar = async (id, e) => {
+      e.stopPropagation();
+      setDropdownOpenId(null);
+      try {
+          await chatAPI.toggleStar(id);
+          // Re-load conversations to get the new sorted order
+          loadConversations();
+      } catch (err) {
+          console.error("Failed to toggle star", err);
+          alert("Failed to pin conversation.");
       }
   };
 
@@ -797,19 +826,74 @@ export default function ChatPage() {
         <div style={{ flex: 1, overflowY: "auto", padding: "4px 14px 12px" }}>
             <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.68rem", fontWeight: 600, color: "#9a7845", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "8px" }}>Recent Chats</p>
             {conversations.map((conv) => (
-                <button key={conv._id} onClick={() => { selectConversation(conv._id); setSidebarOpen(false); }}
-                    style={{
-                        display: "block", width: "100%", textAlign: "left",
-                        padding: "9px 12px", borderRadius: "8px",
-                        background: activeConversationId === conv._id ? "rgba(200, 134, 26, 0.22)" : "transparent",
-                        border: activeConversationId === conv._id ? "1px solid rgba(200, 134, 26, 0.45)" : "1px solid transparent",
-                        fontFamily: "'Inter', sans-serif", fontSize: "0.78rem",
-                        color: activeConversationId === conv._id ? "#7a3e00" : "#3d2a0e",
-                        fontWeight: activeConversationId === conv._id ? 700 : 500,
-                        cursor: "pointer", marginBottom: "2px",
-                        whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis"
-                    }}
-                >{conv.title}</button>
+                <div key={conv._id} style={{ position: "relative", marginBottom: "2px", display: "flex", alignItems: "center" }}>
+                    <button onClick={() => { selectConversation(conv._id); setSidebarOpen(false); }}
+                        style={{
+                            display: "block", width: "100%", textAlign: "left",
+                            padding: "9px 32px 9px 12px", borderRadius: "8px",
+                            background: activeConversationId === conv._id ? "rgba(200, 134, 26, 0.22)" : "transparent",
+                            border: activeConversationId === conv._id ? "1px solid rgba(200, 134, 26, 0.45)" : "1px solid transparent",
+                            fontFamily: "'Inter', sans-serif", fontSize: "0.78rem",
+                            color: activeConversationId === conv._id ? "#7a3e00" : "#3d2a0e",
+                            fontWeight: activeConversationId === conv._id ? 700 : 500,
+                            cursor: "pointer",
+                            whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+                            position: "relative"
+                        }}
+                    >
+                        {conv.isStarred && <span style={{ color: "#c8861a", marginRight: "6px" }}>★</span>}
+                        {conv.title}
+                    </button>
+                    
+                    {/* 3-Dots Button */}
+                    <button 
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setDropdownOpenId(dropdownOpenId === conv._id ? null : conv._id);
+                        }}
+                        style={{
+                            position: "absolute", right: "4px", top: "50%", transform: "translateY(-50%)",
+                            background: "transparent", border: "none", cursor: "pointer",
+                            padding: "4px", borderRadius: "4px", display: "flex", alignItems: "center", justifyContent: "center",
+                            color: "#9a7845", zIndex: 2
+                        }}
+                    >
+                        ⋮
+                    </button>
+
+                    {/* Dropdown Menu */}
+                    {dropdownOpenId === conv._id && (
+                        <div style={{
+                            position: "absolute", right: "0", top: "100%", marginTop: "4px",
+                            background: "#fff", border: "1px solid #e8decb", borderRadius: "8px",
+                            boxShadow: "0 4px 12px rgba(0,0,0,0.1)", zIndex: 50,
+                            width: "120px", overflow: "hidden", display: "flex", flexDirection: "column"
+                        }}>
+                            <button 
+                                onClick={(e) => handleToggleStar(conv._id, e)}
+                                style={{
+                                    padding: "8px 12px", background: "transparent", border: "none", borderBottom: "1px solid #f0e6d2",
+                                    textAlign: "left", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "0.75rem", color: "#5c4021"
+                                }}
+                                onMouseEnter={e => e.currentTarget.style.background = "#fdf5e8"}
+                                onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                            >
+                                {conv.isStarred ? 'Unstar' : 'Star'}
+                            </button>
+                            <button 
+                                onClick={(e) => handleDeleteConversation(conv._id, e)}
+                                style={{
+                                    padding: "8px 12px", background: "transparent", border: "none",
+                                    textAlign: "left", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "0.75rem", color: "#dc2626"
+                                }}
+                                onMouseEnter={e => e.currentTarget.style.background = "#fee2e2"}
+                                onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                            >
+                                Delete
+                            </button>
+                        </div>
+                    )}
+                </div>
             ))}
         </div>
 

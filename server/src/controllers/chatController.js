@@ -8,7 +8,7 @@ const Document = require('../models/Document');
 exports.getConversations = async (req, res) => {
     try {
         const conversations = await Conversation.find({ userId: req.user._id })
-            .sort({ updatedAt: -1 })
+            .sort({ isStarred: -1, updatedAt: -1 })
             .lean();
         res.json({ success: true, conversations });
     } catch (error) {
@@ -457,6 +457,46 @@ ${contextText ? contextText : "No relevant context found in the database."}
             res.write(`data: ${JSON.stringify({ message: 'Error generating response. Please try again.' })}\n\n`);
             res.write(`data: [DONE]\n\n`);
             res.end();
+    }
+};
+
+// Delete a conversation
+exports.deleteConversation = async (req, res) => {
+    try {
+        const conversationId = req.params.id;
+        // Verify ownership
+        const conversation = await Conversation.findOne({ _id: conversationId, userId: req.user._id });
+        if (!conversation) {
+            return res.status(404).json({ success: false, message: 'Conversation not found' });
         }
+        
+        // Delete the conversation and its messages
+        await Message.deleteMany({ conversationId });
+        await Conversation.deleteOne({ _id: conversationId });
+        
+        res.json({ success: true, message: 'Conversation deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting conversation:', error);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+};
+
+// Toggle star status of a conversation
+exports.toggleStarConversation = async (req, res) => {
+    try {
+        const conversationId = req.params.id;
+        // Verify ownership
+        const conversation = await Conversation.findOne({ _id: conversationId, userId: req.user._id });
+        if (!conversation) {
+            return res.status(404).json({ success: false, message: 'Conversation not found' });
+        }
+        
+        conversation.isStarred = !conversation.isStarred;
+        await conversation.save();
+        
+        res.json({ success: true, conversation });
+    } catch (error) {
+        console.error('Error toggling star:', error);
+        res.status(500).json({ success: false, message: 'Server error' });
     }
 };

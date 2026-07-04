@@ -59,9 +59,11 @@ export const adminAPI = {
 
 // ─── Chat API ─────────────────────────────────────────────────────────────
 export const chatAPI = {
-    getConversations:   () => api.get('/chat/conversations'),
+    getConversations: () => api.get('/chat/conversations'),
     createConversation: () => api.post('/chat/conversations'),
-    getMessages:        (id) => api.get(`/chat/conversations/${id}/messages`),
+    getMessages: (id) => api.get(`/chat/conversations/${id}/messages`),
+    deleteConversation: (id) => api.delete(`/chat/conversations/${id}`),
+    toggleStar: (id) => api.patch(`/chat/conversations/${id}/star`),
     // Note: sendMessage streams via SSE, so we handle it using native fetch in the component, not axios.
 };
 // ─── Analytics API ───────────────────────────────────────────────────────
