@@ -433,6 +433,14 @@ export default function ChatPage() {
   });
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [dropdownOpenId, setDropdownOpenId] = useState(null);
+  const [hoveredConvId, setHoveredConvId] = useState(null);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = () => setDropdownOpenId(null);
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, []);
 
   const endRef = useRef(null);
   const chatScrollRef = useRef(null);
@@ -825,7 +833,10 @@ export default function ChatPage() {
         <div style={{ flex: 1, overflowY: "auto", padding: "4px 14px 12px" }}>
             <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.68rem", fontWeight: 600, color: "#9a7845", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "8px" }}>Recent Chats</p>
             {conversations.map((conv) => (
-                <div key={conv._id} style={{ position: "relative", marginBottom: "2px", display: "flex", alignItems: "center" }}>
+                <div key={conv._id} 
+                    onMouseEnter={() => setHoveredConvId(conv._id)}
+                    onMouseLeave={() => setHoveredConvId(null)}
+                    style={{ position: "relative", marginBottom: "2px", display: "flex", alignItems: "center" }}>
                     <button onClick={() => { selectConversation(conv._id); setSidebarOpen(false); }}
                         style={{
                             display: "block", width: "100%", textAlign: "left",
@@ -845,20 +856,22 @@ export default function ChatPage() {
                     </button>
                     
                     {/* 3-Dots Button */}
-                    <button 
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            setDropdownOpenId(dropdownOpenId === conv._id ? null : conv._id);
-                        }}
-                        style={{
-                            position: "absolute", right: "4px", top: "50%", transform: "translateY(-50%)",
-                            background: "transparent", border: "none", cursor: "pointer",
-                            padding: "4px", borderRadius: "4px", display: "flex", alignItems: "center", justifyContent: "center",
-                            color: "#9a7845", zIndex: 2
-                        }}
-                    >
-                        ⋮
-                    </button>
+                    {(hoveredConvId === conv._id || dropdownOpenId === conv._id || activeConversationId === conv._id) && (
+                        <button 
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setDropdownOpenId(dropdownOpenId === conv._id ? null : conv._id);
+                            }}
+                            style={{
+                                position: "absolute", right: "4px", top: "50%", transform: "translateY(-50%)",
+                                background: "transparent", border: "none", cursor: "pointer",
+                                padding: "4px", borderRadius: "4px", display: "flex", alignItems: "center", justifyContent: "center",
+                                color: "#9a7845", zIndex: 2
+                            }}
+                        >
+                            ⋮
+                        </button>
+                    )}
 
                     {/* Dropdown Menu */}
                     {dropdownOpenId === conv._id && (
