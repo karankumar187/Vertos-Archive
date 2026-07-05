@@ -495,7 +495,7 @@ export default function AdminDashboardPage() {
                                     onMouseLeave={e => { if (expandedCourse !== course) e.currentTarget.style.background = '#fff'; }}
                                 >
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                        <span style={{ fontSize: '1.2rem' }}>📚</span>
+                                        <img src="/course-icon.jpg" alt="course" style={{ width: '28px', height: '28px', objectFit: 'contain', borderRadius: '4px', flexShrink: 0 }} />
                                         <h3 style={{ fontFamily: "'Inter', sans-serif", fontSize: '1rem', fontWeight: 600, color: '#3d2800', margin: 0 }}>
                                             {groupedLiveDocs[course].displayLabel}
                                         </h3>
@@ -526,7 +526,7 @@ export default function AdminDashboardPage() {
                                                         
                                                         <td style={{ padding: "12px 20px" }}>
                                                             <p style={{ fontWeight: 600, color: "#2d1f0a", marginBottom: "4px" }}>{doc.title}</p>
-                                                            {doc.pageCount && <span style={{ color: "#9a7845", fontSize: "0.75rem" }}>{doc.pageCount} Pages</span>}
+                                                            {doc.pageCount > 0 && <span style={{ color: "#9a7845", fontSize: "0.75rem" }}>{doc.pageCount} Pages</span>}
                                                         </td>
                         
                                                         <td style={{ padding: "12px 20px" }}>
