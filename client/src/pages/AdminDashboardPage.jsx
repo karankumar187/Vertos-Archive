@@ -290,7 +290,8 @@ export default function AdminDashboardPage() {
     const groupedLiveDocs = liveDocs.reduce((acc, doc) => {
         const key = normalizeCourse(doc.subject);
         if (!acc[key]) {
-            acc[key] = { displayLabel: (doc.subject || 'Unknown').toUpperCase(), docs: [] };
+            // Use the normalized key as displayLabel so it's always consistent
+            acc[key] = { displayLabel: key, docs: [] };
         }
         acc[key].docs.push(doc);
         return acc;
@@ -299,7 +300,7 @@ export default function AdminDashboardPage() {
 
     return (
         <div style={{ maxWidth: "1200px", margin: "40px auto", padding: "0 24px", width: "100%" }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '32px' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '32px', gap: '16px', flexWrap: 'wrap' }}>
                 <div>
                     <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: "2.2rem", color: "#1f1209", marginBottom: "8px" }}>
                         Admin <span style={{ color: "#c8861a" }}>Dashboard</span>
@@ -308,27 +309,31 @@ export default function AdminDashboardPage() {
                         Manage moderation queue and live documents.
                     </p>
                 </div>
-                
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+
+                {/* Right-side controls: filter + tab switcher */}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '10px' }}>
+                    {/* Tab switcher */}
+                    <div style={{ display: 'flex', gap: '8px', background: '#fdfaf5', padding: '6px', borderRadius: '12px', border: '1px solid #e9dcc8' }}>
+                        <button onClick={() => setActiveTab('pending')}
+                            style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', background: activeTab === 'pending' ? '#c8861a' : 'transparent', color: activeTab === 'pending' ? '#fff' : '#8b6535', fontWeight: 600, cursor: 'pointer', transition: '0.2s', fontFamily: "'Inter', sans-serif" }}>
+                            Pending Queue
+                        </button>
+                        <button onClick={() => setActiveTab('live')}
+                            style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', background: activeTab === 'live' ? '#c8861a' : 'transparent', color: activeTab === 'live' ? '#fff' : '#8b6535', fontWeight: 600, cursor: 'pointer', transition: '0.2s', fontFamily: "'Inter', sans-serif" }}>
+                            Live Documents
+                        </button>
+                    </div>
+                    {/* Category filter — only visible on Pending tab */}
                     {activeTab === 'pending' && (
-                        <select 
+                        <select
                             value={pendingCategoryFilter}
                             onChange={(e) => setPendingCategoryFilter(e.target.value)}
-                            style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #ddd0b8', background: '#fff', color: '#5c4021', fontFamily: "'Inter', sans-serif", fontSize: '0.85rem', outline: 'none', cursor: 'pointer' }}
+                            style={{ padding: '8px 14px', borderRadius: '8px', border: '1px solid #ddd0b8', background: '#fff', color: '#5c4021', fontFamily: "'Inter', sans-serif", fontSize: '0.85rem', outline: 'none', cursor: 'pointer', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}
                         >
                             <option value="all">All Categories</option>
                             {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
                         </select>
                     )}
-                    <div style={{ display: 'flex', gap: '8px', background: '#fdfaf5', padding: '6px', borderRadius: '12px', border: '1px solid #e9dcc8' }}>
-                        <button onClick={() => setActiveTab('pending')}
-                        style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', background: activeTab === 'pending' ? '#c8861a' : 'transparent', color: activeTab === 'pending' ? '#fff' : '#8b6535', fontWeight: 600, cursor: 'pointer', transition: '0.2s' }}>
-                        Pending Queue
-                    </button>
-                    <button onClick={() => setActiveTab('live')}
-                        style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', background: activeTab === 'live' ? '#c8861a' : 'transparent', color: activeTab === 'live' ? '#fff' : '#8b6535', fontWeight: 600, cursor: 'pointer', transition: '0.2s' }}>
-                        Live Documents
-                    </button>
                 </div>
             </div>
 
