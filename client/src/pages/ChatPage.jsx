@@ -77,7 +77,7 @@ const MessageBubble = React.memo(function MessageBubble({ msg, onRegenerate, use
   const uniqueSources = msg.sources ? [...new Map(msg.sources.map(s => [s.documentId, s])).values()] : [];
   
   return (
-    <div style={{
+    <div className="msg-bubble-container" style={{
       display: "flex",
       gap: "16px",
       alignSelf: isUser ? "flex-end" : "flex-start",
@@ -86,14 +86,14 @@ const MessageBubble = React.memo(function MessageBubble({ msg, onRegenerate, use
       justifyContent: isUser ? "flex-end" : "flex-start"
     }}>
       {!isUser && (
-        <img src={vertoAiAvatar} alt="Verto AI" style={{
+        <img className="chat-avatar" src={vertoAiAvatar} alt="Verto AI" style={{
           width: "34px", height: "34px", borderRadius: "50%",
           boxShadow: "0 2px 8px rgba(180,83,9,0.15)", flexShrink: 0,
         }} />
       )}
 
-      <div style={{ maxWidth: "85%", display: "flex", flexDirection: "column", alignItems: isUser ? "flex-end" : "flex-start", minWidth: 0 }}>
-        <div style={{
+      <div className="msg-bubble-wrapper" style={{ maxWidth: "85%", display: "flex", flexDirection: "column", alignItems: isUser ? "flex-end" : "flex-start", minWidth: 0 }}>
+        <div className="msg-bubble-content" style={{
           padding: "12px 16px",
           background: isUser
             ? "linear-gradient(135deg, #d97706 0%, #b45309 100%)"
@@ -253,13 +253,13 @@ const MessageBubble = React.memo(function MessageBubble({ msg, onRegenerate, use
 
       {isUser && (
         user?.avatar ? (
-          <img src={user.avatar} alt="User" style={{
+          <img className="chat-avatar" src={user.avatar} alt="User" style={{
             width: "34px", height: "34px", flexShrink: 0,
             borderRadius: "50%", objectFit: "cover",
             boxShadow: "0 2px 8px rgba(180,83,9,0.15)"
           }} />
         ) : (
-          <div style={{
+          <div className="chat-avatar" style={{
             width: "34px", height: "34px", flexShrink: 0,
             background: "linear-gradient(135deg, #c8a87a, #9a7845)",
             borderRadius: "50%",
@@ -956,6 +956,7 @@ export default function ChatPage() {
         {/* Messages */}
         <div 
           ref={chatScrollRef}
+          className="chat-messages-container"
           style={{
             flex: 1,
             overflowY: "auto",

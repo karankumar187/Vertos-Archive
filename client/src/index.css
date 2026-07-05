@@ -140,6 +140,24 @@ body {
   .mobile-grid-1 {
     grid-template-columns: 1fr !important;
   }
+  
+  /* Chat Mobile Adjustments */
+  .chat-messages-container {
+    padding: 60px 12px 0 12px !important; /* Clears top left hamburger menu */
+  }
+  .msg-bubble-container {
+    gap: 8px !important;
+  }
+  .msg-bubble-wrapper {
+    max-width: 90% !important; /* Allow bubbles to take more width on small screens */
+  }
+  .msg-bubble-content {
+    padding: 10px 14px !important;
+  }
+  .chat-avatar {
+    width: 28px !important;
+    height: 28px !important;
+  }
 }
 
 /* Markdown Styling for Chat Messages */
