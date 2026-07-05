@@ -457,6 +457,7 @@ ${contextText ? contextText : "No relevant context found in the database."}
             res.write(`data: ${JSON.stringify({ message: 'Error generating response. Please try again.' })}\n\n`);
             res.write(`data: [DONE]\n\n`);
             res.end();
+        }
     }
 };
 
