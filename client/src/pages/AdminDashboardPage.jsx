@@ -207,6 +207,7 @@ export default function AdminDashboardPage() {
     const [expandedCourse, setExpandedCourse] = useState(null);
     const [textPreviewDoc, setTextPreviewDoc] = useState(null);
     const [pendingCategoryFilter, setPendingCategoryFilter] = useState('all');
+    const [liveSearchQuery, setLiveSearchQuery] = useState('');
 
     useEffect(() => {
         if (activeTab === 'pending') {
@@ -287,7 +288,19 @@ export default function AdminDashboardPage() {
     const normalizeCourse = (subject) =>
         (subject || 'Unknown').toUpperCase().replace(/[\s\-_]+/g, '');
 
-    const groupedLiveDocs = liveDocs.reduce((acc, doc) => {
+    // Filter live docs by search query (course code or title)
+    const searchedLiveDocs = liveSearchQuery.trim()
+        ? liveDocs.filter(doc => {
+            const q = liveSearchQuery.toLowerCase();
+            return (
+                (doc.subject || '').toLowerCase().includes(q) ||
+                normalizeCourse(doc.subject).toLowerCase().includes(q.replace(/[\s\-_]+/g, '')) ||
+                (doc.title || '').toLowerCase().includes(q)
+            );
+          })
+        : liveDocs;
+
+    const groupedLiveDocs = searchedLiveDocs.reduce((acc, doc) => {
         const key = normalizeCourse(doc.subject);
         if (!acc[key]) {
             // Use the normalized key as displayLabel so it's always consistent
@@ -432,6 +445,39 @@ export default function AdminDashboardPage() {
                     </table>
                 ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        {/* Search Bar */}
+                        <div style={{ padding: '16px 20px', borderBottom: '1px solid #f0e6d2' }}>
+                            <div style={{ position: 'relative', maxWidth: '420px' }}>
+                                <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', fontSize: '1rem', pointerEvents: 'none' }}>🔍</span>
+                                <input
+                                    type="text"
+                                    value={liveSearchQuery}
+                                    onChange={e => { setLiveSearchQuery(e.target.value); setExpandedCourse(null); }}
+                                    placeholder="Search by course code or document title..."
+                                    style={{
+                                        width: '100%', padding: '10px 36px 10px 38px', borderRadius: '10px',
+                                        border: '1px solid #ddd0b8', fontFamily: "'Inter', sans-serif",
+                                        fontSize: '0.875rem', color: '#1f1209', outline: 'none',
+                                        background: '#fdfaf5', boxSizing: 'border-box',
+                                        transition: 'border-color 0.2s, box-shadow 0.2s'
+                                    }}
+                                    onFocus={e => { e.target.style.borderColor = '#c8861a'; e.target.style.boxShadow = '0 0 0 3px rgba(200,134,26,0.12)'; }}
+                                    onBlur={e => { e.target.style.borderColor = '#ddd0b8'; e.target.style.boxShadow = 'none'; }}
+                                />
+                                {liveSearchQuery && (
+                                    <button onClick={() => { setLiveSearchQuery(''); setExpandedCourse(null); }}
+                                        style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#9a7845', fontSize: '1rem', lineHeight: 1 }}>
+                                        ×
+                                    </button>
+                                )}
+                            </div>
+                            {liveSearchQuery.trim() && (
+                                <p style={{ fontFamily: "'Inter', sans-serif", fontSize: '0.78rem', color: '#9a7845', marginTop: '8px' }}>
+                                    {sortedCourses.length === 0 ? 'No results found.' : `${sortedCourses.length} course(s) · ${searchedLiveDocs.length} document(s) found`}
+                                </p>
+                            )}
+                        </div>
+
                         {sortedCourses.length === 0 && (
                             <p style={{ textAlign: "center", padding: "40px", color: "#9a7845", fontSize: "0.9rem" }}>No live documents found.</p>
                         )}
@@ -460,8 +506,8 @@ export default function AdminDashboardPage() {
                                     <span style={{ color: '#9a7845', transform: expandedCourse === course ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>▼</span>
                                 </button>
                                 
-                                {/* Expanded Documents */}
-                                {expandedCourse === course && (
+                                {/* Expanded Documents: auto-expand if search narrows to 1 course */}
+                                {(expandedCourse === course || (liveSearchQuery.trim() && sortedCourses.length === 1)) && (
                                     <div style={{ borderTop: '1px solid #e9dcc8', background: '#fff', overflowX: 'auto' }}>
                                         <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: "'Inter', sans-serif", fontSize: "0.85rem", minWidth: '700px' }}>
                                             <thead>
