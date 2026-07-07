@@ -1,5 +1,6 @@
 const Query = require('../models/Query');
 const User = require('../models/User');
+const Contributor = require('../models/Contributor');
 
 exports.getAllQueries = async (req, res) => {
   try {
@@ -60,6 +61,26 @@ exports.addAnswer = async (req, res) => {
     });
 
     await query.save();
+
+    // Reward 2 points for participating in a discussion
+    let contributor = await Contributor.findOne({ userId: authorId });
+    if (!contributor) {
+      contributor = new Contributor({
+        userId: authorId,
+        points: 2
+      });
+    } else {
+      contributor.points = (contributor.points || 0) + 2;
+    }
+
+    // Check for badges
+    if (contributor.points >= 50 && !contributor.badges.includes('Top Contributor')) {
+      contributor.badges.push('Top Contributor');
+    }
+    if (contributor.points >= 100 && !contributor.badges.includes('Elite Verto')) {
+      contributor.badges.push('Elite Verto');
+    }
+    await contributor.save();
 
     // Populate the newly added answer's author before returning
     await query.populate('answers.author', 'name avatar');
