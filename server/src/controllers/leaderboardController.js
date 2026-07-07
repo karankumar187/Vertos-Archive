@@ -35,11 +35,11 @@ exports.getLeaderboard = async (req, res) => {
                 rank: rank++,
                 name: name,
                 regNo: c.userId?.reg_no || 'N/A',
-                points: c.points,
-                docs: c.approvedUploads,
+                points: c.points || 0,
+                docs: c.approvedUploads || 0,
                 avatar: c.userId?.avatar || null,
                 badges: c.badges || [],
-                trustScore: c.trustScore,
+                trustScore: c.trustScore || 0,
                 userId: c.userId?._id
             };
         });
@@ -52,9 +52,10 @@ exports.getLeaderboard = async (req, res) => {
         ]);
         const totalPoints = totalPointsAgg.length > 0 ? totalPointsAgg[0].total : 0;
 
-        const totalContributors = await Contributor.countDocuments({ approvedUploads: { $gt: 0 } });
+        // Count anyone who has points as a contributor
+        const totalContributors = await Contributor.countDocuments({ points: { $gt: 0 } });
 
-        // Count active contributors this month (users who uploaded recently)
+        // Count active contributors this month (users who uploaded recently or got points)
         const startOfMonth = new Date();
         startOfMonth.setDate(1);
         startOfMonth.setHours(0, 0, 0, 0);
