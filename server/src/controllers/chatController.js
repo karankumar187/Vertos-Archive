@@ -67,7 +67,7 @@ exports.sendMessage = async (req, res) => {
         currentFilters.category = 'syllabus';
     }
 
-    const fullCourseMatch = content.match(/\b([a-zA-Z]{3})[-_\s]*(\d{3})\b/i);
+    const fullCourseMatch = content.match(/\b([a-zA-Z]{2,4})[-_\s]*(\d{3})\b/i);
     const numCourseMatch = content.match(/\b(\d{3})\b/);
     
     if (fullCourseMatch || numCourseMatch) {
@@ -75,7 +75,7 @@ exports.sendMessage = async (req, res) => {
             const courseCode = fullCourseMatch ? fullCourseMatch[1] : '';
             const courseNum = fullCourseMatch ? fullCourseMatch[2] : numCourseMatch[1];
             // Match with or without spaces/dashes (e.g. PHY 110, PHY110, PHY-110)
-            const regexStr = courseCode ? `^${courseCode}[-_\\s]*${courseNum}$` : `^[A-Za-z]{3}[-_\\s]*${courseNum}$`;
+            const regexStr = courseCode ? `^${courseCode}[-_\\s]*${courseNum}$` : `^[A-Za-z]{2,4}[-_\\s]*${courseNum}$`;
             const regexMatch = new RegExp(regexStr, 'i');
             
             const uniqueSubjects = await Document.distinct('subject', { subject: regexMatch });
@@ -85,6 +85,9 @@ exports.sendMessage = async (req, res) => {
             } else if (fullCourseMatch) {
                 // Fallback to exactly what the user typed if not in DB yet
                 currentFilters.subject = `${fullCourseMatch[1].toUpperCase()} ${fullCourseMatch[2]}`;
+            } else if (numCourseMatch) {
+                // Fallback to avoid searching all docs when a specific number was provided but DB lookup failed
+                currentFilters.subject = `UNKNOWN ${numCourseMatch[1]}`;
             }
         } catch (err) {
             console.error('Error resolving course number alias:', err);
@@ -178,14 +181,14 @@ exports.sendMessage = async (req, res) => {
         else if (!currentFilters.subject && !conversation.activeCourse) {
             // Search from the most recent message backwards
             for (let i = history.length - 1; i >= 0; i--) {
-                const histFullMatch = history[i].content.match(/\b([a-zA-Z]{3})[-_\s]*(\d{3})\b/i);
+                const histFullMatch = history[i].content.match(/\b([a-zA-Z]{2,4})[-_\s]*(\d{3})\b/i);
                 const histNumMatch = history[i].content.match(/\b(\d{3})\b/);
                 
                 if (histFullMatch || histNumMatch) {
                     try {
                         const courseCode = histFullMatch ? histFullMatch[1] : '';
                         const courseNum = histFullMatch ? histFullMatch[2] : histNumMatch[1];
-                        const regexStr = courseCode ? `^${courseCode}[-_\\s]*${courseNum}$` : `^[A-Za-z]{3}[-_\\s]*${courseNum}$`;
+                        const regexStr = courseCode ? `^${courseCode}[-_\\s]*${courseNum}$` : `^[A-Za-z]{2,4}[-_\\s]*${courseNum}$`;
                         const regexMatch = new RegExp(regexStr, 'i');
                         
                         const uniqueSubjects = await Document.distinct('subject', { subject: regexMatch });
