@@ -149,6 +149,17 @@ function StatCard({ IconComp, value, label, trend }) {
   );
 }
 
+const Avatar = ({ user, size = 40 }) => {
+  if (!user) return <div style={{ width: size, height: size, borderRadius: "50%", background: "#e2e8f0", flexShrink: 0 }} />;
+  if (user.avatar) return <img src={user.avatar} alt={user.name} style={{ width: size, height: size, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />;
+  
+  return (
+    <div style={{ width: size, height: size, borderRadius: "50%", background: user.color ? `${user.color}dd` : "linear-gradient(135deg, #c8861a, #92400e)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: size * 0.4, fontWeight: 700, flexShrink: 0 }}>
+      {user.name?.charAt(0).toUpperCase() || '?'}
+    </div>
+  );
+};
+
 /* ─── Home Tab ──────────────────────────────────────────────── */
 function HomeTab({ setActiveTab }) {
   const [topContributors, setTopContributors] = useState([]);
@@ -185,6 +196,7 @@ function HomeTab({ setActiveTab }) {
             name: u.name || 'Anonymous',
             dept: u.regNo || 'N/A',
             pts: u.points,
+            avatar: u.avatar,
             color: i === 0 ? '#c8861a' : i === 1 ? '#94a3b8' : '#cd7f32'
           }));
         }
@@ -331,9 +343,7 @@ function HomeTab({ setActiveTab }) {
                 <div style={{ width: 24, height: 24, borderRadius: "50%", background: u.color + "22", display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <span style={{ fontSize: "0.7rem", fontWeight: 800, color: u.color }}>{i + 1}</span>
                 </div>
-                <div style={{ width: 36, height: 36, borderRadius: "50%", background: "linear-gradient(135deg, #d97706, #b45309)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <span style={{ color: "#fff", fontWeight: 700, fontSize: "0.8rem" }}>{u.name.charAt(0)}</span>
-                </div>
+                <Avatar user={u} size={36} />
                 <div>
                   <div style={{ fontSize: "0.88rem", fontWeight: 600, color: "#1f1209" }}>{u.name}</div>
                   <div style={{ fontSize: "0.72rem", color: "#8b5e0a" }}>{u.dept}</div>

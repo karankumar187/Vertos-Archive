@@ -1,8 +1,68 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import campusSketch from "../assets/campus-sketch.png";
 import { leaderboardAPI } from "../services/api";
 import { useAuth } from "../context/AuthContext";
+
+// --- SVGs ---
+const TrophyIcon = () => (
+  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#c8861a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/>
+    <path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/>
+    <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/>
+    <path d="M18 2H6v7c0 3.31 2.69 6 6 6s6-2.69 6-6V2Z"/>
+  </svg>
+);
+
+const UsersIcon = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+  </svg>
+);
+
+const BookIcon = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/>
+    <path d="M6.5 2L6 20"/>
+    <path d="M16 6H8"/><path d="M16 10H8"/>
+  </svg>
+);
+
+const StarIcon = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+  </svg>
+);
+
+const FlameIcon = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>
+  </svg>
+);
+
+const TrendUpIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>
+  </svg>
+);
+
+const TrendFlatIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+  </svg>
+);
+
+// --- Avatar Component ---
+const Avatar = ({ user, size = 40, style = {} }) => {
+  if (!user) return <div style={{ width: size, height: size, borderRadius: "50%", background: "#e2e8f0", flexShrink: 0, ...style }} />;
+  if (user.avatar) return <img src={user.avatar} alt={user.name} style={{ width: size, height: size, borderRadius: "50%", objectFit: "cover", flexShrink: 0, ...style }} />;
+  
+  return (
+    <div style={{ width: size, height: size, borderRadius: "50%", background: user.color ? `${user.color}dd` : "linear-gradient(135deg, #c8861a, #92400e)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: size * 0.4, fontWeight: 700, flexShrink: 0, ...style }}>
+      {user.name?.charAt(0).toUpperCase() || '?'}
+    </div>
+  );
+};
+
 
 const PERIODS = ["This Month", "All Time", "This Week"];
 
@@ -21,74 +81,77 @@ function TopPodium({ entries }) {
       gap: "16px",
       marginBottom: "32px",
     }}>
-      {order.map((entry, i) => (
-        <div key={entry.rank} style={{
-          display: "flex", flexDirection: "column", alignItems: "center", gap: "8px",
-          flex: "0 0 auto",
-        }}>
-          {/* Avatar */}
-          <div style={{ position: "relative" }}>
+      {order.map((entry, i) => {
+        const medalColor = i === 1 ? "#fcd34d" : i === 0 ? "#cbd5e1" : "#cd7f32";
+        const medalText = i === 1 ? "#1" : i === 0 ? "#2" : "#3";
+        return (
+          <div key={entry.rank} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px", flex: "0 0 auto" }}>
+            {/* Avatar */}
+            <div style={{ position: "relative" }}>
+              <Avatar 
+                user={{ ...entry, color: i === 1 ? '#b45309' : i === 0 ? '#64748b' : '#8b5e0a' }} 
+                size={i === 1 ? 68 : 54} 
+                style={{
+                  boxShadow: i === 1 ? "0 6px 20px rgba(180,83,9,0.35)" : "0 3px 12px rgba(0,0,0,0.15)",
+                  border: i === 1 ? "3px solid #fcd34d" : "3px solid rgba(255,255,255,0.5)"
+                }}
+              />
+              <div style={{
+                position: "absolute", bottom: "-6px", right: "-6px",
+                width: i === 1 ? "24px" : "20px", height: i === 1 ? "24px" : "20px",
+                background: medalColor, borderRadius: "50%",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: i === 1 ? "12px" : "10px", fontWeight: 800, color: "#1f1209",
+                border: "2px solid #fff", boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
+              }}>
+                {medalText}
+              </div>
+            </div>
+            
+            {/* Name */}
+            <div style={{ textAlign: "center" }}>
+              <p style={{ fontFamily: "'Inter', sans-serif", fontSize: sizes[i], fontWeight: 700, color: "#1f1209", margin: 0 }}>
+                {entry.name.split(" ")[0]}
+              </p>
+              <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.72rem", color: "#9a7845", margin: 0, marginTop: "2px" }}>
+                {entry.points.toLocaleString()} pts
+              </p>
+            </div>
+            
+            {/* Podium block */}
             <div style={{
-              width: i === 1 ? "68px" : "54px",
-              height: i === 1 ? "68px" : "54px",
-              borderRadius: "50%",
+              width: i === 1 ? "100px" : "80px",
+              height: heights[i],
               background: i === 1
-                ? "linear-gradient(135deg, #d97706, #b45309)"
+                ? "linear-gradient(to bottom, #d97706, #b45309)"
                 : i === 0
-                ? "linear-gradient(135deg, #94a3b8, #64748b)"
-                : "linear-gradient(135deg, #c8861a, #8b5e0a)",
+                ? "linear-gradient(to bottom, #94a3b8, #64748b)"
+                : "linear-gradient(to bottom, #c8861a, #8b5e0a)",
+              borderRadius: "10px 10px 0 0",
               display: "flex", alignItems: "center", justifyContent: "center",
-              color: "#fff", fontWeight: 700,
-              fontSize: i === 1 ? "1.4rem" : "1.1rem",
-              fontFamily: "'Inter', sans-serif",
-              boxShadow: i === 1
-                ? "0 6px 20px rgba(180,83,9,0.35)"
-                : "0 3px 12px rgba(0,0,0,0.15)",
-              border: i === 1 ? "3px solid #fcd34d" : "3px solid rgba(255,255,255,0.5)",
-            }}>{entry.avatar}</div>
-            <span style={{
-              position: "absolute", bottom: "-4px", right: "-4px",
-              fontSize: i === 1 ? "22px" : "18px",
-            }}>{entry.badge}</span>
+              boxShadow: i === 1 ? "0 -4px 16px rgba(180,83,9,0.2)" : "none",
+            }}>
+              <span style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.3rem", fontWeight: 700, color: "rgba(255,255,255,0.9)" }}>
+                #{entry.rank}
+              </span>
+            </div>
           </div>
-          {/* Name */}
-          <div style={{ textAlign: "center" }}>
-            <p style={{
-              fontFamily: "'Inter', sans-serif",
-              fontSize: sizes[i], fontWeight: 700,
-              color: "#1f1209",
-            }}>{entry.name.split(" ")[0]}</p>
-            <p style={{
-              fontFamily: "'Inter', sans-serif",
-              fontSize: "0.72rem", color: "#9a7845",
-            }}>{entry.points.toLocaleString()} pts</p>
-          </div>
-          {/* Podium block */}
-          <div style={{
-            width: i === 1 ? "100px" : "80px",
-            height: heights[i],
-            background: i === 1
-              ? "linear-gradient(to bottom, #d97706, #b45309)"
-              : i === 0
-              ? "linear-gradient(to bottom, #94a3b8, #64748b)"
-              : "linear-gradient(to bottom, #c8861a, #8b5e0a)",
-            borderRadius: "10px 10px 0 0",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            boxShadow: i === 1 ? "0 -4px 16px rgba(180,83,9,0.2)" : "none",
-          }}>
-            <span style={{
-              fontFamily: "'Playfair Display', serif",
-              fontSize: "1.3rem", fontWeight: 700, color: "rgba(255,255,255,0.9)",
-            }}>#{entry.rank}</span>
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
 
 function Row({ entry, isMe }) {
   const top3 = entry.rank <= 3;
+  
+  const renderRankBadge = () => {
+    if (entry.rank === 1) return <div style={{ width: 24, height: 24, borderRadius: "50%", background: "#fcd34d", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontWeight: 800, color: "#1f1209" }}>1</div>;
+    if (entry.rank === 2) return <div style={{ width: 24, height: 24, borderRadius: "50%", background: "#cbd5e1", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontWeight: 800, color: "#1f1209" }}>2</div>;
+    if (entry.rank === 3) return <div style={{ width: 24, height: 24, borderRadius: "50%", background: "#cd7f32", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontWeight: 800, color: "#fff" }}>3</div>;
+    return <span style={{ fontFamily: "'Playfair Display', serif", fontSize: "1rem", fontWeight: 700, color: "#9a7845" }}>#{entry.rank}</span>;
+  };
+
   return (
     <div style={{
       display: "grid",
@@ -96,42 +159,28 @@ function Row({ entry, isMe }) {
       alignItems: "center",
       gap: "12px",
       padding: "14px 24px",
-      background: isMe ? "#fef7e9" : "#fff",
-      borderBottom: "1px solid #f0e8d8",
-      borderLeft: isMe ? "3px solid #c8861a" : top3 ? "3px solid #e8c96a66" : "3px solid transparent",
+      background: isMe ? "#fdfaf5" : "#fff",
+      borderBottom: "1px solid #f0e6d2",
+      borderLeft: isMe ? "3px solid #c8861a" : top3 ? "3px solid #f0e6d2" : "3px solid transparent",
       transition: "background 0.15s",
     }}
-      onMouseEnter={e => { e.currentTarget.style.background = "#fdf8f0"; }}
-      onMouseLeave={e => { e.currentTarget.style.background = isMe ? "#fef7e9" : "#fff"; }}
+      onMouseEnter={e => { e.currentTarget.style.background = "#fdfaf5"; }}
+      onMouseLeave={e => { e.currentTarget.style.background = isMe ? "#fdfaf5" : "#fff"; }}
     >
       {/* Rank */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
-        {entry.badge
-          ? <span style={{ fontSize: "22px" }}>{entry.badge}</span>
-          : <span style={{ fontFamily: "'Playfair Display', serif", fontSize: "1rem", fontWeight: 700, color: "#9a7845" }}>#{entry.rank}</span>
-        }
+        {renderRankBadge()}
       </div>
 
       {/* Name + course */}
       <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-        <div style={{
-          width: "38px", height: "38px", borderRadius: "50%", flexShrink: 0,
-          background: top3
-            ? "linear-gradient(135deg, #d97706, #b45309)"
-            : "linear-gradient(135deg, #c8a87a, #9a7845)",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          color: "#fff", fontWeight: 700, fontSize: "0.9rem",
-          fontFamily: "'Inter', sans-serif",
-          boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-        }}>{entry.avatar}</div>
+        <Avatar user={{ ...entry, color: top3 ? '#b45309' : '#9a7845' }} size={38} style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }} />
         <div>
-          <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.875rem",
-            fontWeight: isMe ? 700 : 500, color: "#1f1209" }}>
+          <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.875rem", fontWeight: isMe ? 700 : 600, color: "#1f1209", margin: 0 }}>
             {entry.name}
-            {isMe && <span style={{ marginLeft: "6px", fontSize: "0.7rem",
-              color: "#c8861a", fontWeight: 600 }}>(you)</span>}
+            {isMe && <span style={{ marginLeft: "6px", fontSize: "0.7rem", color: "#c8861a", fontWeight: 600 }}>(you)</span>}
           </p>
-          <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.72rem", color: "#9a7845" }}>
+          <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.72rem", color: "#9a7845", margin: 0, marginTop: "2px" }}>
             {entry.regNo} {entry.trustScore ? `· Trust Score: ${entry.trustScore}` : ''}
           </p>
         </div>
@@ -139,24 +188,23 @@ function Row({ entry, isMe }) {
 
       {/* Docs */}
       <div style={{ textAlign: "center" }}>
-        <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.9rem", fontWeight: 600, color: "#5c4021" }}>
+        <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.9rem", fontWeight: 600, color: "#1f1209" }}>
           {entry.docs}
         </span>
-        <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.72rem", color: "#9a7845" }}> docs</span>
+        <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.72rem", color: "#9a7845", marginLeft: "4px" }}>docs</span>
       </div>
 
       {/* Points */}
       <div style={{ textAlign: "right" }}>
-        <span style={{
-          fontFamily: "'Playfair Display', serif", fontSize: "1rem", fontWeight: 700,
-          color: top3 ? "#c8861a" : "#5c4021",
-        }}>{entry.points.toLocaleString()}</span>
-        <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.7rem", color: "#9a7845", marginLeft: "3px" }}>pts</span>
+        <span style={{ fontFamily: "'Playfair Display', serif", fontSize: "1rem", fontWeight: 800, color: top3 ? "#c8861a" : "#1f1209" }}>
+          {entry.points.toLocaleString()}
+        </span>
+        <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.7rem", color: "#9a7845", marginLeft: "4px" }}>pts</span>
       </div>
 
-      {/* Trend placeholder */}
-      <div style={{ textAlign: "right" }}>
-        <span style={{ fontSize: "14px" }}>{entry.rank <= 3 ? "🔥" : entry.rank <= 6 ? "📈" : "➡️"}</span>
+      {/* Trend */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end" }}>
+        {entry.rank <= 5 ? <TrendUpIcon /> : <TrendFlatIcon />}
       </div>
     </div>
   );
@@ -166,11 +214,20 @@ export default function LeaderboardPage() {
   const { user } = useAuth();
   const [period, setPeriod] = useState("This Month");
   const [leaderboard, setLeaderboard] = useState([]);
+  
+  // Base stats config using SVGs
+  const statConfig = {
+    "Total Contributors": <UsersIcon />,
+    "Documents Shared": <BookIcon />,
+    "Points Awarded": <StarIcon />,
+    "Active This Month": <FlameIcon />
+  };
+  
   const [stats, setStats] = useState([
-    { label: "Total Contributors", value: "0", icon: "👥" },
-    { label: "Documents Shared",   value: "0", icon: "📚" },
-    { label: "Points Awarded",     value: "0", icon: "⭐" },
-    { label: "Active This Month",  value: "0", icon: "🔥" },
+    { label: "Total Contributors", value: "0" },
+    { label: "Documents Shared",   value: "0" },
+    { label: "Points Awarded",     value: "0" },
+    { label: "Active This Month",  value: "0" },
   ]);
   const [loading, setLoading] = useState(true);
 
@@ -191,94 +248,95 @@ export default function LeaderboardPage() {
       }
     };
     fetchLeaderboard();
-  }, [period]); // Period logic can be handled in backend later, currently just refetches
+  }, [period]);
 
   const myEntry = leaderboard.find(entry => entry.userId === user?.id || entry.name === user?.name);
 
   return (
-    <div style={{
-      position: "relative",
-    }}>
-      <div style={{ maxWidth: "1200px", margin: "0 auto", position: "relative", zIndex: 1 }}>
+    <div style={{ position: "relative", paddingBottom: "64px" }}>
+      <div style={{ maxWidth: "1000px", margin: "0 auto", position: "relative", zIndex: 1 }}>
 
         {/* ── Header ── */}
         <div className="anim-up d1" style={{ textAlign: "center", marginBottom: "40px" }}>
           <div style={{
             display: "inline-flex", alignItems: "center", gap: "8px",
-            background: "#fef3dc", border: "1px solid #e8c96a",
-            borderRadius: "999px", padding: "5px 16px", marginBottom: "16px",
+            background: "#fff", border: "1px solid #f0e6d2",
+            borderRadius: "999px", padding: "6px 16px", marginBottom: "16px",
+            boxShadow: "0 2px 4px rgba(160,110,40,0.02)"
           }}>
-            <span style={{ color: "#c8861a", fontSize: "11px" }}>✦</span>
-            <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "11px", fontWeight: 500,
-              letterSpacing: "0.1em", textTransform: "uppercase", color: "#92620a" }}>Community</span>
-            <span style={{ color: "#c8861a", fontSize: "11px" }}>✦</span>
+            <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#c8861a" }} />
+            <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.65rem", fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase", color: "#6b4d1f" }}>
+              COMMUNITY
+            </span>
+            <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#c8861a" }} />
           </div>
-          <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: "2.4rem",
-            fontWeight: 700, color: "#1f1209", marginBottom: "10px" }}>
-            🏆 Leaderboard
-          </h1>
-          <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.9rem",
-            color: "#7a5a2a", maxWidth: "460px", margin: "0 auto", lineHeight: 1.65 }}>
-            Top contributors who share knowledge and help the LPU community grow.
-            Upload documents to earn points and climb the ranks.
+          
+          <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "12px", marginBottom: "12px" }}>
+            <TrophyIcon />
+            <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: "2.8rem", fontWeight: 800, color: "#1f1209", margin: 0 }}>
+              Leaderboard
+            </h1>
+          </div>
+          
+          <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.95rem", color: "#6b4d1f", maxWidth: "480px", margin: "0 auto", lineHeight: 1.6 }}>
+            Top contributors who share knowledge and help the LPU community grow. Upload documents to earn points and climb the ranks.
           </p>
         </div>
 
         {/* ── Stat bar ── */}
         <div className="anim-up d2" style={{
-          display: "flex", flexWrap: "wrap", gap: "14px",
-          justifyContent: "center", marginBottom: "36px",
+          display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px",
+          marginBottom: "40px",
         }}>
           {stats.map(s => (
             <div key={s.label} style={{
-              background: "#fff", border: "1px solid #e9dcc8",
-              borderRadius: "12px", padding: "16px 22px",
-              textAlign: "center", minWidth: "140px", flex: "1 1 130px",
-              boxShadow: "0 2px 10px rgba(160,110,40,0.06)",
+              background: "#fff", border: "1px solid #f0e6d2",
+              borderRadius: "16px", padding: "24px 20px",
+              textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center",
+              boxShadow: "0 4px 16px rgba(160,110,40,0.03)",
               transition: "transform 0.2s, box-shadow 0.2s",
             }}
-              onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 6px 18px rgba(160,110,40,0.1)"; }}
-              onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "0 2px 10px rgba(160,110,40,0.06)"; }}
+              onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 8px 24px rgba(160,110,40,0.08)"; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "0 4px 16px rgba(160,110,40,0.03)"; }}
             >
-              <div style={{ fontSize: "22px", marginBottom: "4px" }}>{s.icon}</div>
-              <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.5rem", fontWeight: 700, color: "#c8861a" }}>{s.value}</div>
-              <div style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.72rem", color: "#8b6535", fontWeight: 500, marginTop: "2px" }}>{s.label}</div>
+              <div style={{ marginBottom: "12px" }}>{statConfig[s.label]}</div>
+              <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.8rem", fontWeight: 800, color: "#c8861a", lineHeight: 1.2 }}>{s.value}</div>
+              <div style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.75rem", color: "#8b6535", fontWeight: 600, marginTop: "4px" }}>{s.label}</div>
             </div>
           ))}
         </div>
 
         {/* ── Main card ── */}
         <div className="anim-up d3" style={{
-          background: "#fff", border: "1px solid #e9dcc8",
-          borderRadius: "16px", overflow: "hidden",
-          boxShadow: "0 4px 28px rgba(160,110,40,0.1)",
+          background: "#fff", border: "1px solid #f0e6d2",
+          borderRadius: "20px", overflow: "hidden",
+          boxShadow: "0 8px 32px rgba(160,110,40,0.06)",
         }}>
           {/* Dark header */}
           <div style={{
-            background: "linear-gradient(135deg, #1f1209 0%, #3d2408 100%)",
-            padding: "24px 28px",
+            background: "linear-gradient(135deg, #2a1a0f 0%, #1f1209 100%)",
+            padding: "24px 32px",
             display: "flex", alignItems: "center", justifyContent: "space-between",
-            flexWrap: "wrap", gap: "14px",
+            flexWrap: "wrap", gap: "16px",
           }}>
             <div>
-              <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.2rem",
-                fontWeight: 700, color: "#f0d090", marginBottom: "4px" }}>
+              <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.3rem", fontWeight: 700, color: "#fdfaf5", margin: "0 0 6px 0" }}>
                 Top Contributors
               </h2>
-              <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.75rem", color: "#c8a060" }}>
+              <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.8rem", color: "#c8a060", margin: 0 }}>
                 {new Date().toLocaleString('default', { month: 'long', year: 'numeric' })} · Updated daily
               </p>
             </div>
             {/* Period toggle */}
-            <div style={{ display: "flex", gap: "6px", background: "rgba(255,255,255,0.07)", borderRadius: "10px", padding: "4px" }}>
+            <div style={{ display: "flex", gap: "4px", background: "rgba(255,255,255,0.05)", borderRadius: "12px", padding: "6px" }}>
               {PERIODS.map(p => (
                 <button key={p} onClick={() => setPeriod(p)} style={{
-                  padding: "6px 14px",
-                  background: period === p ? "rgba(200,134,26,0.85)" : "transparent",
-                  border: "none", borderRadius: "7px",
-                  fontFamily: "'Inter', sans-serif", fontSize: "0.78rem", fontWeight: 500,
+                  padding: "8px 16px",
+                  background: period === p ? "rgba(200,134,26,0.9)" : "transparent",
+                  border: "none", borderRadius: "8px",
+                  fontFamily: "'Inter', sans-serif", fontSize: "0.8rem", fontWeight: 600,
                   color: period === p ? "#fff" : "#c8a060",
-                  cursor: "pointer", transition: "all 0.18s",
+                  cursor: "pointer", transition: "all 0.2s",
                 }}>{p}</button>
               ))}
             </div>
@@ -286,7 +344,7 @@ export default function LeaderboardPage() {
 
           {/* Podium */}
           {!loading && leaderboard.length >= 3 && (
-            <div style={{ padding: "32px 28px 0", background: "linear-gradient(to bottom, #fdfaf5, #fff)" }}>
+            <div style={{ padding: "40px 32px 0", background: "linear-gradient(to bottom, #fdfaf5, #fff)" }}>
               <TopPodium entries={leaderboard.slice(0, 3)} />
             </div>
           )}
@@ -294,13 +352,13 @@ export default function LeaderboardPage() {
           {/* Column headers */}
           <div style={{
             display: "grid", gridTemplateColumns: "52px 1fr 110px 90px 90px",
-            padding: "10px 24px", background: "#fdfaf5",
-            borderTop: "1px solid #ede5d5", borderBottom: "1px solid #ede5d5",
+            padding: "12px 24px", background: "#fdfaf5",
+            borderTop: "1px solid #f0e6d2", borderBottom: "1px solid #f0e6d2",
           }}>
             {["#", "Contributor", "Docs", "Points", "Trend"].map((h, i) => (
               <span key={h} style={{
-                fontFamily: "'Inter', sans-serif", fontSize: "0.72rem",
-                fontWeight: 600, color: "#8b6535",
+                fontFamily: "'Inter', sans-serif", fontSize: "0.75rem",
+                fontWeight: 700, color: "#8b6535",
                 letterSpacing: "0.08em", textTransform: "uppercase",
                 textAlign: i === 0 ? "center" : i >= 2 ? "right" : "left",
               }}>{h}</span>
@@ -309,77 +367,49 @@ export default function LeaderboardPage() {
 
           {/* Rows */}
           {loading ? (
-             <div style={{ padding: "30px", textAlign: "center", color: "#9a7845" }}>Loading leaderboard...</div>
+             <div style={{ padding: "40px", textAlign: "center", color: "#9a7845", fontWeight: 500 }}>Loading leaderboard...</div>
           ) : leaderboard.length === 0 ? (
-             <div style={{ padding: "30px", textAlign: "center", color: "#9a7845" }}>No contributors found. Be the first to upload!</div>
+             <div style={{ padding: "40px", textAlign: "center", color: "#9a7845", fontWeight: 500 }}>No contributors found. Be the first to upload!</div>
           ) : (
             leaderboard.map(entry => (
               <Row key={entry.rank} entry={entry} isMe={entry.userId === user?.id || entry.name === user?.name} />
             ))
           )}
 
-          {/* Footer CTA */}
-          <div style={{
-            padding: "20px 28px",
-            background: "#fdfaf5",
-            borderTop: "1px solid #ede5d5",
-            display: "flex", alignItems: "center", justifyContent: "space-between",
-            flexWrap: "wrap", gap: "12px",
-          }}>
-            <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.8rem", color: "#9a7845" }}>
-              ✦ Upload approved docs to climb the leaderboard
-            </p>
-            <Link to="/upload" style={{
-              padding: "8px 20px",
-              background: "linear-gradient(135deg, #d97706, #b45309)",
-              borderRadius: "8px", color: "#fff",
-              fontFamily: "'Inter', sans-serif", fontSize: "0.82rem", fontWeight: 600,
-              textDecoration: "none",
-              boxShadow: "0 3px 10px rgba(180,83,9,0.22)",
-            }}>+ Upload a Document</Link>
-          </div>
         </div>
 
         {/* My ranking card */}
         {user && myEntry && (
           <div className="anim-up d4" style={{
             marginTop: "24px",
-            background: "linear-gradient(135deg, #1f1209 0%, #3d2408 100%)",
-            border: "1px solid #5a3a10",
-            borderRadius: "14px",
-            padding: "22px 28px",
+            background: "linear-gradient(135deg, #fdfaf5 0%, #fff 100%)",
+            border: "1px solid #c8861a",
+            borderRadius: "16px",
+            padding: "24px 32px",
             display: "flex", alignItems: "center", justifyContent: "space-between",
-            flexWrap: "wrap", gap: "16px",
-            boxShadow: "0 4px 20px rgba(30,10,0,0.18)",
+            flexWrap: "wrap", gap: "20px",
+            boxShadow: "0 8px 24px rgba(200,134,26,0.12)",
           }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
-              <div style={{
-                width: "48px", height: "48px", borderRadius: "50%",
-                background: "linear-gradient(135deg, #d97706, #b45309)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                color: "#fff", fontWeight: 700, fontSize: "1.1rem",
-                border: "2px solid #fcd34d",
-              }}>
-                {user.avatar ? <img src={user.avatar} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} /> : user.name?.charAt(0).toUpperCase()}
-              </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+              <Avatar user={user} size={56} style={{ border: "2px solid #c8861a" }} />
               <div>
-                <p style={{ fontFamily: "'Playfair Display', serif", fontSize: "1rem", fontWeight: 700, color: "#f0d090" }}>
+                <p style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.1rem", fontWeight: 800, color: "#1f1209", margin: "0 0 4px 0" }}>
                   Your Current Ranking
                 </p>
-                <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.78rem", color: "#c8a060" }}>
+                <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.85rem", color: "#6b4d1f", margin: 0, fontWeight: 500 }}>
                   {user.name} · {user.reg_no || 'Standard User'}
                 </p>
               </div>
             </div>
-            <div style={{ display: "flex", gap: "28px" }}>
+            <div style={{ display: "flex", gap: "32px", background: "#fff", padding: "12px 24px", borderRadius: "12px", border: "1px solid #f0e6d2" }}>
               {[
-                ["Rank", `#${myEntry.rank} ${myEntry.badge || ''}`.trim()], 
+                ["Rank", `#${myEntry.rank}`.trim()], 
                 ["Points", myEntry.points.toLocaleString()], 
                 ["Docs", myEntry.docs.toString()]
               ].map(([k, v]) => (
                 <div key={k} style={{ textAlign: "center" }}>
-                  <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.3rem", fontWeight: 700, color: "#f0d090" }}>{v}</div>
-                  <div style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.7rem", color: "#c8a060", letterSpacing: "0.06em", textTransform: "uppercase" }}>{k}</div>
+                  <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.4rem", fontWeight: 800, color: "#c8861a", margin: "0 0 2px 0" }}>{v}</div>
+                  <div style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.7rem", color: "#8b6535", letterSpacing: "0.06em", textTransform: "uppercase", fontWeight: 700 }}>{k}</div>
                 </div>
               ))}
             </div>
