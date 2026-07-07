@@ -197,30 +197,8 @@ export default function LeaderboardPage() {
 
   return (
     <div style={{
-      background: "#faf8f4",
-      minHeight: "calc(100vh - 68px)",
-      padding: "48px 24px",
       position: "relative",
     }}>
-      {/* Fixed Background Image */}
-      <div style={{
-        position: "fixed",
-        inset: 0,
-        backgroundImage: `url(${campusSketch})`,
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        backgroundRepeat: "no-repeat",
-        zIndex: 0,
-        pointerEvents: "none",
-      }} />
-      {/* Fade overlay */}
-      <div style={{
-        position: "fixed",
-        inset: 0,
-        pointerEvents: "none",
-        zIndex: 0,
-        background: "linear-gradient(to bottom, #faf8f4 0%, #faf8f4 40%, rgba(250,248,244,0.85) 65%, rgba(250,248,244,0.2) 100%)",
-      }}/>
       <div style={{ maxWidth: "1200px", margin: "0 auto", position: "relative", zIndex: 1 }}>
 
         {/* ── Header ── */}

@@ -6,9 +6,10 @@ import Hero from "./components/Hero";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import DashboardPage from "./pages/DashboardPage";
-import UploadPage from "./pages/UploadPage";
+import UploadPage from "./pages/ContributePage"; // We'll keep Upload logic here for now or route it via Community
 import ChatPage from "./pages/ChatPage";
-import LeaderboardPage from "./pages/LeaderboardPage";
+import CommunityPage from "./pages/CommunityPage";
+import AboutPage from "./pages/AboutPage";
 import ProfilePage from "./pages/ProfilePage";
 import ChangePasswordPage from "./pages/ChangePasswordPage";
 import AuthCallbackPage from "./pages/AuthCallbackPage";
@@ -46,7 +47,8 @@ function App() {
           <Route path="/" element={<Layout><Hero /></Layout>} />
           <Route path="/login" element={<Layout><LoginPage /></Layout>} />
           <Route path="/register" element={<Layout><RegisterPage /></Layout>} />
-          <Route path="/leaderboard" element={<Layout><LeaderboardPage /></Layout>} />
+          <Route path="/community" element={<Layout><CommunityPage /></Layout>} />
+          <Route path="/about" element={<Layout><AboutPage /></Layout>} />
 
           {/* OAuth callback — no Navbar needed, just processes token */}
           <Route path="/auth/callback" element={<AuthCallbackPage />} />
@@ -54,7 +56,6 @@ function App() {
           {/* Protected */}
           <Route path="/dashboard" element={<Layout><ProtectedRoute><DashboardPage /></ProtectedRoute></Layout>} />
           <Route path="/admin" element={<Layout><ProtectedRoute><AdminDashboardPage /></ProtectedRoute></Layout>} />
-          <Route path="/upload" element={<Layout><ProtectedRoute><UploadPage /></ProtectedRoute></Layout>} />
           <Route path="/chat" element={<Layout noFooter><ProtectedRoute><ChatPage /></ProtectedRoute></Layout>} />
           <Route path="/profile" element={<Layout><ProtectedRoute><ProfilePage /></ProtectedRoute></Layout>} />
           <Route path="/change-password" element={<Layout><ProtectedRoute><ChangePasswordPage /></ProtectedRoute></Layout>} />
