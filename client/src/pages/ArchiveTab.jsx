@@ -60,7 +60,6 @@ export default function ArchiveTab() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "24px", position: "relative" }}>
-      <div style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none", backgroundImage: `url(${campusSketch})`, backgroundSize: "cover", backgroundPosition: "center", opacity: 0.05 }} />
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
         <div>
           <h2 style={{ margin: "0 0 8px 0", fontSize: "1.8rem", color: "#1f1209", fontFamily: "'Playfair Display', serif" }}>

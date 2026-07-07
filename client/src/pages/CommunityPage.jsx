@@ -453,13 +453,15 @@ export default function CommunityPage() {
 
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", background: "#f8f4ee", position: "relative" }}>
-      {/* Fixed campus background (same as homepage) */}
+      {/* Fixed campus background (same as homepage & chatpage) */}
       <div style={{
         position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none",
         backgroundImage: `url(${campusSketch})`,
         backgroundSize: "cover", backgroundPosition: "center", backgroundRepeat: "no-repeat",
-        opacity: 0.06,
+        opacity: 0.9,
       }} />
+      {/* Fade overlay so content remains readable over the sketch */}
+      <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0, background: "rgba(248, 244, 238, 0.75)" }}/>
 
       <div style={{
         position: "sticky", top: 68, zIndex: 40, width: "100%",
