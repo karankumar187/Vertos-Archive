@@ -224,8 +224,8 @@ function TopPodium({ entries }) {
           const badgeColors = ["#94a3b8", "#d97706", "#c8861a"];
           const badgeColor = badgeColors[i];
           const laurelColor = isFirst ? "#d97706" : "#d4b483";
-          const cardW = isFirst ? "200px" : "170px";
-          const avatarSize = isFirst ? 88 : 72;
+          const cardW = isFirst ? "160px" : "136px";
+          const avatarSize = isFirst ? 64 : 52;
 
           return (
             <div key={entry.rank} style={{
@@ -234,7 +234,7 @@ function TopPodium({ entries }) {
               background: isFirst ? "#fdfaf5" : "#fff",
               border: isFirst ? "1.5px solid #e8c96a" : "1px solid #f0e6d2",
               borderRadius: "20px",
-              padding: isFirst ? "28px 20px 24px" : "20px 16px 20px",
+              padding: isFirst ? "20px 16px 18px" : "14px 12px 16px",
               position: "relative",
               boxShadow: isFirst ? "0 8px 28px rgba(200,134,26,0.10)" : "0 2px 8px rgba(160,110,40,0.04)",
               transition: "transform 0.2s",
@@ -256,7 +256,7 @@ function TopPodium({ entries }) {
 
               {/* Avatar */}
               <Avatar user={entry} size={avatarSize} style={{
-                marginBottom: "16px",
+                marginBottom: "12px",
                 boxShadow: isFirst ? "0 4px 16px rgba(200,134,26,0.2)" : "0 2px 8px rgba(0,0,0,0.08)",
                 border: isFirst ? "3px solid #e8c96a" : "2px solid #f0e6d2"
               }} />
@@ -264,7 +264,7 @@ function TopPodium({ entries }) {
               <p style={{ fontFamily: "'Inter', sans-serif", fontSize: isFirst ? "1.05rem" : "0.95rem", fontWeight: 700, color: "#1f1209", margin: "0 0 8px 0", textAlign: "center", lineHeight: 1.2 }}>
                 {entry.name}
               </p>
-              <p style={{ fontFamily: "'Playfair Display', serif", fontSize: isFirst ? "1.4rem" : "1.2rem", fontWeight: 800, color: "#c8861a", margin: "0 0 16px 0" }}>
+              <p style={{ fontFamily: "'Playfair Display', serif", fontSize: isFirst ? "1.2rem" : "1rem", fontWeight: 800, color: "#c8861a", margin: "0 0 12px 0" }}>
                 {entry.points} <span style={{ fontSize: "0.75rem", fontWeight: 600, fontFamily: "'Inter', sans-serif", color: "#8b6535" }}>pts</span>
               </p>
 
@@ -396,7 +396,7 @@ export default function LeaderboardPage() {
   const visibleEntries = showAll ? leaderboard.slice(0, MAX_SHOW) : leaderboard.slice(0, INITIAL_SHOW);
 
   return (
-    <div style={{ position: "relative", paddingBottom: "64px" }} onClick={() => showDropdown && setShowDropdown(false)}>
+    <div style={{ position: "relative", paddingTop: "32px", paddingBottom: "64px" }} onClick={() => showDropdown && setShowDropdown(false)}>
       <div style={{ maxWidth: "900px", margin: "0 auto" }}>
 
         {/* ── Header Row ── */}
