@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { eventsAPI } from "../services/api";
 import campusSketch from "../assets/campus-sketch.png";
+import { cacheGet, cacheSet, cacheInvalidate } from "../utils/localCache";
 
 const EventCard = ({ event, currentUserId, onInterestToggle }) => {
   const isInterested = event.interestedUsers?.includes(currentUserId);
@@ -67,10 +68,14 @@ export default function HappeningTab() {
   const [loading, setLoading] = useState(true);
   const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
 
-  const fetchEvents = async () => {
+  const fetchEvents = async (background = false) => {
     try {
+      if (!background) setLoading(true);
       const { data } = await eventsAPI.getEvents();
-      if (data.success) setEvents(data.data);
+      if (data.success) {
+        setEvents(data.data);
+        cacheSet('community_events', data.data);
+      }
     } catch (error) {
       console.error("Error fetching events:", error);
     } finally {
@@ -79,7 +84,15 @@ export default function HappeningTab() {
   };
 
   useEffect(() => {
-    fetchEvents();
+    // Show cached data instantly, then refresh in background
+    const cached = cacheGet('community_events');
+    if (cached) {
+      setEvents(cached);
+      setLoading(false);
+      fetchEvents(true); // silent background refresh
+    } else {
+      fetchEvents();
+    }
   }, []);
 
   const handleInterestToggle = async (id) => {

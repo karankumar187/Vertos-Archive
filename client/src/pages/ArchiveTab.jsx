@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { archiveAPI } from "../services/api";
 import campusSketch from "../assets/campus-sketch.png";
+import { cacheGet, cacheSet } from "../utils/localCache";
 
 const DocumentCard = ({ doc }) => {
   return (
@@ -37,9 +38,11 @@ export default function ArchiveTab() {
   const [categoryFilter, setCategoryFilter] = useState('');
   const [expandedCourse, setExpandedCourse] = useState(null);
 
-  const fetchArchive = async () => {
+  const getCacheKey = () => `community_archive_${courseFilter}_${categoryFilter}`;
+
+  const fetchArchive = async (background = false) => {
     try {
-      setLoading(true);
+      if (!background) setLoading(true);
       const params = {};
       if (courseFilter) params.courseCode = courseFilter;
       if (categoryFilter) params.category = categoryFilter;
@@ -47,6 +50,7 @@ export default function ArchiveTab() {
       const { data } = await archiveAPI.getArchive(params);
       if (data.success) {
         setDocuments(data.data);
+        cacheSet(getCacheKey(), data.data);
       }
     } catch (error) {
       console.error("Error fetching archive:", error);
@@ -56,7 +60,15 @@ export default function ArchiveTab() {
   };
 
   useEffect(() => {
-    fetchArchive();
+    const key = getCacheKey();
+    const cached = cacheGet(key);
+    if (cached) {
+      setDocuments(cached);
+      setLoading(false);
+      fetchArchive(true); // silent background refresh
+    } else {
+      fetchArchive();
+    }
   }, [courseFilter, categoryFilter]);
 
   const groupedDocs = documents.reduce((acc, doc) => {

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { queriesAPI } from "../services/api";
 import campusSketch from "../assets/campus-sketch.png";
+import { cacheGet, cacheSet, cacheInvalidate } from "../utils/localCache";
 
 const QueryCard = ({ query, onClick }) => {
   const dateObj = new Date(query.createdAt);
@@ -62,11 +63,14 @@ export default function QueriesTab() {
   
   const [answerContent, setAnswerContent] = useState("");
 
-  const fetchQueries = async () => {
+  const fetchQueries = async (background = false) => {
     try {
-      setLoading(true);
+      if (!background) setLoading(true);
       const { data } = await queriesAPI.getQueries();
-      if (data.success) setQueries(data.data);
+      if (data.success) {
+        setQueries(data.data);
+        cacheSet('community_queries', data.data);
+      }
     } catch (error) {
       console.error("Error fetching queries:", error);
     } finally {
@@ -75,7 +79,15 @@ export default function QueriesTab() {
   };
 
   useEffect(() => {
-    fetchQueries();
+    // Show cached data instantly, then refresh in background
+    const cached = cacheGet('community_queries');
+    if (cached) {
+      setQueries(cached);
+      setLoading(false);
+      fetchQueries(true); // silent background refresh
+    } else {
+      fetchQueries();
+    }
   }, []);
 
   const handleAsk = async (e) => {
@@ -87,6 +99,7 @@ export default function QueriesTab() {
       if (data.success) {
         setShowAskForm(false);
         setTitle(""); setDescription(""); setTags("");
+        cacheInvalidate('community_queries');
         fetchQueries();
       }
     } catch (error) {

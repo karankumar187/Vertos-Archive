@@ -8,6 +8,7 @@ import QueriesTab from "./QueriesTab";
 import ArchiveTab from "./ArchiveTab";
 import HappeningTab from "./HappeningTab";
 import { queriesAPI, eventsAPI, leaderboardAPI } from "../services/api";
+import { cacheGet, cacheSet } from "../utils/localCache";
 
 /* ─── SVG Icon Components ───────────────────────────────────── */
 const TrophyIcon = () => (
@@ -157,70 +158,85 @@ function HomeTab({ setActiveTab }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchHomeData = async () => {
+    const CACHE_KEY = 'community_home_data';
+
+    const applyData = (d) => {
+      if (d.topContributors) setTopContributors(d.topContributors);
+      if (d.activeDiscussions) setActiveDiscussions(d.activeDiscussions);
+      if (d.upcomingEvents) setUpcomingEvents(d.upcomingEvents);
+      if (d.stats) setStats(d.stats);
+    };
+
+    const fetchHomeData = async (background = false) => {
       try {
+        if (!background) setLoading(true);
         const [ldbRes, qRes, evRes] = await Promise.all([
           leaderboardAPI.getLeaderboard().catch(() => ({ data: {} })),
           queriesAPI.getQueries().catch(() => ({ data: { data: [] } })),
           eventsAPI.getEvents().catch(() => ({ data: { data: [] } }))
         ]);
 
-        // Real stats from leaderboard API
         const ldbData = ldbRes.data;
+        let newTopContributors = [];
+        let newStats = { docs: '-', contributors: '-', queries: '-', members: '-' };
+
         if (ldbData?.leaderboard) {
-          const top3 = ldbData.leaderboard.slice(0, 3).map((u, i) => ({
+          newTopContributors = ldbData.leaderboard.slice(0, 3).map((u, i) => ({
             name: u.name || 'Anonymous',
             dept: u.regNo || 'N/A',
             pts: u.points,
             color: i === 0 ? '#c8861a' : i === 1 ? '#94a3b8' : '#cd7f32'
           }));
-          setTopContributors(top3);
         }
-        // stats array comes from leaderboard API: { label, value }
         if (ldbData?.stats) {
           const docsEntry = ldbData.stats.find(s => s.label === 'Documents Shared');
           const contribEntry = ldbData.stats.find(s => s.label === 'Total Contributors');
-          setStats(prev => ({
-            ...prev,
-            docs: docsEntry?.value || '-',
-            contributors: contribEntry?.value || '-',
-          }));
+          newStats = { ...newStats, docs: docsEntry?.value || '-', contributors: contribEntry?.value || '-' };
         }
 
-        // Queries
         const allQueries = qRes.data?.data || [];
-        setStats(prev => ({ ...prev, queries: allQueries.length.toString() }));
+        newStats = { ...newStats, queries: allQueries.length.toString() };
+        const newActiveDiscussions = [...allQueries]
+          .sort((a, b) => (b.answers?.length || 0) - (a.answers?.length || 0))
+          .slice(0, 3)
+          .map(q => ({
+            q: q.title, by: q.author?.name || 'Anonymous',
+            ago: new Date(q.createdAt).toLocaleDateString(),
+            answers: q.answers?.length || 0,
+            tag: q.tags?.[0] || 'General', tagColor: '#7c3aed', tagBg: '#EDE9FE'
+          }));
 
-        const sorted = [...allQueries].sort((a, b) => (b.answers?.length || 0) - (a.answers?.length || 0)).slice(0, 3);
-        setActiveDiscussions(sorted.map(q => ({
-          q: q.title,
-          by: q.author?.name || 'Anonymous',
-          ago: new Date(q.createdAt).toLocaleDateString(),
-          answers: q.answers?.length || 0,
-          tag: q.tags?.[0] || 'General',
-          tagColor: '#7c3aed', tagBg: '#EDE9FE'
-        })));
-
-        // Events
         const allEvents = evRes.data?.data || [];
-        setUpcomingEvents(allEvents.slice(0, 3).map(ev => {
+        const newUpcomingEvents = allEvents.slice(0, 3).map(ev => {
           const dateObj = new Date(ev.date);
           return {
             month: dateObj.toLocaleString('default', { month: 'short' }).toUpperCase(),
-            day: dateObj.getDate(),
-            title: ev.title,
+            day: dateObj.getDate(), title: ev.title,
             desc: `${ev.type} • ${ev.location}`,
             interested: ev.interestedUsers?.length || 0,
             color: ev.type === 'Hackathon' ? '#c8861a' : ev.type === 'Workshop' ? '#7c3aed' : '#059669'
           };
-        }));
+        });
+
+        const freshData = { topContributors: newTopContributors, activeDiscussions: newActiveDiscussions, upcomingEvents: newUpcomingEvents, stats: newStats };
+        applyData(freshData);
+        cacheSet(CACHE_KEY, freshData);
       } catch (err) {
         console.error('Error fetching home data', err);
       } finally {
         setLoading(false);
       }
     };
-    fetchHomeData();
+
+    // Show cached data instantly, then refresh in background
+    const cached = cacheGet(CACHE_KEY);
+    if (cached) {
+      applyData(cached);
+      setLoading(false);
+      fetchHomeData(true);
+    } else {
+      fetchHomeData();
+    }
   }, []);
 
   return (
