@@ -94,7 +94,11 @@ export default function QueriesTab() {
   // Auto-scroll to bottom of chat
   useEffect(() => {
     if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      const container = messagesEndRef.current.parentElement;
+      if (container) {
+        // use scrollTo to prevent the entire browser window from jumping down
+        container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+      }
     }
   }, [selectedQuery?.answers]);
 
@@ -263,7 +267,7 @@ export default function QueriesTab() {
 
   const DiscussionCardsList = ({ isSidebar = false }) => {
     return (
-      <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: isSidebar ? "0" : "16px" }}>
         {loading ? (
           <div style={{ textAlign: "center", padding: "30px", color: "#8b6535", fontSize: "0.9rem" }}>Loading...</div>
         ) : filteredQueries.length === 0 ? (
@@ -273,6 +277,7 @@ export default function QueriesTab() {
             const isSelected = selectedQuery?._id === q._id;
             const lastMessage = q.answers?.length > 0 ? q.answers[q.answers.length - 1] : null;
             const primaryTag = q.tags && q.tags[0] ? q.tags[0] : "General";
+            const timeDisplay = timeAgo(lastMessage ? lastMessage.createdAt : q.createdAt);
             
             const commenters = [];
             if (q.answers) {
@@ -286,12 +291,60 @@ export default function QueriesTab() {
               });
             }
             
+            if (isSidebar) {
+              return (
+                <div 
+                  key={q._id} 
+                  onClick={() => setSelectedQuery(q)}
+                  style={{ 
+                    padding: "16px 20px", 
+                    cursor: "pointer", 
+                    background: isSelected ? "#fdfaf5" : "transparent",
+                    borderBottom: "1px solid #f5efeb",
+                    display: "flex", gap: "12px",
+                    position: "relative",
+                    transition: "background 0.2s"
+                  }}
+                >
+                  {isSelected && <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: "4px", background: "#c8861a" }} />}
+                  
+                  <Avatar user={q.author} size={44} />
+                  
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "4px" }}>
+                      <h4 style={{ margin: 0, fontSize: "0.95rem", color: "#1f1209", fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                        {q.title}
+                      </h4>
+                      <span style={{ fontSize: "0.7rem", color: "#8b6535", flexShrink: 0, marginLeft: "8px", fontWeight: 600 }}>
+                        {timeDisplay}
+                      </span>
+                    </div>
+                    
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <p style={{ margin: 0, fontSize: "0.85rem", color: "#6b4d1f", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", flex: 1 }}>
+                        {lastMessage ? (
+                          <><span style={{ fontWeight: 600 }}>{lastMessage.author?.name?.split(' ')[0]}:</span> {lastMessage.content}</>
+                        ) : (
+                          q.description
+                        )}
+                      </p>
+                      {q.answers?.length > 0 && (
+                        <div style={{ background: "#e5d9c5", color: "#4b3823", fontSize: "0.65rem", fontWeight: 800, padding: "2px 6px", borderRadius: "10px", marginLeft: "8px" }}>
+                          {q.answers.length}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+
             return (
               <div 
                 key={q._id} 
                 onClick={() => setSelectedQuery(q)}
                 style={{ 
-                  padding: isSidebar ? "20px" : "24px 32px", 
+                  padding: "24px 32px", 
                   cursor: "pointer", 
                   background: "#fff",
                   border: isSelected ? "2px solid #c8861a" : "1px solid #f0e6d2",
@@ -500,12 +553,21 @@ export default function QueriesTab() {
                           {ans.content}
                         </div>
                         
+                        {/* Delete Button */}
                         {!ans.isOptimistic && (isMe || currentUser?.role === 'admin') && (
                           <button 
                             onClick={(e) => { e.stopPropagation(); handleDeleteAnswer(selectedQuery._id, ans._id); }}
-                            style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: "0.7rem", padding: "4px 0", marginTop: "2px", opacity: 0.8, alignSelf: isMe ? "flex-end" : "flex-start", display: "flex", alignItems: "center", gap: "2px" }}
+                            style={{ 
+                              background: "#fff", border: "1px solid #fee2e2", color: "#ef4444", 
+                              cursor: "pointer", padding: "4px", borderRadius: "50%", 
+                              marginTop: "4px", opacity: 0.8, 
+                              alignSelf: isMe ? "flex-end" : "flex-start", 
+                              display: "flex", alignItems: "center", justifyContent: "center",
+                              marginRight: isMe ? "4px" : "0", marginLeft: isMe ? "0" : "4px"
+                            }}
+                            title="Delete message"
                           >
-                            <TrashIcon /> Delete
+                            <TrashIcon />
                           </button>
                         )}
                       </div>
