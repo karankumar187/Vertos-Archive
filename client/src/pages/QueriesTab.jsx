@@ -531,8 +531,31 @@ export default function QueriesTab() {
                     transition: "opacity 0.2s",
                     flexDirection: isMe ? "row-reverse" : "row"
                   }}>
-                    <Avatar user={ans.author} size={36} />
                     
+                    {/* Avatar & Actions Column */}
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px", flexShrink: 0 }}>
+                      <Avatar user={ans.author} size={36} />
+                      
+                      {/* Delete Button */}
+                      {!ans.isOptimistic && (isMe || currentUser?.role === 'admin') && (
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); handleDeleteAnswer(selectedQuery._id, ans._id); }}
+                          style={{ 
+                            background: "#fff", border: "1px solid #fee2e2", color: "#ef4444", 
+                            cursor: "pointer", padding: "6px", borderRadius: "50%", 
+                            opacity: 0.8, display: "flex", alignItems: "center", justifyContent: "center",
+                            transition: "background 0.2s, opacity 0.2s"
+                          }}
+                          onMouseEnter={e => { e.currentTarget.style.background = "#fee2e2"; e.currentTarget.style.opacity = 1; }}
+                          onMouseLeave={e => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.opacity = 0.8; }}
+                          title="Delete message"
+                        >
+                          <TrashIcon />
+                        </button>
+                      )}
+                    </div>
+                    
+                    {/* Content Column */}
                     <div style={{ maxWidth: "80%", display: "flex", flexDirection: "column", alignItems: isMe ? "flex-end" : "flex-start" }}>
                       <div style={{ display: "flex", alignItems: "baseline", gap: "8px", marginBottom: "4px", flexDirection: isMe ? "row-reverse" : "row" }}>
                         <span style={{ fontWeight: 700, color: "#1f1209", fontSize: "0.9rem" }}>{ans.author?.name || 'Anonymous'}</span>
@@ -540,7 +563,7 @@ export default function QueriesTab() {
                         {ans.isOptimistic && <span style={{ fontSize: "0.7rem", color: "#c8861a", fontWeight: 700, fontStyle: "italic" }}>Sending...</span>}
                       </div>
                       
-                      <div style={{ position: "relative", group: "message" }}>
+                      <div style={{ position: "relative" }}>
                         <div style={{ 
                           background: isMe ? "#c8861a" : "#fff", 
                           color: isMe ? "#fff" : "#1f1209",
@@ -552,24 +575,6 @@ export default function QueriesTab() {
                         }}>
                           {ans.content}
                         </div>
-                        
-                        {/* Delete Button */}
-                        {!ans.isOptimistic && (isMe || currentUser?.role === 'admin') && (
-                          <button 
-                            onClick={(e) => { e.stopPropagation(); handleDeleteAnswer(selectedQuery._id, ans._id); }}
-                            style={{ 
-                              background: "#fff", border: "1px solid #fee2e2", color: "#ef4444", 
-                              cursor: "pointer", padding: "4px", borderRadius: "50%", 
-                              marginTop: "4px", opacity: 0.8, 
-                              alignSelf: isMe ? "flex-end" : "flex-start", 
-                              display: "flex", alignItems: "center", justifyContent: "center",
-                              marginRight: isMe ? "4px" : "0", marginLeft: isMe ? "0" : "4px"
-                            }}
-                            title="Delete message"
-                          >
-                            <TrashIcon />
-                          </button>
-                        )}
                       </div>
                     </div>
                   </div>
