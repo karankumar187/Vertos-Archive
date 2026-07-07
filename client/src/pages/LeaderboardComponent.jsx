@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { leaderboardAPI } from "../services/api";
 import { useAuth } from "../context/AuthContext";
+import podiumBgUrl from '../assets/podium_bg.jpg';
+import crownIconUrl from '../assets/crown_icon.jpg';
 
 // Sparkly Trophy SVG (no background)
 const TrophyImg = () => (
@@ -204,15 +206,17 @@ function TopPodium({ entries }) {
 
   return (
     <div style={{
-      background: "#fff", borderRadius: "20px",
-      padding: "32px 24px 40px",
-      boxShadow: "0 2px 16px rgba(160,110,40,0.05)",
-      border: "1px solid #f0e6d2",
+      backgroundImage: `url(${podiumBgUrl})`,
+      backgroundSize: "cover", backgroundPosition: "center",
+      borderRadius: "20px",
+      padding: "36px 24px 48px",
       marginBottom: "24px",
+      boxShadow: "0 4px 24px rgba(160,110,40,0.1)",
+      border: "1px solid #f0e6d2",
     }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", marginBottom: "36px" }}>
-        <CrownIcon />
-        <h2 style={{ fontFamily: "'Inter', sans-serif", fontSize: "1.05rem", fontWeight: 700, color: "#1f1209", margin: 0 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", marginBottom: "40px" }}>
+        <img src={crownIconUrl} alt="Crown" style={{ width: 28, height: 28, mixBlendMode: "multiply", borderRadius: "4px" }} />
+        <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.6rem", fontWeight: 900, color: "#1f1209", margin: 0 }}>
           Top 3 Contributors
         </h2>
       </div>
@@ -231,12 +235,13 @@ function TopPodium({ entries }) {
             <div key={entry.rank} style={{
               display: "flex", flexDirection: "column", alignItems: "center",
               width: cardW,
-              background: isFirst ? "#fdfaf5" : "#fff",
-              border: isFirst ? "1.5px solid #e8c96a" : "1px solid #f0e6d2",
+              background: isFirst ? "rgba(255, 255, 255, 0.95)" : "rgba(255, 255, 255, 0.85)",
+              backdropFilter: "blur(4px)",
+              border: isFirst ? "1.5px solid rgba(232, 201, 106, 0.8)" : "1px solid rgba(240, 230, 210, 0.6)",
               borderRadius: "20px",
               padding: isFirst ? "20px 16px 18px" : "14px 12px 16px",
               position: "relative",
-              boxShadow: isFirst ? "0 8px 28px rgba(200,134,26,0.10)" : "0 2px 8px rgba(160,110,40,0.04)",
+              boxShadow: isFirst ? "0 12px 32px rgba(200,134,26,0.15)" : "0 4px 12px rgba(160,110,40,0.06)",
               transition: "transform 0.2s",
             }}
               onMouseEnter={e => e.currentTarget.style.transform = "translateY(-4px)"}
@@ -440,7 +445,7 @@ export default function LeaderboardPage() {
           </div>
 
           {/* Period Selector + Refresh */}
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }} onClick={e => e.stopPropagation()}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", position: "relative", zIndex: 100 }} onClick={e => e.stopPropagation()}>
             <button
               onClick={() => setShowDropdown(!showDropdown)}
               style={{
