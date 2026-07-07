@@ -274,7 +274,7 @@ function HomeTab({ setActiveTab }) {
 
         {/* Right Banner Image */}
         <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
-          <img src={campusBanner} alt="Community" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "top center" }} />
+          <img src={campusBanner} alt="Community" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "75% center" }} />
           {/* Fade Left */}
           <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: "80px", background: "linear-gradient(to right, #fff, transparent)", zIndex: 1 }} />
           {/* Quote box */}
@@ -464,32 +464,38 @@ export default function CommunityPage() {
       <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0, background: "rgba(248, 244, 238, 0.75)" }}/>
 
       <div style={{
-        position: "sticky", top: 68, zIndex: 40, width: "100%",
-        background: "rgba(253,250,245,0.97)", backdropFilter: "blur(16px)",
-        borderBottom: "1px solid #e9dcc8",
+        position: "sticky", top: 84, zIndex: 40, width: "100%",
+        display: "flex", justifyContent: "center", pointerEvents: "none",
+        padding: "0 24px"
       }}>
         <div style={{
-          maxWidth: 1280, margin: "0 auto", padding: "0 24px",
-          display: "flex", alignItems: "stretch", gap: "0",
-          overflowX: "auto", scrollbarWidth: "none", height: "48px",
+          pointerEvents: "auto",
+          background: "rgba(255, 255, 255, 0.96)", backdropFilter: "blur(16px)",
+          border: "1px solid #f0e6d2", borderRadius: "100px",
+          display: "flex", alignItems: "center", padding: "6px",
+          boxShadow: "0 4px 20px rgba(160, 110, 40, 0.08)",
+          overflowX: "auto", scrollbarWidth: "none",
+          gap: "4px"
         }}>
-          {tabs.map(t => {
+          {tabs.map((t, index) => {
             const active = activeTab === t.id;
             return (
-              <button key={t.id} onClick={() => updateTab(t.id)} style={{
-                padding: "0 18px", border: "none", background: "transparent",
-                color: active ? "#c8861a" : "#6b4d1f",
-                fontWeight: active ? 700 : 500, fontSize: "0.83rem",
-                cursor: "pointer", whiteSpace: "nowrap", display: "flex",
-                alignItems: "center", gap: "7px", borderBottom: active ? "2px solid #c8861a" : "2px solid transparent",
-                transition: "all 0.18s", fontFamily: "'Inter', sans-serif",
-                marginBottom: "-1px",
-              }}
-              onMouseEnter={e => { if (!active) e.currentTarget.style.color = "#8b5e0a"; }}
-              onMouseLeave={e => { if (!active) e.currentTarget.style.color = "#6b4d1f"; }}
-              >
-                <t.Icon /> {t.label}
-              </button>
+              <div key={t.id} style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                {index > 0 && <div style={{ width: "1px", height: "20px", background: "#f0e6d2", margin: "0 4px" }} />}
+                <button onClick={() => updateTab(t.id)} style={{
+                  padding: "8px 18px", border: "none", background: active ? "#fdfaf5" : "transparent",
+                  color: active ? "#1f1209" : "#8b6535",
+                  fontWeight: active ? 700 : 600, fontSize: "0.85rem",
+                  borderRadius: "100px", cursor: "pointer", whiteSpace: "nowrap", 
+                  display: "flex", alignItems: "center", gap: "8px",
+                  transition: "all 0.18s", fontFamily: "'Inter', sans-serif"
+                }}
+                onMouseEnter={e => { if (!active) e.currentTarget.style.color = "#1f1209"; }}
+                onMouseLeave={e => { if (!active) e.currentTarget.style.color = "#8b6535"; }}
+                >
+                  <t.Icon /> {t.label}
+                </button>
+              </div>
             );
           })}
         </div>
