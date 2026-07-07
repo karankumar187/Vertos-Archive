@@ -228,7 +228,7 @@ function HomeTab({ setActiveTab }) {
 
       {/* ── HERO BANNER ── */}
       <div style={{
-        borderRadius: "20px", overflow: "hidden", position: "relative",
+        borderRadius: "20px", overflow: "visible", position: "relative",
         background: "#fff", boxShadow: "0 4px 24px rgba(160,110,40,0.08)",
         border: "1px solid #f0e6d2", display: "flex", minHeight: "280px",
       }}>
@@ -273,12 +273,12 @@ function HomeTab({ setActiveTab }) {
         </div>
 
         {/* Right Banner Image */}
-        <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
-          <img src={campusBanner} alt="Community" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "100% center" }} />
+        <div style={{ flex: 1, position: "relative", overflow: "visible" }}>
+          <img src={campusBanner} alt="Community" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "100% center", borderTopRightRadius: "20px", borderBottomRightRadius: "20px" }} />
           {/* Fade Left */}
           <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: "80px", background: "linear-gradient(to right, #fff, transparent)", zIndex: 1 }} />
           {/* Quote box */}
-          <div style={{ position: "absolute", top: "50%", right: 24, transform: "translateY(-50%)", zIndex: 2, background: "rgba(255,255,255,0.95)", borderRadius: "14px", padding: "16px 20px", maxWidth: "200px", backdropFilter: "blur(8px)", boxShadow: "0 4px 20px rgba(0,0,0,0.08)" }}>
+          <div style={{ position: "absolute", top: "50%", right: -32, transform: "translateY(-50%)", zIndex: 2, background: "rgba(255,255,255,0.95)", borderRadius: "14px", padding: "16px 20px", maxWidth: "200px", backdropFilter: "blur(8px)", boxShadow: "0 4px 20px rgba(0,0,0,0.08)" }}>
             <div style={{ fontSize: "1.8rem", color: "#c8861a", lineHeight: 1, marginBottom: "8px" }}>"</div>
             <p style={{ fontSize: "0.78rem", fontStyle: "italic", color: "#3d2a0e", margin: "0 0 8px 0", lineHeight: 1.5 }}>
               The best way to find yourself is to lose yourself in the service of others.
