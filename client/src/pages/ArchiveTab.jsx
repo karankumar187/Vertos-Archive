@@ -58,6 +58,15 @@ export default function ArchiveTab() {
     fetchArchive();
   }, [courseFilter, categoryFilter]);
 
+  const groupedDocs = documents.reduce((acc, doc) => {
+    const key = doc.subject ? doc.subject.replace(/\s+/g, '').toUpperCase() : 'OTHER';
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(doc);
+    return acc;
+  }, {});
+
+  const sortedCourses = Object.keys(groupedDocs).sort();
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "24px", position: "relative" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
@@ -84,11 +93,12 @@ export default function ArchiveTab() {
             style={{ padding: "10px 16px", borderRadius: "8px", border: "1px solid #cbd5e1", outline: "none", background: "#fff" }}
           >
             <option value="">All Categories</option>
-            <option value="Notes">Notes</option>
-            <option value="Syllabus">Syllabus</option>
-            <option value="Previous Year Paper">Previous Year Paper</option>
-            <option value="Assignment">Assignment</option>
-            <option value="Other">Other</option>
+            <option value="notes">Notes</option>
+            <option value="pyq">PYQ</option>
+            <option value="syllabus">Syllabus</option>
+            <option value="placements">Placements</option>
+            <option value="faculty">Faculty</option>
+            <option value="university">University</option>
           </select>
         </div>
       </div>
@@ -96,13 +106,28 @@ export default function ArchiveTab() {
       {loading ? (
         <div style={{ textAlign: "center", padding: "40px", color: "#64748b" }}>Loading archive...</div>
       ) : documents.length > 0 ? (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: "20px" }}>
-          {documents.map(doc => <DocumentCard key={doc._id} doc={doc} />)}
+        <div style={{ display: "flex", flexDirection: "column", gap: "32px" }}>
+          {sortedCourses.map(course => (
+            <div key={course}>
+              <div style={{ 
+                borderBottom: "2px solid #e9dcc8", paddingBottom: "8px", marginBottom: "16px",
+                display: "flex", alignItems: "center", gap: "12px"
+              }}>
+                <h3 style={{ margin: 0, fontSize: "1.4rem", color: "#1f1209", fontFamily: "'Playfair Display', serif" }}>
+                  {course}
+                </h3>
+                <span style={{ fontSize: "0.75rem", background: "#fef3dc", color: "#b47a18", padding: "3px 8px", borderRadius: "12px", fontWeight: 700 }}>
+                  {groupedDocs[course].length} Resources
+                </span>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: "20px" }}>
+                {groupedDocs[course].map(doc => <DocumentCard key={doc._id} doc={doc} />)}
+              </div>
+            </div>
+          ))}
         </div>
       ) : (
-        <div style={{ textAlign: "center", padding: "60px 20px", background: "#fff", borderRadius: "12px", border: "1px dashed #cbd5e1" }}>
-          <p style={{ color: "#64748b", margin: 0 }}>No resources found matching your filters.</p>
-        </div>
+        <div style={{ textAlign: "center", padding: "40px", color: "#64748b" }}>No resources found.</div>
       )}
     </div>
   );
