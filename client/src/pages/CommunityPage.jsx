@@ -160,8 +160,8 @@ const Avatar = ({ user, size = 40 }) => {
   );
 };
 
-/* ─── Home Tab ──────────────────────────────────────────────── */
-function HomeTab({ setActiveTab }) {
+/* ─── Feed Tab ──────────────────────────────────────────────── */
+function FeedTab({ setActiveTab }) {
   const [topContributors, setTopContributors] = useState([]);
   const [activeDiscussions, setActiveDiscussions] = useState([]);
   const [upcomingEvents, setUpcomingEvents] = useState([]);
@@ -169,7 +169,7 @@ function HomeTab({ setActiveTab }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const CACHE_KEY = 'community_home_data';
+    const CACHE_KEY = 'community_feed_data';
 
     const applyData = (d) => {
       if (d.topContributors) setTopContributors(d.topContributors);
@@ -178,7 +178,7 @@ function HomeTab({ setActiveTab }) {
       if (d.stats) setStats(d.stats);
     };
 
-    const fetchHomeData = async (background = false) => {
+    const fetchFeedData = async (background = false) => {
       try {
         if (!background) setLoading(true);
         const [ldbRes, qRes, evRes] = await Promise.all([
@@ -234,7 +234,7 @@ function HomeTab({ setActiveTab }) {
         applyData(freshData);
         cacheSet(CACHE_KEY, freshData);
       } catch (err) {
-        console.error('Error fetching home data', err);
+        console.error('Error fetching feed data', err);
       } finally {
         setLoading(false);
       }
@@ -245,9 +245,9 @@ function HomeTab({ setActiveTab }) {
     if (cached) {
       applyData(cached);
       setLoading(false);
-      fetchHomeData(true);
+      fetchFeedData(true);
     } else {
-      fetchHomeData();
+      fetchFeedData();
     }
   }, []);
 
@@ -453,13 +453,13 @@ function HomeTab({ setActiveTab }) {
 
 /* ─── Main Community Page ───────────────────────────────────── */
 export default function CommunityPage() {
-  const [activeTab, setActiveTab] = useState("home");
+  const [activeTab, setActiveTab] = useState("feed");
   const location = useLocation();
 
   useEffect(() => {
     if (location.hash) {
       const tab = location.hash.replace("#", "");
-      if (["home","leaderboard","queries","archive","happening","contribute"].includes(tab)) setActiveTab(tab);
+      if (["feed","leaderboard","queries","archive","happening","contribute"].includes(tab)) setActiveTab(tab);
     }
   }, [location.hash]);
 
@@ -469,7 +469,7 @@ export default function CommunityPage() {
   };
 
   const tabs = [
-    { id: "home",        label: "Home",        Icon: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg> },
+    { id: "feed",        label: "Feed",        Icon: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg> },
     { id: "leaderboard", label: "Leaderboard", Icon: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M8 21V11M16 21V3M12 21v-5"/></svg> },
     { id: "queries",     label: "Queries",     Icon: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg> },
     { id: "archive",     label: "Archive",     Icon: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="21,8 21,21 3,21 3,8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg> },
@@ -529,7 +529,7 @@ export default function CommunityPage() {
 
       {/* ── TAB CONTENT ── */}
       <div style={{ position: "relative", zIndex: 1, maxWidth: 1280, margin: "0 auto", width: "100%", padding: "28px 24px", flex: 1, boxSizing: "border-box" }}>
-        {activeTab === "home"        && <HomeTab setActiveTab={updateTab} />}
+        {activeTab === "feed"        && <FeedTab setActiveTab={updateTab} />}
         {activeTab === "leaderboard" && <LeaderboardComponent />}
         {activeTab === "queries"     && <QueriesTab />}
         {activeTab === "archive"     && <ArchiveTab />}
