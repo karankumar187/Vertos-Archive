@@ -1,7 +1,37 @@
 import { useState, useEffect } from "react";
 import { leaderboardAPI } from "../services/api";
 import { useAuth } from "../context/AuthContext";
-import trophyIcon from "../assets/trophy_icon.jpg";
+
+// Sparkly Trophy SVG (no background)
+const TrophyImg = () => (
+  <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+    {/* Sparkles */}
+    <path d="M52 8 L53.5 10 L52 12 L50.5 10 Z" fill="#f59e0b"/>
+    <path d="M51 9.5 L53 10 L51 10.5 L49 10 Z" fill="#f59e0b"/>
+    <path d="M12 10 L13 11.5 L12 13 L11 11.5 Z" fill="#d97706"/>
+    <path d="M11.5 11 L13 12 L11.5 12.5 L10 12 Z" fill="#d97706"/>
+    <path d="M56 22 L57 23.5 L56 25 L55 23.5 Z" fill="#f59e0b" opacity="0.7"/>
+    <path d="M8 28 L9 29 L8 30 L7 29 Z" fill="#d97706" opacity="0.6"/>
+    {/* Cup body */}
+    <path d="M20 12 H44 V34 C44 41.7 38.6 48 31.8 49.5 L32 50 L27 50 L27.2 49.5 C20.4 48 15 41.7 15 34 V12 Z" fill="url(#cupGrad)" rx="2"/>
+    {/* Handles */}
+    <path d="M20 16 C14 16 10 20 10 25 C10 30 14 33 20 32" stroke="#d97706" strokeWidth="3.5" fill="none" strokeLinecap="round"/>
+    <path d="M44 16 C50 16 54 20 54 25 C54 30 50 33 44 32" stroke="#d97706" strokeWidth="3.5" fill="none" strokeLinecap="round"/>
+    {/* Shine */}
+    <path d="M24 16 C24 16 26 20 25 28" stroke="#fde68a" strokeWidth="2" opacity="0.6" strokeLinecap="round"/>
+    {/* Stem */}
+    <rect x="28" y="50" width="8" height="6" fill="#d97706" rx="1"/>
+    {/* Base */}
+    <rect x="22" y="56" width="20" height="4" fill="#b45309" rx="2"/>
+    <defs>
+      <linearGradient id="cupGrad" x1="15" y1="12" x2="44" y2="50" gradientUnits="userSpaceOnUse">
+        <stop stopColor="#fcd34d"/>
+        <stop offset="0.5" stopColor="#d97706"/>
+        <stop offset="1" stopColor="#b45309"/>
+      </linearGradient>
+    </defs>
+  </svg>
+);
 
 // --- SVGs ---
 const CrownIcon = () => (
@@ -124,8 +154,8 @@ const Avatar = ({ user, size = 40, style = {} }) => {
 };
 
 const PERIODS = ["This Month", "All Time", "This Week"];
-const INITIAL_SHOW = 5;
-const MAX_SHOW = 15;
+const INITIAL_SHOW = 15;
+const MAX_SHOW = 999; 
 
 // Rank badge colors
 const rankBadge = (rank) => {
@@ -340,7 +370,7 @@ export default function LeaderboardPage() {
         {/* ── Header Row ── */}
         <div className="anim-up d1" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "40px" }}>
           <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
-            <img src={trophyIcon} alt="Trophy" style={{ width: 64, height: 64, objectFit: "contain" }} />
+            <TrophyImg />
             <div>
               <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: "3rem", fontWeight: 900, color: "#1f1209", margin: 0, lineHeight: 1 }}>
                 Leaderboard
@@ -392,7 +422,7 @@ export default function LeaderboardPage() {
         </div>
 
         {/* ── Podium ── */}
-        {!loading && leaderboard.length >= 3 && (
+        {!loading && leaderboard.length >= 1 && (
           <div className="anim-up d2">
             <TopPodium entries={leaderboard.slice(0, 3)} />
           </div>
