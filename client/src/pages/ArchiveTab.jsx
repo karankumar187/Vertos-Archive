@@ -34,23 +34,23 @@ const DocumentCard = ({ doc }) => {
 export default function ArchiveTab() {
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [courseFilter, setCourseFilter] = useState('');
+  const [courseSearch, setCourseSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [expandedCourse, setExpandedCourse] = useState(null);
 
-  const getCacheKey = () => `community_archive_${courseFilter}_${categoryFilter}`;
+  // Categories that should be shown publicly
+  const PUBLIC_CATEGORIES = ['notes', 'pyq', 'syllabus'];
 
   const fetchArchive = async (background = false) => {
     try {
       if (!background) setLoading(true);
-      const params = {};
-      if (courseFilter) params.courseCode = courseFilter;
-      if (categoryFilter) params.category = categoryFilter;
-      
-      const { data } = await archiveAPI.getArchive(params);
+      // Fetch all verified docs (no server-side filters for category/course since we filter client-side)
+      const { data } = await archiveAPI.getArchive({});
       if (data.success) {
-        setDocuments(data.data);
-        cacheSet(getCacheKey(), data.data);
+        // Only store public category docs
+        const filtered = data.data.filter(d => PUBLIC_CATEGORIES.includes(d.category?.toLowerCase()));
+        setDocuments(filtered);
+        cacheSet('community_archive_all', filtered);
       }
     } catch (error) {
       console.error("Error fetching archive:", error);
@@ -60,18 +60,25 @@ export default function ArchiveTab() {
   };
 
   useEffect(() => {
-    const key = getCacheKey();
-    const cached = cacheGet(key);
+    const cached = cacheGet('community_archive_all');
     if (cached) {
       setDocuments(cached);
       setLoading(false);
-      fetchArchive(true); // silent background refresh
+      fetchArchive(true);
     } else {
       fetchArchive();
     }
-  }, [courseFilter, categoryFilter]);
+  }, []);
 
-  const groupedDocs = documents.reduce((acc, doc) => {
+  // Client-side filtering (instant, no network needed)
+  const visibleDocs = documents.filter(doc => {
+    const subjectMatch = courseSearch.trim() === '' ||
+      doc.subject?.replace(/\s+/g, '').toUpperCase().includes(courseSearch.replace(/\s+/g, '').toUpperCase());
+    const categoryMatch = categoryFilter === '' || doc.category?.toLowerCase() === categoryFilter.toLowerCase();
+    return subjectMatch && categoryMatch;
+  });
+
+  const groupedDocs = visibleDocs.reduce((acc, doc) => {
     const key = doc.subject ? doc.subject.replace(/\s+/g, '').toUpperCase() : 'OTHER';
     if (!acc[key]) acc[key] = [];
     acc[key].push(doc);
@@ -95,30 +102,27 @@ export default function ArchiveTab() {
         <div style={{ display: "flex", gap: "12px" }}>
           <input 
             type="text" 
-            placeholder="Filter by Course (e.g. MTH174)"
-            value={courseFilter}
-            onChange={(e) => setCourseFilter(e.target.value)}
-            style={{ padding: "10px 16px", borderRadius: "8px", border: "1px solid #cbd5e1", outline: "none", minWidth: "220px" }}
+            placeholder="Search by Course (e.g. MTH174)"
+            value={courseSearch}
+            onChange={(e) => { setCourseSearch(e.target.value); setExpandedCourse(null); }}
+            style={{ padding: "10px 16px", borderRadius: "8px", border: "1px solid #cbd5e1", outline: "none", minWidth: "220px", fontFamily: "'Inter', sans-serif" }}
           />
           <select 
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value)}
-            style={{ padding: "10px 16px", borderRadius: "8px", border: "1px solid #cbd5e1", outline: "none", background: "#fff" }}
+            style={{ padding: "10px 16px", borderRadius: "8px", border: "1px solid #cbd5e1", outline: "none", background: "#fff", fontFamily: "'Inter', sans-serif" }}
           >
             <option value="">All Categories</option>
             <option value="notes">Notes</option>
             <option value="pyq">PYQ</option>
             <option value="syllabus">Syllabus</option>
-            <option value="placements">Placements</option>
-            <option value="faculty">Faculty</option>
-            <option value="university">University</option>
           </select>
         </div>
       </div>
 
       {loading ? (
         <div style={{ textAlign: "center", padding: "40px", color: "#64748b" }}>Loading archive...</div>
-      ) : documents.length > 0 ? (
+      ) : visibleDocs.length > 0 ? (
         <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
           {sortedCourses.map(course => (
             <div key={course} style={{ background: "#fff", borderRadius: "12px", border: "1px solid #e9dcc8", overflow: "hidden" }}>
@@ -141,7 +145,7 @@ export default function ArchiveTab() {
               </button>
 
               {/* Expanded Documents List */}
-              {(expandedCourse === course || (courseFilter.trim() && sortedCourses.length === 1)) && (
+              {(expandedCourse === course || (courseSearch.trim() && sortedCourses.length === 1)) && (
                 <div style={{ borderTop: "1px solid #e9dcc8", overflowX: "auto" }}>
                   <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: "'Inter', sans-serif", fontSize: "0.85rem", minWidth: "700px" }}>
                     <thead>
@@ -195,7 +199,15 @@ export default function ArchiveTab() {
           ))}
         </div>
       ) : (
-        <div style={{ textAlign: "center", padding: "40px", color: "#64748b" }}>No resources found.</div>
+        <div style={{ textAlign: "center", padding: "60px 20px", background: "#fff", borderRadius: "12px", border: "1px dashed #e9dcc8" }}>
+          <div style={{ fontSize: "2rem", marginBottom: "12px" }}>📂</div>
+          <p style={{ margin: 0, fontWeight: 600, color: "#1f1209", fontSize: "1rem" }}>
+            {courseSearch || categoryFilter ? `No resources found for "${courseSearch || categoryFilter}"` : "No resources in the archive yet."}
+          </p>
+          <p style={{ margin: "8px 0 0 0", color: "#9a7845", fontSize: "0.85rem" }}>
+            {courseSearch || categoryFilter ? "Try a different course code or category." : "Be the first to contribute!"}
+          </p>
+        </div>
       )}
     </div>
   );
