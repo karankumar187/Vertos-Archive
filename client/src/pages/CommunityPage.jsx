@@ -233,7 +233,7 @@ function HomeTab({ setActiveTab }) {
         border: "1px solid #f0e6d2", display: "flex", minHeight: "280px",
       }}>
         {/* Left Text Content */}
-        <div style={{ flex: "0 0 52%", padding: "40px 40px", display: "flex", flexDirection: "column", justifyContent: "center", gap: "16px", zIndex: 1 }}>
+        <div style={{ flex: "0 0 45%", padding: "40px 40px", display: "flex", flexDirection: "column", justifyContent: "center", gap: "16px", zIndex: 1 }}>
           <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "#c8861a", letterSpacing: "0.12em", textTransform: "uppercase", display: "flex", alignItems: "center", gap: "6px" }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="#c8861a"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
             Community
@@ -274,7 +274,7 @@ function HomeTab({ setActiveTab }) {
 
         {/* Right Banner Image */}
         <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
-          <img src={campusBanner} alt="Community" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "75% center" }} />
+          <img src={campusBanner} alt="Community" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "100% center" }} />
           {/* Fade Left */}
           <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: "80px", background: "linear-gradient(to right, #fff, transparent)", zIndex: 1 }} />
           {/* Quote box */}
@@ -472,7 +472,7 @@ export default function CommunityPage() {
           pointerEvents: "auto",
           background: "rgba(255, 255, 255, 0.96)", backdropFilter: "blur(16px)",
           border: "1px solid #f0e6d2", borderRadius: "100px",
-          display: "flex", alignItems: "center", padding: "6px",
+          display: "flex", alignItems: "center", padding: "4px",
           boxShadow: "0 4px 20px rgba(160, 110, 40, 0.08)",
           overflowX: "auto", scrollbarWidth: "none",
           gap: "4px"
@@ -483,11 +483,11 @@ export default function CommunityPage() {
               <div key={t.id} style={{ display: "flex", alignItems: "center", gap: "4px" }}>
                 {index > 0 && <div style={{ width: "1px", height: "20px", background: "#f0e6d2", margin: "0 4px" }} />}
                 <button onClick={() => updateTab(t.id)} style={{
-                  padding: "8px 18px", border: "none", background: active ? "#fdfaf5" : "transparent",
+                  padding: "6px 14px", border: "none", background: active ? "#fdfaf5" : "transparent",
                   color: active ? "#1f1209" : "#8b6535",
-                  fontWeight: active ? 700 : 600, fontSize: "0.85rem",
+                  fontWeight: active ? 700 : 600, fontSize: "0.78rem",
                   borderRadius: "100px", cursor: "pointer", whiteSpace: "nowrap", 
-                  display: "flex", alignItems: "center", gap: "8px",
+                  display: "flex", alignItems: "center", gap: "6px",
                   transition: "all 0.18s", fontFamily: "'Inter', sans-serif"
                 }}
                 onMouseEnter={e => { if (!active) e.currentTarget.style.color = "#1f1209"; }}
