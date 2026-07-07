@@ -1,8 +1,6 @@
 import { useState, useEffect } from "react";
 import { leaderboardAPI } from "../services/api";
 import { useAuth } from "../context/AuthContext";
-import podiumBgUrl from '../assets/podium_bg.jpg';
-import crownIconUrl from '../assets/crown_icon.jpg';
 
 // Sparkly Trophy SVG (no background)
 const TrophyImg = () => (
@@ -206,17 +204,15 @@ function TopPodium({ entries }) {
 
   return (
     <div style={{
-      backgroundImage: `url(${podiumBgUrl})`,
-      backgroundSize: "cover", backgroundPosition: "center",
-      borderRadius: "20px",
-      padding: "36px 24px 48px",
-      marginBottom: "24px",
-      boxShadow: "0 4px 24px rgba(160,110,40,0.1)",
+      background: "#fff", borderRadius: "20px",
+      padding: "32px 24px 40px",
+      boxShadow: "0 2px 16px rgba(160,110,40,0.05)",
       border: "1px solid #f0e6d2",
+      marginBottom: "24px",
     }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", marginBottom: "40px" }}>
-        <img src={crownIconUrl} alt="Crown" style={{ width: 28, height: 28, mixBlendMode: "multiply", borderRadius: "4px" }} />
-        <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.6rem", fontWeight: 900, color: "#1f1209", margin: 0 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", marginBottom: "36px" }}>
+        <CrownIcon />
+        <h2 style={{ fontFamily: "'Inter', sans-serif", fontSize: "1.05rem", fontWeight: 700, color: "#1f1209", margin: 0 }}>
           Top 3 Contributors
         </h2>
       </div>
@@ -235,13 +231,12 @@ function TopPodium({ entries }) {
             <div key={entry.rank} style={{
               display: "flex", flexDirection: "column", alignItems: "center",
               width: cardW,
-              background: isFirst ? "rgba(255, 255, 255, 0.95)" : "rgba(255, 255, 255, 0.85)",
-              backdropFilter: "blur(4px)",
-              border: isFirst ? "1.5px solid rgba(232, 201, 106, 0.8)" : "1px solid rgba(240, 230, 210, 0.6)",
+              background: isFirst ? "#fdfaf5" : "#fff",
+              border: isFirst ? "1.5px solid #e8c96a" : "1px solid #f0e6d2",
               borderRadius: "20px",
               padding: isFirst ? "20px 16px 18px" : "14px 12px 16px",
               position: "relative",
-              boxShadow: isFirst ? "0 12px 32px rgba(200,134,26,0.15)" : "0 4px 12px rgba(160,110,40,0.06)",
+              boxShadow: isFirst ? "0 8px 28px rgba(200,134,26,0.10)" : "0 2px 8px rgba(160,110,40,0.04)",
               transition: "transform 0.2s",
             }}
               onMouseEnter={e => e.currentTarget.style.transform = "translateY(-4px)"}
@@ -299,7 +294,7 @@ function Row({ entry, isMe }) {
   return (
     <div style={{
       display: "grid",
-      gridTemplateColumns: "56px 1fr 100px 110px 70px",
+      gridTemplateColumns: "56px 1fr 100px 120px 110px 70px",
       alignItems: "center", gap: "16px",
       padding: "18px 28px",
       background: isMe ? "#fdfaf5" : "#fff",
@@ -345,6 +340,14 @@ function Row({ entry, isMe }) {
         <DocIcon />
         <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.9rem", fontWeight: 600, color: "#4b3823" }}>
           {entry.docs}
+        </span>
+      </div>
+
+      {/* Discussions */}
+      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8b6535" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+        <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.9rem", fontWeight: 600, color: "#4b3823" }}>
+          {entry.discussions || 0}
         </span>
       </div>
 
@@ -423,28 +426,7 @@ export default function LeaderboardPage() {
               </p>
             </div>
 
-            {/* Refresh Button */}
-            <button
-              onClick={() => fetchLeaderboard(true)}
-              title="Refresh leaderboard"
-              style={{
-                background: refreshing ? "#fdfaf5" : "#fff",
-                border: "1px solid #e5d9c5", borderRadius: "50%",
-                width: 40, height: 40, display: "flex", alignItems: "center", justifyContent: "center",
-                cursor: "pointer", boxShadow: "0 2px 8px rgba(160,110,40,0.06)",
-                transition: "transform 0.3s",
-                transform: refreshing ? "rotate(180deg)" : "rotate(0deg)",
-                flexShrink: 0
-              }}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c8861a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
-                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
-              </svg>
-            </button>
-          </div>
-
-          {/* Period Selector + Refresh */}
+          {/* Period Selector */}
           <div style={{ display: "flex", alignItems: "center", gap: "8px", position: "relative", zIndex: 100 }} onClick={e => e.stopPropagation()}>
             <button
               onClick={() => setShowDropdown(!showDropdown)}
@@ -492,6 +474,30 @@ export default function LeaderboardPage() {
         )}
 
         {/* ── Rankings Table ── */}
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "12px" }}>
+          {/* Refresh Button */}
+          <button
+            onClick={() => fetchLeaderboard(true)}
+            title="Refresh leaderboard"
+            style={{
+              background: refreshing ? "#fdfaf5" : "#fff",
+              border: "1px solid #e5d9c5", borderRadius: "50%",
+              width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center",
+              cursor: "pointer", boxShadow: "0 2px 8px rgba(160,110,40,0.06)",
+              transition: "transform 0.3s, box-shadow 0.2s",
+              transform: refreshing ? "rotate(180deg)" : "rotate(0deg)",
+              flexShrink: 0
+            }}
+            onMouseEnter={e => e.currentTarget.style.boxShadow = "0 4px 12px rgba(160,110,40,0.12)"}
+            onMouseLeave={e => e.currentTarget.style.boxShadow = "0 2px 8px rgba(160,110,40,0.06)"}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c8861a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+            </svg>
+          </button>
+        </div>
+
         <div className="anim-up d3" style={{
           background: "#fff", border: "1px solid #f0e6d2",
           borderRadius: "20px", overflow: "hidden",
@@ -500,15 +506,15 @@ export default function LeaderboardPage() {
         }}>
           {/* Header row */}
           <div style={{
-            display: "grid", gridTemplateColumns: "56px 1fr 100px 110px 70px",
+            display: "grid", gridTemplateColumns: "56px 1fr 100px 120px 110px 70px",
             padding: "16px 28px", background: "#fdfaf5",
             borderBottom: "1px solid #f0e6d2",
           }}>
-            {["#", "Contributor", "Docs", "Points", "Trend"].map((h, i) => (
+            {["#", "Contributor", "Docs", "Discussions", "Points", "Trend"].map((h, i) => (
               <span key={h} style={{
                 fontFamily: "'Inter', sans-serif", fontSize: "0.75rem", fontWeight: 700,
                 color: "#8b6535", textTransform: "uppercase", letterSpacing: "0.06em",
-                textAlign: i === 4 ? "center" : "left",
+                textAlign: i === 5 ? "center" : "left",
               }}>{h}</span>
             ))}
           </div>
