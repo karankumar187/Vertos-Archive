@@ -1,0 +1,238 @@
+import { useState, useEffect } from "react";
+import { queriesAPI } from "../services/api";
+
+const QueryCard = ({ query, onClick }) => {
+  const dateObj = new Date(query.createdAt);
+  const timeStr = dateObj.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+  return (
+    <div 
+      onClick={() => onClick(query)}
+      style={{
+        background: "#fff", borderRadius: "12px", padding: "20px",
+        border: "1px solid #e2e8f0", boxShadow: "0 2px 4px rgba(0,0,0,0.02)",
+        cursor: "pointer", transition: "all 0.2s",
+        display: "flex", flexDirection: "column", gap: "12px"
+      }}
+      onMouseEnter={e => e.currentTarget.style.borderColor = "#7c3aed44"}
+      onMouseLeave={e => e.currentTarget.style.borderColor = "#e2e8f0"}
+    >
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+        <h3 style={{ margin: 0, fontSize: "1.1rem", color: "#1e293b", fontWeight: 600, lineHeight: 1.4 }}>{query.title}</h3>
+        <span style={{ fontSize: "0.8rem", color: "#7c3aed", background: "#EDE9FE", padding: "4px 10px", borderRadius: "12px", fontWeight: 700, whiteSpace: "nowrap", marginLeft: "12px" }}>
+          {query.answers?.length || 0} answers
+        </span>
+      </div>
+      
+      <p style={{ margin: 0, fontSize: "0.9rem", color: "#64748b", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+        {query.description}
+      </p>
+
+      <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+        {query.tags?.map((tag, i) => (
+          <span key={i} style={{ fontSize: "0.7rem", background: "#f1f5f9", color: "#475569", padding: "3px 8px", borderRadius: "4px" }}>
+            {tag}
+          </span>
+        ))}
+      </div>
+      
+      <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "4px", borderTop: "1px solid #f1f5f9", paddingTop: "12px" }}>
+        <div style={{ width: 24, height: 24, borderRadius: "50%", background: "linear-gradient(135deg, #7c3aed, #4c1d95)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: "0.6rem", fontWeight: 700 }}>
+          {query.author?.name?.charAt(0) || '?'}
+        </div>
+        <span style={{ fontSize: "0.75rem", color: "#64748b" }}>
+          <strong style={{ color: "#334155" }}>{query.author?.name || 'Anonymous'}</strong> asked on {timeStr}
+        </span>
+      </div>
+    </div>
+  );
+};
+
+export default function QueriesTab() {
+  const [queries, setQueries] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedQuery, setSelectedQuery] = useState(null);
+  
+  // Form states
+  const [showAskForm, setShowAskForm] = useState(false);
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [tags, setTags] = useState("");
+  
+  const [answerContent, setAnswerContent] = useState("");
+
+  const fetchQueries = async () => {
+    try {
+      setLoading(true);
+      const { data } = await queriesAPI.getQueries();
+      if (data.success) setQueries(data.data);
+    } catch (error) {
+      console.error("Error fetching queries:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchQueries();
+  }, []);
+
+  const handleAsk = async (e) => {
+    e.preventDefault();
+    if (!title || !description) return;
+    try {
+      const tagArray = tags.split(',').map(t => t.trim()).filter(t => t);
+      const { data } = await queriesAPI.createQuery({ title, description, tags: tagArray });
+      if (data.success) {
+        setShowAskForm(false);
+        setTitle(""); setDescription(""); setTags("");
+        fetchQueries();
+      }
+    } catch (error) {
+      console.error("Error asking query:", error);
+    }
+  };
+
+  const handleAnswer = async (e) => {
+    e.preventDefault();
+    if (!answerContent || !selectedQuery) return;
+    try {
+      const { data } = await queriesAPI.addAnswer(selectedQuery._id, { content: answerContent });
+      if (data.success) {
+        setAnswerContent("");
+        // Update local state to reflect new answer
+        setSelectedQuery(data.data);
+        fetchQueries();
+      }
+    } catch (error) {
+      console.error("Error adding answer:", error);
+    }
+  };
+
+  // View: Single Query Details
+  if (selectedQuery) {
+    return (
+      <div style={{ maxWidth: "800px", margin: "0 auto", display: "flex", flexDirection: "column", gap: "24px" }}>
+        <button 
+          onClick={() => setSelectedQuery(null)}
+          style={{ background: "none", border: "none", color: "#7c3aed", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: "6px", padding: 0, alignSelf: "flex-start" }}
+        >
+          ← Back to Queries
+        </button>
+
+        {/* Original Question */}
+        <div style={{ background: "#fff", borderRadius: "12px", padding: "28px", border: "1px solid #e2e8f0", boxShadow: "0 4px 6px rgba(0,0,0,0.02)" }}>
+          <h2 style={{ margin: "0 0 16px 0", color: "#1e293b", fontSize: "1.5rem" }}>{selectedQuery.title}</h2>
+          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "16px" }}>
+            {selectedQuery.tags?.map((tag, i) => (
+              <span key={i} style={{ fontSize: "0.75rem", background: "#EDE9FE", color: "#6d28d9", padding: "4px 10px", borderRadius: "6px", fontWeight: 600 }}>
+                {tag}
+              </span>
+            ))}
+          </div>
+          <p style={{ fontSize: "1rem", color: "#475569", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
+            {selectedQuery.description}
+          </p>
+          <div style={{ marginTop: "24px", paddingTop: "16px", borderTop: "1px solid #f1f5f9", display: "flex", alignItems: "center", gap: "10px" }}>
+            <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#7c3aed", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 700 }}>
+              {selectedQuery.author?.name?.charAt(0) || '?'}
+            </div>
+            <div style={{ fontSize: "0.85rem", color: "#64748b" }}>
+              <div style={{ color: "#334155", fontWeight: 600 }}>{selectedQuery.author?.name || 'Anonymous'}</div>
+              <div>{new Date(selectedQuery.createdAt).toLocaleString()}</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Answers Section */}
+        <h3 style={{ margin: "10px 0 0 0", color: "#1e293b" }}>{selectedQuery.answers?.length || 0} Answers</h3>
+        
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+          {selectedQuery.answers?.map((ans, i) => (
+            <div key={i} style={{ background: "#fff", borderRadius: "12px", padding: "20px", border: "1px solid #e2e8f0" }}>
+              <p style={{ margin: "0 0 16px 0", color: "#334155", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{ans.content}</p>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <div style={{ width: 28, height: 28, borderRadius: "50%", background: "#10b981", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: "0.7rem", fontWeight: 700 }}>
+                  {ans.author?.name?.charAt(0) || '?'}
+                </div>
+                <div style={{ fontSize: "0.75rem", color: "#64748b" }}>
+                  <span style={{ color: "#334155", fontWeight: 600 }}>{ans.author?.name || 'Anonymous'}</span> • {new Date(ans.createdAt).toLocaleString()}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Post Answer Form */}
+        <form onSubmit={handleAnswer} style={{ background: "#f8fafc", borderRadius: "12px", padding: "20px", border: "1px solid #e2e8f0", marginTop: "16px" }}>
+          <h4 style={{ margin: "0 0 12px 0", color: "#1e293b" }}>Your Answer</h4>
+          <textarea 
+            value={answerContent} onChange={e => setAnswerContent(e.target.value)}
+            placeholder="Type your answer here... Be helpful and respectful!"
+            rows={4} required
+            style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #cbd5e1", outline: "none", fontFamily: "inherit", resize: "vertical", boxSizing: "border-box", marginBottom: "12px" }}
+          />
+          <button type="submit" style={{ background: "#7c3aed", color: "#fff", border: "none", padding: "10px 20px", borderRadius: "8px", fontWeight: 600, cursor: "pointer" }}>
+            Post Answer
+          </button>
+        </form>
+      </div>
+    );
+  }
+
+  // View: List of Queries
+  return (
+    <div style={{ maxWidth: "1000px", margin: "0 auto", display: "flex", flexDirection: "column", gap: "24px" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+        <div>
+          <h2 style={{ margin: "0 0 8px 0", fontSize: "1.8rem", color: "#1f1209", fontFamily: "'Playfair Display', serif" }}>
+            Student Queries
+          </h2>
+          <p style={{ margin: 0, color: "#6b4d1f", fontSize: "0.95rem" }}>
+            Ask questions, share knowledge, and help your peers.
+          </p>
+        </div>
+        <button 
+          onClick={() => setShowAskForm(!showAskForm)}
+          style={{ background: "#7c3aed", color: "#fff", border: "none", padding: "10px 20px", borderRadius: "8px", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}
+        >
+          {showAskForm ? "Cancel" : "Ask a Question"}
+        </button>
+      </div>
+
+      {showAskForm && (
+        <form onSubmit={handleAsk} style={{ background: "#fff", borderRadius: "12px", padding: "24px", border: "1px solid #7c3aed44", boxShadow: "0 8px 24px rgba(124,58,237,0.08)" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+            <div>
+              <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, color: "#334155", marginBottom: "6px" }}>Question Title</label>
+              <input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g., How to approach DBMS Unit 3?" required style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", boxSizing: "border-box" }} />
+            </div>
+            <div>
+              <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, color: "#334155", marginBottom: "6px" }}>Details</label>
+              <textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Explain your question in detail..." rows={4} required style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", boxSizing: "border-box", resize: "vertical" }} />
+            </div>
+            <div>
+              <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, color: "#334155", marginBottom: "6px" }}>Tags (comma separated)</label>
+              <input type="text" value={tags} onChange={e => setTags(e.target.value)} placeholder="e.g., DBMS, Semester 5, Midterms" style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", boxSizing: "border-box" }} />
+            </div>
+            <button type="submit" style={{ background: "#7c3aed", color: "#fff", border: "none", padding: "12px", borderRadius: "8px", fontWeight: 600, cursor: "pointer", marginTop: "8px" }}>
+              Post Question
+            </button>
+          </div>
+        </form>
+      )}
+
+      {loading ? (
+        <div style={{ textAlign: "center", padding: "40px", color: "#64748b" }}>Loading queries...</div>
+      ) : queries.length > 0 ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+          {queries.map(q => <QueryCard key={q._id} query={q} onClick={setSelectedQuery} />)}
+        </div>
+      ) : (
+        <div style={{ textAlign: "center", padding: "60px 20px", background: "#fff", borderRadius: "12px", border: "1px dashed #cbd5e1" }}>
+          <p style={{ color: "#64748b", margin: 0 }}>No questions asked yet. Be the first!</p>
+        </div>
+      )}
+    </div>
+  );
+}

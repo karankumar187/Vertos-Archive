@@ -129,6 +129,9 @@ const adminRoutes = require('./src/routes/admin');
 const chatRoutes = require('./src/routes/chat');
 const analyticsRoutes = require('./src/routes/analytics');
 const leaderboardRoutes = require('./src/routes/leaderboard');
+const queriesRoutes = require('./src/routes/queries');
+const eventsRoutes = require('./src/routes/events');
+const archiveRoutes = require('./src/routes/archive');
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -137,6 +140,9 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
+app.use('/api/queries', queriesRoutes);
+app.use('/api/events', eventsRoutes);
+app.use('/api/archive', archiveRoutes);
 
 // File proxy: fetches a Cloudinary file and streams it with correct headers for browser viewing/download
 app.get('/api/file/view', async (req, res) => {

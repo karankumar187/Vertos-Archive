@@ -73,7 +73,24 @@ export const analyticsAPI = {
 
 // ─── Leaderboard API ─────────────────────────────────────────────────────
 export const leaderboardAPI = {
-    getLeaderboard: () => api.get('/leaderboard'),
+    getLeaderboard: (period) => api.get(`/leaderboard?period=${period}`)
+};
+
+// ─── Community APIs ───────────────────────────────────────────────────────
+export const queriesAPI = {
+    getQueries: () => api.get('/queries'),
+    createQuery: (data) => api.post('/queries', data),
+    addAnswer: (id, data) => api.post(`/queries/${id}/answers`, data),
+};
+
+export const eventsAPI = {
+    getEvents: () => api.get('/events'),
+    createEvent: (data) => api.post('/events', data),
+    toggleInterest: (id) => api.post(`/events/${id}/interest`),
+};
+
+export const archiveAPI = {
+    getArchive: (params) => api.get('/archive', { params }),
 };
 
 export default api;
