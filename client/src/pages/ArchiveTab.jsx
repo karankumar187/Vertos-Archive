@@ -35,6 +35,7 @@ export default function ArchiveTab() {
   const [loading, setLoading] = useState(true);
   const [courseFilter, setCourseFilter] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
+  const [expandedCourse, setExpandedCourse] = useState(null);
 
   const fetchArchive = async () => {
     try {
@@ -106,23 +107,78 @@ export default function ArchiveTab() {
       {loading ? (
         <div style={{ textAlign: "center", padding: "40px", color: "#64748b" }}>Loading archive...</div>
       ) : documents.length > 0 ? (
-        <div style={{ display: "flex", flexDirection: "column", gap: "32px" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
           {sortedCourses.map(course => (
-            <div key={course}>
-              <div style={{ 
-                borderBottom: "2px solid #e9dcc8", paddingBottom: "8px", marginBottom: "16px",
-                display: "flex", alignItems: "center", gap: "12px"
-              }}>
-                <h3 style={{ margin: 0, fontSize: "1.4rem", color: "#1f1209", fontFamily: "'Playfair Display', serif" }}>
-                  {course}
-                </h3>
-                <span style={{ fontSize: "0.75rem", background: "#fef3dc", color: "#b47a18", padding: "3px 8px", borderRadius: "12px", fontWeight: 700 }}>
-                  {groupedDocs[course].length} Resources
-                </span>
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: "20px" }}>
-                {groupedDocs[course].map(doc => <DocumentCard key={doc._id} doc={doc} />)}
-              </div>
+            <div key={course} style={{ background: "#fff", borderRadius: "12px", border: "1px solid #e9dcc8", overflow: "hidden" }}>
+              <button 
+                onClick={() => setExpandedCourse(expandedCourse === course ? null : course)}
+                style={{ 
+                  width: "100%", padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between",
+                  background: expandedCourse === course ? "#fdfaf5" : "#fff", border: "none", cursor: "pointer", transition: "background 0.2s"
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                  <h3 style={{ margin: 0, fontSize: "1.2rem", color: "#1f1209", fontFamily: "'Inter', sans-serif", fontWeight: 700 }}>
+                    {course}
+                  </h3>
+                  <span style={{ fontSize: "0.75rem", background: "#fdf3e1", color: "#b47a18", padding: "2px 8px", borderRadius: "12px", fontWeight: 600 }}>
+                    {groupedDocs[course].length} Resources
+                  </span>
+                </div>
+                <span style={{ color: "#9a7845", transform: expandedCourse === course ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}>▼</span>
+              </button>
+
+              {/* Expanded Documents List */}
+              {(expandedCourse === course || (courseFilter.trim() && sortedCourses.length === 1)) && (
+                <div style={{ borderTop: "1px solid #e9dcc8", overflowX: "auto" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: "'Inter', sans-serif", fontSize: "0.85rem", minWidth: "700px" }}>
+                    <thead>
+                      <tr style={{ background: "#fdfaf5", borderBottom: "1px solid #f0e6d2", textAlign: "left", color: "#8b6535", textTransform: "uppercase", fontSize: "0.7rem", letterSpacing: "0.05em" }}>
+                        <th style={{ padding: "12px 20px" }}>Document</th>
+                        <th style={{ padding: "12px 20px" }}>Category</th>
+                        <th style={{ padding: "12px 20px" }}>Uploader</th>
+                        <th style={{ padding: "12px 20px", textAlign: "right" }}>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {groupedDocs[course].map(doc => (
+                        <tr key={doc._id} style={{ borderBottom: "1px solid #f0e6d2", transition: "background 0.2s" }}
+                            onMouseEnter={e => e.currentTarget.style.background = "#fcfaf7"} onMouseLeave={e => e.currentTarget.style.background = "#fff"}>
+                          
+                          <td style={{ padding: "12px 20px" }}>
+                            <p style={{ fontWeight: 600, color: "#2d1f0a", margin: "0 0 4px 0" }}>{doc.title}</p>
+                            <p style={{ margin: 0, fontSize: "0.75rem", color: "#64748b", maxWidth: "300px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                              {doc.description || "No description provided."}
+                            </p>
+                          </td>
+
+                          <td style={{ padding: "12px 20px" }}>
+                            <span style={{ display: "inline-block", background: "#fdf3e1", color: "#b47a18", padding: "4px 8px", borderRadius: "12px", fontSize: "0.7rem", fontWeight: 600, textTransform: "capitalize" }}>
+                              {doc.category}
+                            </span>
+                          </td>
+
+                          <td style={{ padding: "12px 20px" }}>
+                            <p style={{ color: "#3d2800", fontWeight: 500, margin: 0 }}>{doc.uploaderID?.name || 'Anonymous'}</p>
+                          </td>
+
+                          <td style={{ padding: "12px 20px", textAlign: "right" }}>
+                            <a href={doc.fileUrl} target="_blank" rel="noreferrer" style={{
+                              textDecoration: "none", fontSize: "0.85rem", fontWeight: 600, color: "#c8861a", border: "1px solid #e9dcc8", padding: "6px 12px", borderRadius: "8px", display: "inline-block", transition: "all 0.2s"
+                            }}
+                            onMouseEnter={e => { e.currentTarget.style.background = "#fdfaf5"; e.currentTarget.style.borderColor = "#c8861a"; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "#e9dcc8"; }}
+                            >
+                              View File
+                            </a>
+                          </td>
+
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           ))}
         </div>
