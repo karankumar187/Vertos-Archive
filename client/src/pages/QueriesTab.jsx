@@ -25,7 +25,7 @@ const QueryCard = ({ query, onClick, currentUser, onDelete }) => {
         <span style={{ fontSize: "0.8rem", color: "#7c3aed", background: "#EDE9FE", padding: "4px 10px", borderRadius: "12px", fontWeight: 700, whiteSpace: "nowrap", marginLeft: "12px" }}>
           {query.answers?.length || 0} answers
         </span>
-        {currentUser && query.author?._id === (currentUser._id || currentUser.id) && (
+        {currentUser && (query.author?._id === (currentUser._id || currentUser.id) || currentUser.role === 'admin') && (
           <button 
             onClick={(e) => { e.stopPropagation(); onDelete(query._id); }}
             style={{ 
@@ -52,9 +52,13 @@ const QueryCard = ({ query, onClick, currentUser, onDelete }) => {
       </div>
       
       <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "4px", borderTop: "1px solid #f1f5f9", paddingTop: "12px" }}>
-        <div style={{ width: 24, height: 24, borderRadius: "50%", background: "linear-gradient(135deg, #7c3aed, #4c1d95)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: "0.6rem", fontWeight: 700 }}>
-          {query.author?.name?.charAt(0) || '?'}
-        </div>
+        {query.author?.avatar ? (
+          <img src={query.author.avatar} alt="avatar" style={{ width: 24, height: 24, borderRadius: "50%", objectFit: "cover" }} />
+        ) : (
+          <div style={{ width: 24, height: 24, borderRadius: "50%", background: "linear-gradient(135deg, #7c3aed, #4c1d95)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: "0.6rem", fontWeight: 700 }}>
+            {query.author?.name?.charAt(0) || '?'}
+          </div>
+        )}
         <span style={{ fontSize: "0.75rem", color: "#64748b" }}>
           <strong style={{ color: "#334155" }}>{query.author?.name || 'Anonymous'}</strong> asked on {timeStr}
         </span>
@@ -142,6 +146,26 @@ export default function QueriesTab() {
     }
   };
 
+  const handleDeleteAnswer = async (queryId, answerId) => {
+    if (!window.confirm("Are you sure you want to delete this answer?")) return;
+    try {
+      const { data } = await queriesAPI.deleteAnswer(queryId, answerId);
+      if (data.success) {
+        cacheInvalidate('community_queries');
+        fetchQueries();
+        // Optimistically update the selected query view
+        if (selectedQuery && selectedQuery._id === queryId) {
+          setSelectedQuery({
+            ...selectedQuery,
+            answers: selectedQuery.answers.filter(a => a._id !== answerId)
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error deleting answer:", error);
+    }
+  };
+
   const handleAnswer = async (e) => {
     e.preventDefault();
     if (!answerContent || !selectedQuery || isSubmitting) return;
@@ -176,7 +200,7 @@ export default function QueriesTab() {
         <div style={{ background: "#fff", borderRadius: "12px", padding: "28px", border: "1px solid #e2e8f0", boxShadow: "0 4px 6px rgba(0,0,0,0.02)" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>
             <h2 style={{ margin: 0, color: "#1e293b", fontSize: "1.5rem" }}>{selectedQuery.title}</h2>
-            {currentUser && selectedQuery.author?._id === (currentUser._id || currentUser.id) && (
+            {currentUser && (selectedQuery.author?._id === (currentUser._id || currentUser.id) || currentUser.role === 'admin') && (
               <button 
                 onClick={(e) => { e.stopPropagation(); handleDelete(selectedQuery._id); }}
                 style={{ 
@@ -200,9 +224,13 @@ export default function QueriesTab() {
             {selectedQuery.description}
           </p>
           <div style={{ marginTop: "24px", paddingTop: "16px", borderTop: "1px solid #f1f5f9", display: "flex", alignItems: "center", gap: "10px" }}>
-            <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#7c3aed", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 700 }}>
-              {selectedQuery.author?.name?.charAt(0) || '?'}
-            </div>
+            {selectedQuery.author?.avatar ? (
+              <img src={selectedQuery.author.avatar} alt="avatar" style={{ width: 32, height: 32, borderRadius: "50%", objectFit: "cover" }} />
+            ) : (
+              <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#7c3aed", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 700 }}>
+                {selectedQuery.author?.name?.charAt(0) || '?'}
+              </div>
+            )}
             <div style={{ fontSize: "0.85rem", color: "#64748b" }}>
               <div style={{ color: "#334155", fontWeight: 600 }}>{selectedQuery.author?.name || 'Anonymous'}</div>
               <div>{new Date(selectedQuery.createdAt).toLocaleString()}</div>
@@ -216,11 +244,29 @@ export default function QueriesTab() {
         <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
           {selectedQuery.answers?.map((ans, i) => (
             <div key={i} style={{ background: "#fff", borderRadius: "12px", padding: "20px", border: "1px solid #e2e8f0" }}>
-              <p style={{ margin: "0 0 16px 0", color: "#334155", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{ans.content}</p>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                <p style={{ margin: "0 0 16px 0", color: "#334155", lineHeight: 1.6, whiteSpace: "pre-wrap", flex: 1 }}>{ans.content}</p>
+                {currentUser && (ans.author?._id === (currentUser._id || currentUser.id) || currentUser.role === 'admin') && (
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); handleDeleteAnswer(selectedQuery._id, ans._id); }}
+                    style={{ 
+                      background: "none", border: "none", color: "#ef4444", cursor: "pointer", 
+                      padding: "4px", marginLeft: "12px", display: "flex", alignItems: "center", justifyContent: "center" 
+                    }}
+                    title="Delete Answer"
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+                  </button>
+                )}
+              </div>
               <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <div style={{ width: 28, height: 28, borderRadius: "50%", background: "#10b981", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: "0.7rem", fontWeight: 700 }}>
-                  {ans.author?.name?.charAt(0) || '?'}
-                </div>
+                {ans.author?.avatar ? (
+                  <img src={ans.author.avatar} alt="avatar" style={{ width: 28, height: 28, borderRadius: "50%", objectFit: "cover" }} />
+                ) : (
+                  <div style={{ width: 28, height: 28, borderRadius: "50%", background: "#10b981", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: "0.7rem", fontWeight: 700 }}>
+                    {ans.author?.name?.charAt(0) || '?'}
+                  </div>
+                )}
                 <div style={{ fontSize: "0.75rem", color: "#64748b" }}>
                   <span style={{ color: "#334155", fontWeight: 600 }}>{ans.author?.name || 'Anonymous'}</span> • {new Date(ans.createdAt).toLocaleString()}
                 </div>

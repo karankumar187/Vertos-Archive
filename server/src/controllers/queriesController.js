@@ -5,6 +5,7 @@ exports.getAllQueries = async (req, res) => {
   try {
     const queries = await Query.find()
       .populate('author', 'name avatar')
+      .populate('answers.author', 'name avatar')
       .sort({ createdAt: -1 });
     res.json({ success: true, data: queries });
   } catch (error) {
@@ -80,8 +81,8 @@ exports.deleteQuery = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Query not found' });
     }
 
-    // Verify authorship
-    if (query.author.toString() !== userId) {
+    // Verify authorship or admin
+    if (query.author.toString() !== userId && req.user.role !== 'admin') {
       return res.status(403).json({ success: false, message: 'Not authorized to delete this query' });
     }
 
@@ -90,5 +91,34 @@ exports.deleteQuery = async (req, res) => {
   } catch (error) {
     console.error('Error deleting query:', error);
     res.status(500).json({ success: false, message: 'Server error deleting query' });
+  }
+};
+
+exports.deleteAnswer = async (req, res) => {
+  try {
+    const { id, answerId } = req.params;
+    const userId = req.user.id;
+
+    const query = await Query.findById(id);
+    if (!query) {
+      return res.status(404).json({ success: false, message: 'Query not found' });
+    }
+
+    const answer = query.answers.id(answerId);
+    if (!answer) {
+      return res.status(404).json({ success: false, message: 'Answer not found' });
+    }
+
+    if (answer.author.toString() !== userId && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Not authorized to delete this answer' });
+    }
+
+    query.answers.pull(answerId);
+    await query.save();
+
+    res.json({ success: true, message: 'Answer deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting answer:', error);
+    res.status(500).json({ success: false, message: 'Server error deleting answer' });
   }
 };
