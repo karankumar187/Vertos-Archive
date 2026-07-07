@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import campusSketch from "../assets/campus-sketch.png";
+import campusBanner from "../assets/community-banner.jpg";
 import LeaderboardComponent from "./LeaderboardComponent";
 import ContributePage from "./ContributePage";
 import QueriesTab from "./QueriesTab";
@@ -273,7 +274,7 @@ function HomeTab({ setActiveTab }) {
 
         {/* Right Banner Image */}
         <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
-          <img src={campusSketch} alt="Community" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "top center", opacity: 0.45 }} />
+          <img src={campusBanner} alt="Community" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "top center" }} />
           {/* Fade Left */}
           <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: "80px", background: "linear-gradient(to right, #fff, transparent)", zIndex: 1 }} />
           {/* Quote box */}
