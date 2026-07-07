@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const queriesController = require('../controllers/queriesController');
-const { protect } = require('../middleware/auth.middleware');
+const { protect } = require('../middleware/auth');
 
 router.get('/', protect, queriesController.getAllQueries);
 router.post('/', protect, queriesController.createQuery);
