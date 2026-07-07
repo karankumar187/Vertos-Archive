@@ -496,7 +496,7 @@ export default function CommunityPage() {
       </div>
 
       {/* ── TAB CONTENT ── */}
-      <div style={{ maxWidth: 1280, margin: "0 auto", width: "100%", padding: "28px 24px", flex: 1, boxSizing: "border-box" }}>
+      <div style={{ position: "relative", zIndex: 1, maxWidth: 1280, margin: "0 auto", width: "100%", padding: "28px 24px", flex: 1, boxSizing: "border-box" }}>
         {activeTab === "home"        && <HomeTab setActiveTab={updateTab} />}
         {activeTab === "leaderboard" && <LeaderboardComponent />}
         {activeTab === "queries"     && <QueriesTab />}
