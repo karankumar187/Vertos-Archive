@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
-import campusBanner from "../assets/community-banner.jpg";
+import campusSketch from "../assets/campus-sketch.png";
 import LeaderboardComponent from "./LeaderboardComponent";
 import ContributePage from "./ContributePage";
 import QueriesTab from "./QueriesTab";
@@ -152,55 +152,71 @@ function HomeTab({ setActiveTab }) {
   const [topContributors, setTopContributors] = useState([]);
   const [activeDiscussions, setActiveDiscussions] = useState([]);
   const [upcomingEvents, setUpcomingEvents] = useState([]);
+  const [stats, setStats] = useState({ docs: '-', contributors: '-', queries: '-', members: '-' });
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchHomeData = async () => {
       try {
         const [ldbRes, qRes, evRes] = await Promise.all([
-          leaderboardAPI.getLeaderboard('all_time').catch(()=>({data:{data:[]}})),
-          queriesAPI.getQueries().catch(()=>({data:{data:[]}})),
-          eventsAPI.getEvents().catch(()=>({data:{data:[]}}))
+          leaderboardAPI.getLeaderboard().catch(() => ({ data: {} })),
+          queriesAPI.getQueries().catch(() => ({ data: { data: [] } })),
+          eventsAPI.getEvents().catch(() => ({ data: { data: [] } }))
         ]);
 
-        if (ldbRes.data?.data) {
-          const formatted = ldbRes.data.data.slice(0, 3).map(u => ({
-            name: u.userId?.name || 'Anonymous',
-            dept: `${u.userId?.course || 'Student'}`,
-            pts: u.totalPoints,
-            color: "#c8861a"
+        // Real stats from leaderboard API
+        const ldbData = ldbRes.data;
+        if (ldbData?.leaderboard) {
+          const top3 = ldbData.leaderboard.slice(0, 3).map((u, i) => ({
+            name: u.name || 'Anonymous',
+            dept: u.regNo || 'N/A',
+            pts: u.points,
+            color: i === 0 ? '#c8861a' : i === 1 ? '#94a3b8' : '#cd7f32'
           }));
-          setTopContributors(formatted);
+          setTopContributors(top3);
+        }
+        // stats array comes from leaderboard API: { label, value }
+        if (ldbData?.stats) {
+          const docsEntry = ldbData.stats.find(s => s.label === 'Documents Shared');
+          const contribEntry = ldbData.stats.find(s => s.label === 'Total Contributors');
+          setStats(prev => ({
+            ...prev,
+            docs: docsEntry?.value || '-',
+            contributors: contribEntry?.value || '-',
+          }));
         }
 
-        if (qRes.data?.data) {
-          const sorted = qRes.data.data.sort((a, b) => b.answers?.length - a.answers?.length).slice(0, 3);
-          const formatted = sorted.map(q => ({
-            q: q.title,
-            by: q.author?.name || 'Anonymous',
-            ago: new Date(q.createdAt).toLocaleDateString(),
-            answers: q.answers?.length || 0,
-            tag: q.tags?.[0] || 'General',
-            tagColor: "#7c3aed", tagBg: "#EDE9FE"
-          }));
-          setActiveDiscussions(formatted);
-        }
+        // Queries
+        const allQueries = qRes.data?.data || [];
+        setStats(prev => ({ ...prev, queries: allQueries.length.toString() }));
 
-        if (evRes.data?.data) {
-          const formatted = evRes.data.data.slice(0, 3).map(ev => {
-            const dateObj = new Date(ev.date);
-            return {
-              month: dateObj.toLocaleString('default', { month: 'short' }).toUpperCase(),
-              day: dateObj.getDate(),
-              title: ev.title,
-              desc: `${ev.type} • ${ev.location}`,
-              interested: ev.interestedUsers?.length || 0,
-              color: "#c8861a"
-            };
-          });
-          setUpcomingEvents(formatted);
-        }
+        const sorted = [...allQueries].sort((a, b) => (b.answers?.length || 0) - (a.answers?.length || 0)).slice(0, 3);
+        setActiveDiscussions(sorted.map(q => ({
+          q: q.title,
+          by: q.author?.name || 'Anonymous',
+          ago: new Date(q.createdAt).toLocaleDateString(),
+          answers: q.answers?.length || 0,
+          tag: q.tags?.[0] || 'General',
+          tagColor: '#7c3aed', tagBg: '#EDE9FE'
+        })));
+
+        // Events
+        const allEvents = evRes.data?.data || [];
+        setUpcomingEvents(allEvents.slice(0, 3).map(ev => {
+          const dateObj = new Date(ev.date);
+          return {
+            month: dateObj.toLocaleString('default', { month: 'short' }).toUpperCase(),
+            day: dateObj.getDate(),
+            title: ev.title,
+            desc: `${ev.type} • ${ev.location}`,
+            interested: ev.interestedUsers?.length || 0,
+            color: ev.type === 'Hackathon' ? '#c8861a' : ev.type === 'Workshop' ? '#7c3aed' : '#059669'
+          };
+        }));
       } catch (err) {
-        console.error("Error fetching home data", err);
+        console.error('Error fetching home data', err);
+      } finally {
+        setLoading(false);
       }
     };
     fetchHomeData();
@@ -248,8 +264,8 @@ function HomeTab({ setActiveTab }) {
                 ))}
               </div>
               <div>
-                <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "#1f1209" }}>2.5K+</div>
-                <div style={{ fontSize: "0.7rem", color: "#8b6a3e" }}>Active Members</div>
+                <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "#1f1209" }}>{stats.contributors !== '-' ? `${stats.contributors}+` : '...'}</div>
+                <div style={{ fontSize: "0.7rem", color: "#8b6a3e" }}>Top Contributors</div>
               </div>
             </div>
           </div>
@@ -257,7 +273,7 @@ function HomeTab({ setActiveTab }) {
 
         {/* Right Banner Image */}
         <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
-          <img src={campusBanner} alt="Community" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "top center" }} />
+          <img src={campusSketch} alt="Community" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "top center", opacity: 0.45 }} />
           {/* Fade Left */}
           <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: "80px", background: "linear-gradient(to right, #fff, transparent)", zIndex: 1 }} />
           {/* Quote box */}
@@ -271,13 +287,13 @@ function HomeTab({ setActiveTab }) {
         </div>
       </div>
 
-      {/* ── STATS ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px" }}>
-        <StatCard IconComp={PeopleIcon} value="2,543" label="Active Members" trend="12% this week" />
-        <StatCard IconComp={DocIcon} value="18.9K" label="Resources" trend="18% this week" />
-        <StatCard IconComp={ChatIcon} value="1,284" label="Queries Solved" trend="20% this week" />
-        <StatCard IconComp={TrophyIcon} value="856" label="Top Contributors" trend="15% this week" />
-        <StatCard IconComp={StarIcon} value="4.8/5" label="Community Rating" />
+      {/* ── LIVE STATS ── */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "16px" }}>
+        <StatCard IconComp={DocIcon} value={loading ? '...' : stats.docs} label="Resources Shared" />
+        <StatCard IconComp={TrophyIcon} value={loading ? '...' : stats.contributors} label="Top Contributors" />
+        <StatCard IconComp={ChatIcon} value={loading ? '...' : stats.queries} label="Queries Asked" />
+        <StatCard IconComp={PeopleIcon} value={loading ? '...' : (topContributors.length > 0 ? topContributors.length + '+' : '-')} label="Active Mentors" />
+        <StatCard IconComp={StarIcon} value={loading ? '...' : (upcomingEvents.length > 0 ? upcomingEvents.length.toString() : '0')} label="Upcoming Events" />
       </div>
 
 
@@ -436,10 +452,10 @@ export default function CommunityPage() {
 
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", background: "#f8f4ee", position: "relative" }}>
-      {/* Fixed campus background for entire Community section */}
+      {/* Fixed campus background (same as homepage) */}
       <div style={{
         position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none",
-        backgroundImage: `url(${campusBanner})`,
+        backgroundImage: `url(${campusSketch})`,
         backgroundSize: "cover", backgroundPosition: "center", backgroundRepeat: "no-repeat",
         opacity: 0.06,
       }} />
