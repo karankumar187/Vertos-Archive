@@ -216,7 +216,7 @@ export default function QueriesTab() {
     <div style={{ display: "flex", gap: "0", background: "#fff", border: "1px solid #e5d9c5", borderRadius: "12px", overflow: "hidden", height: "calc(100vh - 140px)", minHeight: "600px", boxShadow: "0 10px 30px rgba(160,110,40,0.05)" }}>
       
       {/* ─── LEFT SIDEBAR (DISCUSSION LIST) ─── */}
-      <div style={{ width: "340px", background: "#fcfcfb", display: "flex", flexDirection: "column", borderRight: "1px solid #e5d9c5", flexShrink: 0 }}>
+      <div style={{ width: "420px", background: "#f8f4ee", display: "flex", flexDirection: "column", borderRight: "1px solid #e5d9c5", flexShrink: 0 }}>
         
         {/* Top Header & Search */}
         <div style={{ padding: "20px", borderBottom: "1px solid #e5d9c5", background: "#fff" }}>
@@ -238,7 +238,7 @@ export default function QueriesTab() {
         </div>
 
         {/* Discussions List */}
-        <div style={{ flex: 1, overflowY: "auto" }}>
+        <div style={{ flex: 1, overflowY: "auto", padding: "16px", display: "flex", flexDirection: "column", gap: "16px" }}>
           {loading ? (
             <div style={{ textAlign: "center", padding: "30px", color: "#8b6535", fontSize: "0.9rem" }}>Loading...</div>
           ) : filteredQueries.length === 0 ? (
@@ -247,49 +247,99 @@ export default function QueriesTab() {
             filteredQueries.map(q => {
               const isSelected = selectedQuery?._id === q._id;
               const lastMessage = q.answers?.length > 0 ? q.answers[q.answers.length - 1] : null;
-              const timeDisplay = timeAgo(lastMessage ? lastMessage.createdAt : q.createdAt);
+              const primaryTag = q.tags && q.tags[0] ? q.tags[0] : "General";
+              
+              // Get unique commenters for the avatar pile
+              const commenters = [];
+              if (q.answers) {
+                const seen = new Set();
+                q.answers.forEach(a => {
+                  const id = a.author?._id || a.author?.name;
+                  if (id && !seen.has(id)) {
+                    seen.add(id);
+                    commenters.push(a.author);
+                  }
+                });
+              }
               
               return (
                 <div 
                   key={q._id} 
                   onClick={() => setSelectedQuery(q)}
                   style={{ 
-                    padding: "16px 20px", 
+                    padding: "20px", 
                     cursor: "pointer", 
-                    background: isSelected ? "#fdfaf5" : "transparent",
-                    borderBottom: "1px solid #f5efeb",
-                    display: "flex", gap: "12px",
+                    background: "#fff",
+                    border: isSelected ? "2px solid #c8861a" : "1px solid #e5d9c5",
+                    borderRadius: "12px",
+                    display: "flex", gap: "16px",
                     position: "relative",
-                    transition: "background 0.2s"
+                    transition: "all 0.2s",
+                    boxShadow: isSelected ? "0 4px 12px rgba(200,134,26,0.15)" : "0 2px 4px rgba(0,0,0,0.02)"
                   }}
                 >
-                  {isSelected && <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: "4px", background: "#c8861a" }} />}
+                  {/* Floating Tag */}
+                  <div style={{ 
+                    position: "absolute", top: -12, right: 16, 
+                    background: "#fff", border: "1px solid #f0e6d2", 
+                    borderRadius: "100px", padding: "2px 10px", 
+                    display: "flex", alignItems: "center", gap: "6px",
+                    boxShadow: "0 2px 4px rgba(0,0,0,0.02)"
+                  }}>
+                    <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#2563eb" }} />
+                    <span style={{ fontSize: "0.6rem", fontWeight: 800, color: "#6b4d1f", textTransform: "uppercase", letterSpacing: "0.05em" }}>{primaryTag}</span>
+                  </div>
+
+                  <div style={{ flexShrink: 0 }}>
+                    <Avatar user={q.author} size={48} />
+                  </div>
                   
-                  <Avatar user={q.author} size={44} />
-                  
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "4px" }}>
-                      <h4 style={{ margin: 0, fontSize: "0.95rem", color: "#1f1209", fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "4px" }}>
+                      <h4 style={{ margin: 0, fontSize: "1.05rem", color: "#1f1209", fontWeight: 800, lineHeight: 1.3, paddingRight: "8px" }}>
                         {q.title}
                       </h4>
-                      <span style={{ fontSize: "0.7rem", color: "#8b6535", flexShrink: 0, marginLeft: "8px", fontWeight: 600 }}>
-                        {timeDisplay}
-                      </span>
+                      {currentUser && (q.author?._id === (currentUser._id || currentUser.id) || currentUser.role === 'admin') && (
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); handleDelete(q._id); }}
+                          style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", padding: "2px", opacity: 0.6, flexShrink: 0 }}
+                          onMouseEnter={e => e.currentTarget.style.opacity = 1}
+                          onMouseLeave={e => e.currentTarget.style.opacity = 0.6}
+                          title="Delete Discussion"
+                        >
+                          <TrashIcon />
+                        </button>
+                      )}
                     </div>
                     
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <p style={{ margin: 0, fontSize: "0.85rem", color: "#6b4d1f", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", flex: 1 }}>
-                        {lastMessage ? (
-                          <><span style={{ fontWeight: 600 }}>{lastMessage.author?.name?.split(' ')[0]}:</span> {lastMessage.content}</>
-                        ) : (
-                          q.description
-                        )}
-                      </p>
-                      {q.answers?.length > 0 && (
-                        <div style={{ background: "#e5d9c5", color: "#4b3823", fontSize: "0.65rem", fontWeight: 800, padding: "2px 6px", borderRadius: "10px", marginLeft: "8px" }}>
-                          {q.answers.length}
-                        </div>
+                    <div style={{ fontSize: "0.75rem", color: "#8b6535", marginBottom: "12px", display: "flex", alignItems: "center", gap: "4px" }}>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 015.5 5.5v0a5.5 5.5 0 01-5.5 5.5H11"/></svg>
+                      {lastMessage ? (
+                        <>Latest reply from <strong style={{ color: "#4b3823" }}>@{lastMessage.author?.name?.split(' ')[0] || 'someone'}</strong> {timeAgo(lastMessage.createdAt)}</>
+                      ) : (
+                        <>Asked by <strong style={{ color: "#4b3823" }}>@{q.author?.name?.split(' ')[0] || 'someone'}</strong> {timeAgo(q.createdAt)}</>
                       )}
+                    </div>
+                    
+                    <p style={{ margin: 0, fontSize: "0.85rem", color: "#6b4d1f", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", marginBottom: "12px" }}>
+                      {q.description}
+                    </p>
+                    
+                    <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: "12px", marginTop: "auto" }}>
+                      {/* Avatar Pile */}
+                      <div style={{ display: "flex" }}>
+                        {commenters.slice(0, 3).map((c, i) => (
+                          <div key={i} style={{ width: 24, height: 24, borderRadius: "50%", border: "2px solid #fff", marginLeft: i > 0 ? "-8px" : 0, zIndex: 10 - i }}>
+                            <Avatar user={c} size={20} />
+                          </div>
+                        ))}
+                      </div>
+                      
+                      {/* Comment count */}
+                      <div style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "0.8rem", fontWeight: 700, color: "#8b6535" }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+                        {q.answers?.length || 0} Comments
+                      </div>
                     </div>
                   </div>
                 </div>
