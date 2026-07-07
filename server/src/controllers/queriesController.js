@@ -7,13 +7,37 @@ exports.getAllQueries = async (req, res) => {
     const queries = await Query.find()
       .populate('author', 'name avatar')
       .populate('answers.author', 'name avatar')
-      .sort({ createdAt: -1 });
-    res.json({ success: true, data: queries });
+      .sort({ createdAt: -1 })
+      .lean();
+
+    // Build a userId -> badges map from Contributor collection
+    const allUserIds = new Set();
+    queries.forEach(q => {
+      if (q.author?._id) allUserIds.add(q.author._id.toString());
+      q.answers?.forEach(a => { if (a.author?._id) allUserIds.add(a.author._id.toString()); });
+    });
+
+    const contributors = await Contributor.find({ userId: { $in: [...allUserIds] } }).select('userId badges').lean();
+    const badgeMap = {};
+    contributors.forEach(c => { badgeMap[c.userId.toString()] = c.badges || []; });
+
+    // Attach badges to each author
+    const enriched = queries.map(q => ({
+      ...q,
+      author: q.author ? { ...q.author, badges: badgeMap[q.author._id?.toString()] || [] } : q.author,
+      answers: q.answers?.map(a => ({
+        ...a,
+        author: a.author ? { ...a.author, badges: badgeMap[a.author._id?.toString()] || [] } : a.author,
+      }))
+    }));
+
+    res.json({ success: true, data: enriched });
   } catch (error) {
     console.error('Error fetching queries:', error);
     res.status(500).json({ success: false, message: 'Server error fetching queries' });
   }
 };
+
 
 exports.createQuery = async (req, res) => {
   try {
@@ -62,25 +86,28 @@ exports.addAnswer = async (req, res) => {
 
     await query.save();
 
-    // Reward 2 points for participating in a discussion
-    let contributor = await Contributor.findOne({ userId: authorId });
-    if (!contributor) {
-      contributor = new Contributor({
-        userId: authorId,
-        points: 2
-      });
-    } else {
-      contributor.points = (contributor.points || 0) + 2;
-    }
+    // Reward 2 points ONLY for the user's FIRST reply in this discussion
+    const alreadyParticipated = query.answers.filter(
+      a => a.author.toString() === authorId.toString()
+    ).length > 1; // > 1 because we just pushed the new one above
 
-    // Check for badges
-    if (contributor.points >= 50 && !contributor.badges.includes('Top Contributor')) {
-      contributor.badges.push('Top Contributor');
+    if (!alreadyParticipated) {
+      let contributor = await Contributor.findOne({ userId: authorId });
+      if (!contributor) {
+        contributor = new Contributor({ userId: authorId, points: 2 });
+      } else {
+        contributor.points = (contributor.points || 0) + 2;
+      }
+
+      // Award badges at thresholds
+      if (contributor.points >= 50 && !contributor.badges.includes('Top Contributor')) {
+        contributor.badges.push('Top Contributor');
+      }
+      if (contributor.points >= 100 && !contributor.badges.includes('Elite Verto')) {
+        contributor.badges.push('Elite Verto');
+      }
+      await contributor.save();
     }
-    if (contributor.points >= 100 && !contributor.badges.includes('Elite Verto')) {
-      contributor.badges.push('Elite Verto');
-    }
-    await contributor.save();
 
     // Populate the newly added answer's author before returning
     await query.populate('answers.author', 'name avatar');

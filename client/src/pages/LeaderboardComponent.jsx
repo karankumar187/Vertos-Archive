@@ -136,19 +136,51 @@ const LaurelRight = ({ color }) => (
 );
 
 // --- Avatar ---
-const Avatar = ({ user, size = 40, style = {} }) => {
-  if (!user) return <div style={{ width: size, height: size, borderRadius: "50%", background: "#e2e8f0", flexShrink: 0, ...style }} />;
-  if (user.avatar) return (
-    <img src={user.avatar} alt={user.name}
-      style={{ width: size, height: size, borderRadius: "50%", objectFit: "cover", flexShrink: 0, ...style }} />
+// Badge icons for overlay
+const BadgeIcon = ({ badge }) => {
+  if (badge === 'Elite Verto') return (
+    <div title="Elite Verto" style={{ width: "100%", height: "100%", background: "linear-gradient(135deg,#7c3aed,#4f46e5)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="#fff"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+    </div>
   );
-  const colors = ["#c8861a", "#7c3aed", "#059669", "#2563eb", "#dc2626"];
-  const colorIdx = (user.name?.charCodeAt(0) || 0) % colors.length;
+  // Top Contributor (gold star)
   return (
-    <div style={{ width: size, height: size, borderRadius: "50%", background: user.color || colors[colorIdx],
-      display: "flex", alignItems: "center", justifyContent: "center",
-      color: "#fff", fontSize: size * 0.4, fontWeight: 700, flexShrink: 0, ...style }}>
-      {user.name?.charAt(0).toUpperCase() || '?'}
+    <div title="Top Contributor" style={{ width: "100%", height: "100%", background: "linear-gradient(135deg,#d97706,#b45309)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="#fff"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+    </div>
+  );
+};
+
+const Avatar = ({ user, size = 40, style = {}, showBadge = true }) => {
+  const badges = user?.badges || [];
+  const topBadge = badges.includes('Elite Verto') ? 'Elite Verto' : badges.includes('Top Contributor') ? 'Top Contributor' : null;
+  const badgeSize = Math.max(14, Math.round(size * 0.35));
+
+  const avatarEl = (() => {
+    if (!user) return <div style={{ width: size, height: size, borderRadius: "50%", background: "#e2e8f0", flexShrink: 0, ...style }} />;
+    if (user.avatar) return (
+      <img src={user.avatar} alt={user.name}
+        style={{ width: size, height: size, borderRadius: "50%", objectFit: "cover", flexShrink: 0, ...style }} />
+    );
+    const colors = ["#c8861a", "#7c3aed", "#059669", "#2563eb", "#dc2626"];
+    const colorIdx = (user.name?.charCodeAt(0) || 0) % colors.length;
+    return (
+      <div style={{ width: size, height: size, borderRadius: "50%", background: user.color || colors[colorIdx],
+        display: "flex", alignItems: "center", justifyContent: "center",
+        color: "#fff", fontSize: size * 0.4, fontWeight: 700, flexShrink: 0, ...style }}>
+        {user.name?.charAt(0).toUpperCase() || '?'}
+      </div>
+    );
+  })();
+
+  if (!showBadge || !topBadge) return avatarEl;
+
+  return (
+    <div style={{ position: "relative", flexShrink: 0, width: size, height: size }}>
+      {avatarEl}
+      <div style={{ position: "absolute", bottom: -2, right: -2, width: badgeSize, height: badgeSize, borderRadius: "50%", border: "2px solid #fff", overflow: "hidden" }}>
+        <BadgeIcon badge={topBadge} />
+      </div>
     </div>
   );
 };

@@ -29,13 +29,30 @@ const formatDate = (dateStr) => {
 };
 
 // Avatar component
-const Avatar = ({ user, size = 40 }) => {
-  if (!user) return <div style={{ width: size, height: size, borderRadius: "50%", background: "#e2e8f0", flexShrink: 0 }} />;
-  if (user.avatar) return <img src={user.avatar} alt={user.name} style={{ width: size, height: size, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />;
-  
+const Avatar = ({ user, size = 40, showBadge = true }) => {
+  const badges = user?.badges || [];
+  const topBadge = badges.includes('Elite Verto') ? 'Elite Verto' : badges.includes('Top Contributor') ? 'Top Contributor' : null;
+  const badgeSize = Math.max(13, Math.round(size * 0.34));
+
+  const avatarEl = (() => {
+    if (!user) return <div style={{ width: size, height: size, borderRadius: "50%", background: "#e2e8f0", flexShrink: 0 }} />;
+    if (user.avatar) return <img src={user.avatar} alt={user.name} style={{ width: size, height: size, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />;
+    return (
+      <div style={{ width: size, height: size, borderRadius: "50%", background: "linear-gradient(135deg, #c8861a, #92400e)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: size * 0.4, fontWeight: 700, flexShrink: 0 }}>
+        {user.name?.charAt(0) || '?'}
+      </div>
+    );
+  })();
+
+  if (!showBadge || !topBadge) return avatarEl;
+
+  const badgeBg = topBadge === 'Elite Verto' ? 'linear-gradient(135deg,#7c3aed,#4f46e5)' : 'linear-gradient(135deg,#d97706,#b45309)';
   return (
-    <div style={{ width: size, height: size, borderRadius: "50%", background: "linear-gradient(135deg, #c8861a, #92400e)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: size * 0.4, fontWeight: 700, flexShrink: 0 }}>
-      {user.name?.charAt(0) || '?'}
+    <div style={{ position: "relative", flexShrink: 0, width: size, height: size }} title={topBadge}>
+      {avatarEl}
+      <div style={{ position: "absolute", bottom: -2, right: -2, width: badgeSize, height: badgeSize, borderRadius: "50%", background: badgeBg, border: "2px solid #fff", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <svg width={badgeSize * 0.55} height={badgeSize * 0.55} viewBox="0 0 24 24" fill="#fff"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      </div>
     </div>
   );
 };

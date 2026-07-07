@@ -37,8 +37,8 @@ exports.getLeaderboard = async (req, res) => {
                 regNo: c.userId?.reg_no || 'N/A',
                 points: c.points,
                 docs: c.approvedUploads,
-                avatar: avatar,
-                badge: badge || (c.badges && c.badges.length > 0 ? c.badges[0] : null),
+                avatar: c.userId?.avatar || null,
+                badges: c.badges || [],
                 trustScore: c.trustScore,
                 userId: c.userId?._id
             };
