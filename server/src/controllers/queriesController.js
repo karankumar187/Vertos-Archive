@@ -69,3 +69,26 @@ exports.addAnswer = async (req, res) => {
     res.status(500).json({ success: false, message: 'Server error adding answer' });
   }
 };
+
+exports.deleteQuery = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+
+    const query = await Query.findById(id);
+    if (!query) {
+      return res.status(404).json({ success: false, message: 'Query not found' });
+    }
+
+    // Verify authorship
+    if (query.author.toString() !== userId) {
+      return res.status(403).json({ success: false, message: 'Not authorized to delete this query' });
+    }
+
+    await Query.findByIdAndDelete(id);
+    res.json({ success: true, message: 'Query deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting query:', error);
+    res.status(500).json({ success: false, message: 'Server error deleting query' });
+  }
+};

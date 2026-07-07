@@ -353,7 +353,7 @@ function HomeTab({ setActiveTab }) {
             <button onClick={() => setActiveTab('queries')} style={{ background: "none", border: "none", color: "#c8861a", fontSize: "0.8rem", fontWeight: 600, cursor: "pointer" }}>View All</button>
           </div>
           {activeDiscussions.length > 0 ? activeDiscussions.map((d, i) => (
-            <div key={i} style={{ paddingBottom: i < 2 ? "14px" : 0, marginBottom: i < 2 ? "14px" : 0, borderBottom: i < 2 ? "1px solid #f5efeb" : "none" }}>
+            <div key={i} onClick={() => setActiveTab('queries')} style={{ paddingBottom: i < 2 ? "14px" : 0, marginBottom: i < 2 ? "14px" : 0, borderBottom: i < 2 ? "1px solid #f5efeb" : "none", cursor: "pointer" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "6px" }}>
                 <div style={{ fontSize: "0.88rem", fontWeight: 600, color: "#1f1209", flex: 1, paddingRight: "10px", lineHeight: 1.4 }}>{d.q}</div>
                 <span style={{ fontSize: "0.68rem", padding: "3px 8px", background: d.tagBg, color: d.tagColor, borderRadius: "12px", fontWeight: 700, whiteSpace: "nowrap" }}>{d.tag}</span>

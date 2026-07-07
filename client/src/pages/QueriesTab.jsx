@@ -3,7 +3,7 @@ import { queriesAPI } from "../services/api";
 import campusSketch from "../assets/campus-sketch.png";
 import { cacheGet, cacheSet, cacheInvalidate } from "../utils/localCache";
 
-const QueryCard = ({ query, onClick }) => {
+const QueryCard = ({ query, onClick, currentUser, onDelete }) => {
   const dateObj = new Date(query.createdAt);
   const timeStr = dateObj.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 
@@ -24,6 +24,18 @@ const QueryCard = ({ query, onClick }) => {
         <span style={{ fontSize: "0.8rem", color: "#7c3aed", background: "#EDE9FE", padding: "4px 10px", borderRadius: "12px", fontWeight: 700, whiteSpace: "nowrap", marginLeft: "12px" }}>
           {query.answers?.length || 0} answers
         </span>
+        {currentUser && query.author?._id === currentUser.id && (
+          <button 
+            onClick={(e) => { e.stopPropagation(); onDelete(query._id); }}
+            style={{ 
+              background: "none", border: "none", color: "#ef4444", cursor: "pointer", 
+              padding: "4px", marginLeft: "8px", display: "flex", alignItems: "center", justifyContent: "center" 
+            }}
+            title="Delete Query"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+          </button>
+        )}
       </div>
       
       <p style={{ margin: 0, fontSize: "0.9rem", color: "#64748b", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
@@ -60,8 +72,11 @@ export default function QueriesTab() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [tags, setTags] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const [answerContent, setAnswerContent] = useState("");
+  
+  const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
 
   const fetchQueries = async (background = false) => {
     try {
@@ -92,8 +107,9 @@ export default function QueriesTab() {
 
   const handleAsk = async (e) => {
     e.preventDefault();
-    if (!title || !description) return;
+    if (!title || !description || isSubmitting) return;
     try {
+      setIsSubmitting(true);
       const tagArray = tags.split(',').map(t => t.trim()).filter(t => t);
       const { data } = await queriesAPI.createQuery({ title, description, tags: tagArray });
       if (data.success) {
@@ -104,13 +120,32 @@ export default function QueriesTab() {
       }
     } catch (error) {
       console.error("Error asking query:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this query?")) return;
+    try {
+      const { data } = await queriesAPI.deleteQuery(id);
+      if (data.success) {
+        cacheInvalidate('community_queries');
+        if (selectedQuery && selectedQuery._id === id) {
+          setSelectedQuery(null);
+        }
+        fetchQueries();
+      }
+    } catch (error) {
+      console.error("Error deleting query:", error);
     }
   };
 
   const handleAnswer = async (e) => {
     e.preventDefault();
-    if (!answerContent || !selectedQuery) return;
+    if (!answerContent || !selectedQuery || isSubmitting) return;
     try {
+      setIsSubmitting(true);
       const { data } = await queriesAPI.addAnswer(selectedQuery._id, { content: answerContent });
       if (data.success) {
         setAnswerContent("");
@@ -120,6 +155,8 @@ export default function QueriesTab() {
       }
     } catch (error) {
       console.error("Error adding answer:", error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -186,8 +223,8 @@ export default function QueriesTab() {
             rows={4} required
             style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #cbd5e1", outline: "none", fontFamily: "inherit", resize: "vertical", boxSizing: "border-box", marginBottom: "12px" }}
           />
-          <button type="submit" style={{ background: "#7c3aed", color: "#fff", border: "none", padding: "10px 20px", borderRadius: "8px", fontWeight: 600, cursor: "pointer" }}>
-            Post Answer
+          <button type="submit" disabled={isSubmitting} style={{ background: isSubmitting ? "#a78bfa" : "#7c3aed", color: "#fff", border: "none", padding: "12px 24px", borderRadius: "8px", fontWeight: 700, fontSize: "1rem", cursor: isSubmitting ? "not-allowed" : "pointer" }}>
+            {isSubmitting ? "Posting..." : "Post Answer"}
           </button>
         </form>
       </div>
@@ -229,8 +266,8 @@ export default function QueriesTab() {
               <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, color: "#334155", marginBottom: "6px" }}>Tags (comma separated)</label>
               <input type="text" value={tags} onChange={e => setTags(e.target.value)} placeholder="e.g., DBMS, Semester 5, Midterms" style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", boxSizing: "border-box" }} />
             </div>
-            <button type="submit" style={{ background: "#7c3aed", color: "#fff", border: "none", padding: "12px", borderRadius: "8px", fontWeight: 600, cursor: "pointer", marginTop: "8px" }}>
-              Post Question
+            <button type="submit" disabled={isSubmitting} style={{ background: isSubmitting ? "#a78bfa" : "#7c3aed", color: "#fff", border: "none", padding: "12px", borderRadius: "8px", fontWeight: 600, cursor: isSubmitting ? "not-allowed" : "pointer", marginTop: "8px" }}>
+              {isSubmitting ? "Posting..." : "Post Question"}
             </button>
           </div>
         </form>
@@ -240,7 +277,7 @@ export default function QueriesTab() {
         <div style={{ textAlign: "center", padding: "40px", color: "#64748b" }}>Loading queries...</div>
       ) : queries.length > 0 ? (
         <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-          {queries.map(q => <QueryCard key={q._id} query={q} onClick={setSelectedQuery} />)}
+          {queries.map(q => <QueryCard key={q._id} query={q} onClick={setSelectedQuery} currentUser={currentUser} onDelete={handleDelete} />)}
         </div>
       ) : (
         <div style={{ textAlign: "center", padding: "60px 20px", background: "#fff", borderRadius: "12px", border: "1px dashed #cbd5e1" }}>

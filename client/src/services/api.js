@@ -81,6 +81,7 @@ export const queriesAPI = {
     getQueries: () => api.get('/queries'),
     createQuery: (data) => api.post('/queries', data),
     addAnswer: (id, data) => api.post(`/queries/${id}/answers`, data),
+    deleteQuery: (id) => api.delete(`/queries/${id}`),
 };
 
 export const eventsAPI = {
