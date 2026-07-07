@@ -280,14 +280,6 @@ function HomeTab({ setActiveTab }) {
         <StatCard IconComp={StarIcon} value="4.8/5" label="Community Rating" />
       </div>
 
-      {/* ── FEATURE CARDS ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: "16px" }}>
-        <FeatureCard IconComp={TrophyIcon} title="Leaderboard" description="See top contributors and rising stars in the community." buttonText="View Leaderboard" onClick={() => setActiveTab('leaderboard')} accentColor="#c8861a" bgColor="#FFF3CC" />
-        <FeatureCard IconComp={QueriesIcon} title="Queries" description="Ask questions, share knowledge and get help quickly." buttonText="Go to Queries" onClick={() => setActiveTab('queries')} accentColor="#7c3aed" bgColor="#EDE9FE" />
-        <FeatureCard IconComp={ArchiveIcon} title="Archive" description="Explore all uploaded resources with proper categories." buttonText="Explore Archive" onClick={() => setActiveTab('archive')} accentColor="#059669" bgColor="#D1FAE5" />
-        <FeatureCard IconComp={HappeningIcon} title="Happening" description="Stay updated with all events and activities in the university." buttonText="View Events" onClick={() => setActiveTab('happening')} accentColor="#dc2626" bgColor="#FEE2E2" />
-        <FeatureCard IconComp={ContributeIcon} title="Contribute" description="Upload resources and help make our community stronger." buttonText="Contribute Now" onClick={() => setActiveTab('contribute')} accentColor="#db2777" bgColor="#FCE7F3" />
-      </div>
 
       {/* ── BOTTOM 3-COL GRID ── */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(290px, 1fr))", gap: "20px" }}>
@@ -385,6 +377,15 @@ function HomeTab({ setActiveTab }) {
 
       </div>
 
+      {/* ── FEATURE CARDS ── */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: "16px" }}>
+        <FeatureCard IconComp={TrophyIcon} title="Leaderboard" description="See top contributors and rising stars in the community." buttonText="View Leaderboard" onClick={() => setActiveTab('leaderboard')} accentColor="#c8861a" bgColor="#FFF3CC" />
+        <FeatureCard IconComp={QueriesIcon} title="Queries" description="Ask questions, share knowledge and get help quickly." buttonText="Go to Queries" onClick={() => setActiveTab('queries')} accentColor="#7c3aed" bgColor="#EDE9FE" />
+        <FeatureCard IconComp={ArchiveIcon} title="Archive" description="Explore all uploaded resources with proper categories." buttonText="Explore Archive" onClick={() => setActiveTab('archive')} accentColor="#059669" bgColor="#D1FAE5" />
+        <FeatureCard IconComp={HappeningIcon} title="Happening" description="Stay updated with all events and activities in the university." buttonText="View Events" onClick={() => setActiveTab('happening')} accentColor="#dc2626" bgColor="#FEE2E2" />
+        <FeatureCard IconComp={ContributeIcon} title="Contribute" description="Upload resources and help make our community stronger." buttonText="Contribute Now" onClick={() => setActiveTab('contribute')} accentColor="#db2777" bgColor="#FCE7F3" />
+      </div>
+
       {/* ── TRUST BADGES ── */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px", paddingTop: "8px" }}>
         {[
@@ -434,9 +435,15 @@ export default function CommunityPage() {
   ];
 
   return (
-    <div style={{ flex: 1, display: "flex", flexDirection: "column", background: "#f8f4ee" }}>
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", background: "#f8f4ee", position: "relative" }}>
+      {/* Fixed campus background for entire Community section */}
+      <div style={{
+        position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none",
+        backgroundImage: `url(${campusBanner})`,
+        backgroundSize: "cover", backgroundPosition: "center", backgroundRepeat: "no-repeat",
+        opacity: 0.06,
+      }} />
 
-      {/* ── SECONDARY NAVBAR ── */}
       <div style={{
         position: "sticky", top: 68, zIndex: 40, width: "100%",
         background: "rgba(253,250,245,0.97)", backdropFilter: "blur(16px)",

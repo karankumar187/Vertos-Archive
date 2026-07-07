@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { queriesAPI } from "../services/api";
+import campusBanner from "../assets/community-banner.jpg";
 
 const QueryCard = ({ query, onClick }) => {
   const dateObj = new Date(query.createdAt);
@@ -112,7 +113,8 @@ export default function QueriesTab() {
   // View: Single Query Details
   if (selectedQuery) {
     return (
-      <div style={{ maxWidth: "800px", margin: "0 auto", display: "flex", flexDirection: "column", gap: "24px" }}>
+      <div style={{ maxWidth: "800px", margin: "0 auto", display: "flex", flexDirection: "column", gap: "24px", position: "relative" }}>
+        <div style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none", backgroundImage: `url(${campusBanner})`, backgroundSize: "cover", backgroundPosition: "center", opacity: 0.05 }} />
         <button 
           onClick={() => setSelectedQuery(null)}
           style={{ background: "none", border: "none", color: "#7c3aed", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: "6px", padding: 0, alignSelf: "flex-start" }}
@@ -182,7 +184,8 @@ export default function QueriesTab() {
 
   // View: List of Queries
   return (
-    <div style={{ maxWidth: "1000px", margin: "0 auto", display: "flex", flexDirection: "column", gap: "24px" }}>
+    <div style={{ maxWidth: "1000px", margin: "0 auto", display: "flex", flexDirection: "column", gap: "24px", position: "relative" }}>
+      <div style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none", backgroundImage: `url(${campusBanner})`, backgroundSize: "cover", backgroundPosition: "center", opacity: 0.05 }} />
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
         <div>
           <h2 style={{ margin: "0 0 8px 0", fontSize: "1.8rem", color: "#1f1209", fontFamily: "'Playfair Display', serif" }}>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { eventsAPI } from "../services/api";
+import campusBanner from "../assets/community-banner.jpg";
 
 const EventCard = ({ event, currentUserId, onInterestToggle }) => {
   const isInterested = event.interestedUsers?.includes(currentUserId);
@@ -104,7 +105,8 @@ export default function HappeningTab() {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "24px", maxWidth: "900px", margin: "0 auto" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "24px", maxWidth: "900px", margin: "0 auto", position: "relative" }}>
+      <div style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none", backgroundImage: `url(${campusBanner})`, backgroundSize: "cover", backgroundPosition: "center", opacity: 0.05 }} />
       <div style={{ textAlign: "center", marginBottom: "12px" }}>
         <h2 style={{ margin: "0 0 12px 0", fontSize: "2rem", color: "#1f1209", fontFamily: "'Playfair Display', serif" }}>
           Campus Happenings

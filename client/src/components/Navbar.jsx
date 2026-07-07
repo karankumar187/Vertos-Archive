@@ -5,8 +5,8 @@ import { useAuth } from "../context/AuthContext";
 const NAV_LINKS = [
   { to: "/", label: "Home" },
   { to: "/chat", label: "Chat" },
-  { to: "/about", label: "About" },
   { to: "/community", label: "Community" },
+  { to: "/about", label: "About" },
 ];
 
 /** Renders a single dropdown menu item */
