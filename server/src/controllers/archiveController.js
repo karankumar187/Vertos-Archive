@@ -5,7 +5,7 @@ exports.getArchive = async (req, res) => {
     const { courseCode, category } = req.query;
     
     // Filter by approved status to only show live resources
-    let filter = { status: 'approved' };
+    let filter = { verified: true };
     
     if (courseCode) {
       // Use regex for loose matching just like in search
@@ -17,8 +17,8 @@ exports.getArchive = async (req, res) => {
     }
 
     const documents = await Document.find(filter)
-      .populate('uploadedBy', 'name avatar')
-      .sort({ uploadDate: -1 });
+      .populate('uploaderID', 'name avatar')
+      .sort({ createdAt: -1 });
       
     res.json({ success: true, data: documents });
   } catch (error) {
