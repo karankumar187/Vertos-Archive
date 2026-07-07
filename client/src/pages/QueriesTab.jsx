@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { queriesAPI } from "../services/api";
 import campusSketch from "../assets/campus-sketch.png";
 import { cacheGet, cacheSet, cacheInvalidate } from "../utils/localCache";
+import { useAuth } from "../context/AuthContext";
 
 const QueryCard = ({ query, onClick, currentUser, onDelete }) => {
   const dateObj = new Date(query.createdAt);
@@ -24,7 +25,7 @@ const QueryCard = ({ query, onClick, currentUser, onDelete }) => {
         <span style={{ fontSize: "0.8rem", color: "#7c3aed", background: "#EDE9FE", padding: "4px 10px", borderRadius: "12px", fontWeight: 700, whiteSpace: "nowrap", marginLeft: "12px" }}>
           {query.answers?.length || 0} answers
         </span>
-        {currentUser && query.author?._id === currentUser.id && (
+        {currentUser && query.author?._id === (currentUser._id || currentUser.id) && (
           <button 
             onClick={(e) => { e.stopPropagation(); onDelete(query._id); }}
             style={{ 
@@ -76,7 +77,7 @@ export default function QueriesTab() {
   
   const [answerContent, setAnswerContent] = useState("");
   
-  const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+  const { user: currentUser } = useAuth();
 
   const fetchQueries = async (background = false) => {
     try {
@@ -173,7 +174,21 @@ export default function QueriesTab() {
 
         {/* Original Question */}
         <div style={{ background: "#fff", borderRadius: "12px", padding: "28px", border: "1px solid #e2e8f0", boxShadow: "0 4px 6px rgba(0,0,0,0.02)" }}>
-          <h2 style={{ margin: "0 0 16px 0", color: "#1e293b", fontSize: "1.5rem" }}>{selectedQuery.title}</h2>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>
+            <h2 style={{ margin: 0, color: "#1e293b", fontSize: "1.5rem" }}>{selectedQuery.title}</h2>
+            {currentUser && selectedQuery.author?._id === (currentUser._id || currentUser.id) && (
+              <button 
+                onClick={(e) => { e.stopPropagation(); handleDelete(selectedQuery._id); }}
+                style={{ 
+                  background: "none", border: "none", color: "#ef4444", cursor: "pointer", 
+                  padding: "4px", marginLeft: "12px", display: "flex", alignItems: "center", justifyContent: "center" 
+                }}
+                title="Delete Query"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+              </button>
+            )}
+          </div>
           <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "16px" }}>
             {selectedQuery.tags?.map((tag, i) => (
               <span key={i} style={{ fontSize: "0.75rem", background: "#EDE9FE", color: "#6d28d9", padding: "4px 10px", borderRadius: "6px", fontWeight: 600 }}>
