@@ -87,26 +87,36 @@ exports.addAnswer = async (req, res) => {
     await query.save();
 
     // Reward 2 points ONLY for the user's FIRST reply in this discussion
-    const alreadyParticipated = query.answers.filter(
-      a => a.author.toString() === authorId.toString()
-    ).length > 1; // > 1 because we just pushed the new one above
+    try {
+      const alreadyParticipated = query.answers.filter(
+        a => a.author.toString() === authorId.toString()
+      ).length > 1; // > 1 because we just pushed the new one above
 
-    if (!alreadyParticipated) {
-      let contributor = await Contributor.findOne({ userId: authorId });
-      if (!contributor) {
-        contributor = new Contributor({ userId: authorId, points: 2 });
-      } else {
-        contributor.points = (contributor.points || 0) + 2;
-      }
+      console.log(`[Points] User ${authorId} replied. Already participated: ${alreadyParticipated}. Total answers from user: ${query.answers.filter(a => a.author.toString() === authorId.toString()).length}`);
 
-      // Award badges at thresholds
-      if (contributor.points >= 50 && !contributor.badges.includes('Top Contributor')) {
-        contributor.badges.push('Top Contributor');
+      if (!alreadyParticipated) {
+        let contributor = await Contributor.findOne({ userId: authorId });
+        console.log(`[Points] Contributor found: ${!!contributor}, current points: ${contributor?.points}`);
+
+        if (!contributor) {
+          contributor = new Contributor({ userId: authorId, points: 2 });
+        } else {
+          contributor.points = (contributor.points || 0) + 2;
+        }
+
+        // Award badges at thresholds
+        if (contributor.points >= 50 && !contributor.badges.includes('Top Contributor')) {
+          contributor.badges.push('Top Contributor');
+        }
+        if (contributor.points >= 100 && !contributor.badges.includes('Elite Verto')) {
+          contributor.badges.push('Elite Verto');
+        }
+        await contributor.save();
+        console.log(`[Points] Saved! New points: ${contributor.points}`);
       }
-      if (contributor.points >= 100 && !contributor.badges.includes('Elite Verto')) {
-        contributor.badges.push('Elite Verto');
-      }
-      await contributor.save();
+    } catch (pointsErr) {
+      // Don't fail the whole request just because points failed
+      console.error('[Points] Failed to award discussion points:', pointsErr);
     }
 
     // Populate the newly added answer's author before returning

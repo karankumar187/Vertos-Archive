@@ -368,28 +368,34 @@ export default function LeaderboardPage() {
   const [stats, setStats] = useState({ contributors: "0", docs: "0", points: "0", active: "0" });
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchLeaderboard = async () => {
-      try {
-        const res = await leaderboardAPI.getLeaderboard();
-        if (res.data?.success) {
-          setLeaderboard(res.data.leaderboard);
-          if (res.data.stats) {
-            const getStat = (label) => res.data.stats.find(s => s.label === label)?.value || "0";
-            setStats({
-              contributors: getStat("Total Contributors"),
-              docs: getStat("Documents Shared"),
-              points: getStat("Points Awarded"),
-              active: getStat("Active This Month")
-            });
-          }
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchLeaderboard = async (isRefresh = false) => {
+    try {
+      if (isRefresh) setRefreshing(true);
+      else setLoading(true);
+      const res = await leaderboardAPI.getLeaderboard();
+      if (res.data?.success) {
+        setLeaderboard(res.data.leaderboard);
+        if (res.data.stats) {
+          const getStat = (label) => res.data.stats.find(s => s.label === label)?.value || "0";
+          setStats({
+            contributors: getStat("Total Contributors"),
+            docs: getStat("Documents Shared"),
+            points: getStat("Points Awarded"),
+            active: getStat("Active This Month")
+          });
         }
-      } catch (err) {
-        console.error("Failed to fetch leaderboard", err);
-      } finally {
-        setLoading(false);
       }
-    };
+    } catch (err) {
+      console.error("Failed to fetch leaderboard", err);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
     fetchLeaderboard();
   }, [period]);
 
@@ -411,10 +417,30 @@ export default function LeaderboardPage() {
                 Recognizing students who help<br />Vertos Archive grow.
               </p>
             </div>
+
+            {/* Refresh Button */}
+            <button
+              onClick={() => fetchLeaderboard(true)}
+              title="Refresh leaderboard"
+              style={{
+                background: refreshing ? "#fdfaf5" : "#fff",
+                border: "1px solid #e5d9c5", borderRadius: "50%",
+                width: 40, height: 40, display: "flex", alignItems: "center", justifyContent: "center",
+                cursor: "pointer", boxShadow: "0 2px 8px rgba(160,110,40,0.06)",
+                transition: "transform 0.3s",
+                transform: refreshing ? "rotate(180deg)" : "rotate(0deg)",
+                flexShrink: 0
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c8861a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+              </svg>
+            </button>
           </div>
 
-          {/* Period Selector */}
-          <div style={{ position: "relative" }} onClick={e => e.stopPropagation()}>
+          {/* Period Selector + Refresh */}
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }} onClick={e => e.stopPropagation()}>
             <button
               onClick={() => setShowDropdown(!showDropdown)}
               style={{
