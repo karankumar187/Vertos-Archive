@@ -407,7 +407,17 @@ export default function LeaderboardPage() {
     fetchLeaderboard();
   }, [period]);
 
-  const visibleEntries = showAll ? leaderboard.slice(0, MAX_SHOW) : leaderboard.slice(0, INITIAL_SHOW);
+  const isMe = (entry) => entry.userId === user?.id || entry.name === user?.name;
+  let visibleEntries = showAll ? leaderboard.slice(0, MAX_SHOW) : leaderboard.slice(0, INITIAL_SHOW);
+  
+  // Always show current user's rank at the bottom if they aren't in the visible slice
+  if (user && leaderboard.length > 0) {
+    const userInVisible = visibleEntries.some(isMe);
+    const userInLeaderboard = leaderboard.find(isMe);
+    if (!userInVisible && userInLeaderboard) {
+      visibleEntries.push({ ...userInLeaderboard, isPinned: true });
+    }
+  }
 
   return (
     <div style={{ position: "relative", paddingTop: "32px", paddingBottom: "64px" }} onClick={() => showDropdown && setShowDropdown(false)}>
@@ -526,8 +536,10 @@ export default function LeaderboardPage() {
           ) : leaderboard.length === 0 ? (
             <div style={{ padding: "40px", textAlign: "center", color: "#8b6535" }}>No contributors yet. Be the first to upload!</div>
           ) : (
-            visibleEntries.map(entry => (
-              <Row key={entry.rank} entry={entry} isMe={entry.userId === user?.id || entry.name === user?.name} />
+            visibleEntries.map((entry, idx) => (
+              <div key={entry.rank} style={{ borderTop: entry.isPinned ? "2px dashed #f0e6d2" : "none" }}>
+                <Row entry={entry} isMe={isMe(entry)} />
+              </div>
             ))
           )}
 
