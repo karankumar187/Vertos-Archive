@@ -220,9 +220,8 @@ function TopPodium({ entries }) {
           const isFirst = i === 1;
           const badgeColors = ["#94a3b8", "#d97706", "#c8861a"];
           const badgeColor = badgeColors[i];
-          const laurelColor = isFirst ? "#d97706" : "#d4b483";
-          const cardW = isFirst ? "160px" : "136px";
-          const avatarSize = isFirst ? 64 : 52;
+          const cardW = isFirst ? "146px" : "124px";
+          const avatarSize = isFirst ? 56 : 46;
 
           return (
             <div key={entry.rank} style={{
@@ -265,15 +264,9 @@ function TopPodium({ entries }) {
               }}>
                 {entry.name}
               </p>
-              <p style={{ fontFamily: "'Playfair Display', serif", fontSize: isFirst ? "1.2rem" : "1rem", fontWeight: 800, color: "#c8861a", margin: "0 0 12px 0" }}>
+              <p style={{ fontFamily: "'Playfair Display', serif", fontSize: isFirst ? "1.2rem" : "1rem", fontWeight: 800, color: "#c8861a", margin: 0 }}>
                 {entry.points} <span style={{ fontSize: "0.75rem", fontWeight: 600, fontFamily: "'Inter', sans-serif", color: "#8b6535" }}>pts</span>
               </p>
-
-              {/* Laurel Wreath */}
-              <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                <LaurelLeft color={laurelColor} />
-                <LaurelRight color={laurelColor} />
-              </div>
             </div>
           );
         })}
@@ -523,11 +516,11 @@ export default function LeaderboardPage() {
             borderBottom: "1px solid #f0e6d2",
           }}>
             {["#", "Contributor", "Docs", "Discussions", "Points", "Trend"].map((h, i) => (
-              <span key={h} style={{
+              <div key={h} style={{
                 fontFamily: "'Inter', sans-serif", fontSize: "0.75rem", fontWeight: 700,
                 color: "#8b6535", textTransform: "uppercase", letterSpacing: "0.06em",
                 textAlign: (i >= 2 && i <= 5) ? "center" : "left",
-              }}>{h}</span>
+              }}>{h}</div>
             ))}
           </div>
 
