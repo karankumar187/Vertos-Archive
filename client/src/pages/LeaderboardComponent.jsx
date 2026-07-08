@@ -204,11 +204,8 @@ function TopPodium({ entries }) {
 
   return (
     <div style={{
-      background: "#fff", borderRadius: "20px",
-      padding: "32px 24px 40px",
-      boxShadow: "0 2px 16px rgba(160,110,40,0.05)",
-      border: "1px solid #f0e6d2",
-      marginBottom: "24px",
+      marginBottom: "32px",
+      marginTop: "16px",
     }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", marginBottom: "36px" }}>
         <CrownIcon />
@@ -261,7 +258,11 @@ function TopPodium({ entries }) {
                 border: isFirst ? "3px solid #e8c96a" : "2px solid #f0e6d2"
               }} />
 
-              <p style={{ fontFamily: "'Inter', sans-serif", fontSize: isFirst ? "1.05rem" : "0.95rem", fontWeight: 700, color: "#1f1209", margin: "0 0 8px 0", textAlign: "center", lineHeight: 1.2 }}>
+              <p style={{ 
+                fontFamily: "'Inter', sans-serif", fontSize: isFirst ? "1.05rem" : "0.95rem", fontWeight: 700, color: "#1f1209", 
+                margin: "0 0 8px 0", textAlign: "center", lineHeight: 1.2,
+                whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", width: "100%"
+              }}>
                 {entry.name}
               </p>
               <p style={{ fontFamily: "'Playfair Display', serif", fontSize: isFirst ? "1.2rem" : "1rem", fontWeight: 800, color: "#c8861a", margin: "0 0 12px 0" }}>
@@ -336,7 +337,7 @@ function Row({ entry, isMe }) {
       </div>
 
       {/* Docs */}
-      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}>
         <DocIcon />
         <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.9rem", fontWeight: 600, color: "#4b3823" }}>
           {entry.docs}
@@ -344,7 +345,7 @@ function Row({ entry, isMe }) {
       </div>
 
       {/* Discussions */}
-      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8b6535" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
         <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.9rem", fontWeight: 600, color: "#4b3823" }}>
           {entry.discussions || 0}
@@ -352,7 +353,7 @@ function Row({ entry, isMe }) {
       </div>
 
       {/* Points */}
-      <div>
+      <div style={{ textAlign: "center" }}>
         <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.95rem", fontWeight: 700, color: top3 ? "#c8861a" : "#8b6535" }}>
           {entry.points.toLocaleString()}
         </span>
@@ -525,7 +526,7 @@ export default function LeaderboardPage() {
               <span key={h} style={{
                 fontFamily: "'Inter', sans-serif", fontSize: "0.75rem", fontWeight: 700,
                 color: "#8b6535", textTransform: "uppercase", letterSpacing: "0.06em",
-                textAlign: i === 5 ? "center" : "left",
+                textAlign: (i >= 2 && i <= 5) ? "center" : "left",
               }}>{h}</span>
             ))}
           </div>
