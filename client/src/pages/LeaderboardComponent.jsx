@@ -425,6 +425,7 @@ export default function LeaderboardPage() {
                 Recognizing students who help<br />Vertos Archive grow.
               </p>
             </div>
+          </div>
 
           {/* Period Selector */}
           <div style={{ display: "flex", alignItems: "center", gap: "8px", position: "relative", zIndex: 100 }} onClick={e => e.stopPropagation()}>
