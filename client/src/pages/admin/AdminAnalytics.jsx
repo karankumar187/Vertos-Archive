@@ -94,14 +94,40 @@ export default function AdminAnalytics() {
             <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 700, color: "#1f1209" }}>User Growth</h3>
             <span style={{ fontSize: "0.8rem", color: "#8b5e0a", fontWeight: 600 }}>Last 30 Days ▾</span>
           </div>
-          <div style={{ flex: 1, display: "flex", alignItems: "flex-end", gap: "2px", justifyContent: "space-between", border: "1px dashed #e9dcc8", borderRadius: "12px", padding: "10px" }}>
-            {data?.userGrowth && data.userGrowth.map((point, i) => {
-                const max = Math.max(...data.userGrowth.map(p => p.count), 1);
-                const height = `${(point.count / max) * 100}%`;
-                return (
-                    <div key={i} title={`${point.date}: ${point.count}`} style={{ width: "10px", height: height, background: "#2563eb", borderRadius: "2px", minHeight: point.count > 0 ? "4px" : "0" }} />
-                );
-            })}
+          <div style={{ flex: 1, display: "flex", gap: "10px" }}>
+            {/* Y-axis */}
+            {(() => {
+              const max = data?.userGrowth && data.userGrowth.length > 0 ? Math.max(...data.userGrowth.map(p => p.count), 1) : 1;
+              return (
+                <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", fontSize: "0.7rem", color: "#8b5e0a", paddingBottom: "24px" }}>
+                  <span>{max}</span>
+                  <span>{Math.round(max/2)}</span>
+                  <span>0</span>
+                </div>
+              );
+            })()}
+            {/* Graph Area */}
+            <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+              <div style={{ flex: 1, display: "flex", alignItems: "flex-end", gap: "2px", justifyContent: "space-between", borderBottom: "1px solid #e9dcc8", paddingBottom: "4px" }}>
+                {data?.userGrowth && data.userGrowth.length > 0 ? data.userGrowth.map((point, i) => {
+                    const max = Math.max(...data.userGrowth.map(p => p.count), 1);
+                    const height = `${(point.count / max) * 100}%`;
+                    return (
+                        <div key={i} title={`${point.date}: ${point.count}`} style={{ width: "10px", height: height, background: "#2563eb", borderRadius: "2px", minHeight: point.count > 0 ? "4px" : "0" }} />
+                    );
+                }) : <div style={{ width: "100%", textAlign: "center", color: "#8b5e0a", fontSize: "0.9rem" }}>No data</div>}
+              </div>
+              {/* X-axis */}
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.7rem", color: "#8b5e0a", marginTop: "8px" }}>
+                {data?.userGrowth && data.userGrowth.length > 0 ? (
+                  <>
+                    <span>{new Date(data.userGrowth[0].date).getDate()} {new Date(data.userGrowth[0].date).toLocaleString('default', { month: 'short' })}</span>
+                    <span>{new Date(data.userGrowth[Math.floor(data.userGrowth.length/2)].date).getDate()} {new Date(data.userGrowth[Math.floor(data.userGrowth.length/2)].date).toLocaleString('default', { month: 'short' })}</span>
+                    <span>{new Date(data.userGrowth[data.userGrowth.length-1].date).getDate()} {new Date(data.userGrowth[data.userGrowth.length-1].date).toLocaleString('default', { month: 'short' })}</span>
+                  </>
+                ) : null}
+              </div>
+            </div>
           </div>
         </div>
 
@@ -111,14 +137,40 @@ export default function AdminAnalytics() {
             <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 700, color: "#1f1209" }}>Documents Uploaded</h3>
             <span style={{ fontSize: "0.8rem", color: "#8b5e0a", fontWeight: 600 }}>Last 30 Days ▾</span>
           </div>
-          <div style={{ flex: 1, display: "flex", alignItems: "flex-end", gap: "2px", justifyContent: "space-between", border: "1px dashed #e9dcc8", borderRadius: "12px", padding: "10px" }}>
-            {data?.uploadTrend && data.uploadTrend.map((point, i) => {
-                const max = Math.max(...data.uploadTrend.map(p => p.count), 1);
-                const height = `${(point.count / max) * 100}%`;
-                return (
-                    <div key={i} title={`${point.date}: ${point.count}`} style={{ width: "10px", height: height, background: "#c8861a", borderRadius: "2px", minHeight: point.count > 0 ? "4px" : "0" }} />
-                );
-            })}
+          <div style={{ flex: 1, display: "flex", gap: "10px" }}>
+            {/* Y-axis */}
+            {(() => {
+              const max = data?.uploadTrend && data.uploadTrend.length > 0 ? Math.max(...data.uploadTrend.map(p => p.count), 1) : 1;
+              return (
+                <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", fontSize: "0.7rem", color: "#8b5e0a", paddingBottom: "24px" }}>
+                  <span>{max}</span>
+                  <span>{Math.round(max/2)}</span>
+                  <span>0</span>
+                </div>
+              );
+            })()}
+            {/* Graph Area */}
+            <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+              <div style={{ flex: 1, display: "flex", alignItems: "flex-end", gap: "2px", justifyContent: "space-between", borderBottom: "1px solid #e9dcc8", paddingBottom: "4px" }}>
+                {data?.uploadTrend && data.uploadTrend.length > 0 ? data.uploadTrend.map((point, i) => {
+                    const max = Math.max(...data.uploadTrend.map(p => p.count), 1);
+                    const height = `${(point.count / max) * 100}%`;
+                    return (
+                        <div key={i} title={`${point.date}: ${point.count}`} style={{ width: "10px", height: height, background: "#c8861a", borderRadius: "2px", minHeight: point.count > 0 ? "4px" : "0" }} />
+                    );
+                }) : <div style={{ width: "100%", textAlign: "center", color: "#8b5e0a", fontSize: "0.9rem" }}>No data</div>}
+              </div>
+              {/* X-axis */}
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.7rem", color: "#8b5e0a", marginTop: "8px" }}>
+                {data?.uploadTrend && data.uploadTrend.length > 0 ? (
+                  <>
+                    <span>{new Date(data.uploadTrend[0].date).getDate()} {new Date(data.uploadTrend[0].date).toLocaleString('default', { month: 'short' })}</span>
+                    <span>{new Date(data.uploadTrend[Math.floor(data.uploadTrend.length/2)].date).getDate()} {new Date(data.uploadTrend[Math.floor(data.uploadTrend.length/2)].date).toLocaleString('default', { month: 'short' })}</span>
+                    <span>{new Date(data.uploadTrend[data.uploadTrend.length-1].date).getDate()} {new Date(data.uploadTrend[data.uploadTrend.length-1].date).toLocaleString('default', { month: 'short' })}</span>
+                  </>
+                ) : null}
+              </div>
+            </div>
           </div>
         </div>
 

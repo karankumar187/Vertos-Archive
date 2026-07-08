@@ -88,8 +88,8 @@ export default function AdminDashboard() {
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "24px" }}>
         <StatCard title="Total Users" value={loading ? "..." : (data?.totalUsers?.toLocaleString() || 0)} icon={<IconUsers />} change="12.5%" isPositive={true} />
         <StatCard title="Total Documents" value={loading ? "..." : (data?.totalDocs?.toLocaleString() || 0)} icon={<IconDocs />} change="18.7%" isPositive={true} />
-        <StatCard title="Pending Approvals" value={loading ? "..." : "0"} icon={<IconPending />} change="8.4%" isPositive={false} />
-        <StatCard title="AI Queries Today" value={loading ? "..." : (data?.aiQueries?.toLocaleString() || 0)} icon={<IconAI />} change="15.3%" isPositive={true} />
+        <StatCard title="Pending Approvals" value={loading ? "..." : (data?.pendingApprovals?.toLocaleString() || 0)} icon={<IconPending />} change="8.4%" isPositive={false} />
+        <StatCard title="AI Queries Today" value={loading ? "..." : (data?.aiQueriesToday?.toLocaleString() || 0)} icon={<IconAI />} change="15.3%" isPositive={true} />
       </div>
 
       {/* Main Content Area */}
@@ -101,14 +101,40 @@ export default function AdminDashboard() {
             <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 700, color: "#1f1209" }}>Upload Trend</h3>
             <span style={{ fontSize: "0.8rem", color: "#8b5e0a", fontWeight: 600 }}>Last 30 Days</span>
           </div>
-          <div style={{ flex: 1, display: "flex", alignItems: "flex-end", gap: "4px", justifyContent: "space-between", border: "1px dashed #e9dcc8", borderRadius: "12px", padding: "10px" }}>
-            {data?.uploadTrend && data.uploadTrend.length > 0 ? data.uploadTrend.map((point, i) => {
-                const max = Math.max(...data.uploadTrend.map(p => p.count), 1);
-                const height = `${(point.count / max) * 100}%`;
-                return (
-                    <div key={i} title={`${point.date}: ${point.count}`} style={{ flex: 1, height: height, background: "#c8861a", borderRadius: "2px", minHeight: point.count > 0 ? "4px" : "0" }} />
-                );
-            }) : <div style={{ width: "100%", textAlign: "center", color: "#8b5e0a", fontSize: "0.9rem" }}>No data</div>}
+          <div style={{ flex: 1, display: "flex", gap: "10px" }}>
+            {/* Y-axis */}
+            {(() => {
+              const max = data?.uploadTrend && data.uploadTrend.length > 0 ? Math.max(...data.uploadTrend.map(p => p.count), 1) : 1;
+              return (
+                <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", fontSize: "0.7rem", color: "#8b5e0a", paddingBottom: "24px" }}>
+                  <span>{max}</span>
+                  <span>{Math.round(max/2)}</span>
+                  <span>0</span>
+                </div>
+              );
+            })()}
+            {/* Graph Area */}
+            <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+              <div style={{ flex: 1, display: "flex", alignItems: "flex-end", gap: "4px", justifyContent: "space-between", borderBottom: "1px solid #e9dcc8", paddingBottom: "4px" }}>
+                {data?.uploadTrend && data.uploadTrend.length > 0 ? data.uploadTrend.map((point, i) => {
+                    const max = Math.max(...data.uploadTrend.map(p => p.count), 1);
+                    const height = `${(point.count / max) * 100}%`;
+                    return (
+                        <div key={i} title={`${point.date}: ${point.count}`} style={{ flex: 1, height: height, background: "#c8861a", borderRadius: "2px", minHeight: point.count > 0 ? "4px" : "0" }} />
+                    );
+                }) : <div style={{ width: "100%", textAlign: "center", color: "#8b5e0a", fontSize: "0.9rem" }}>No data</div>}
+              </div>
+              {/* X-axis */}
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.7rem", color: "#8b5e0a", marginTop: "8px" }}>
+                {data?.uploadTrend && data.uploadTrend.length > 0 ? (
+                  <>
+                    <span>{new Date(data.uploadTrend[0].date).getDate()} {new Date(data.uploadTrend[0].date).toLocaleString('default', { month: 'short' })}</span>
+                    <span>{new Date(data.uploadTrend[Math.floor(data.uploadTrend.length/2)].date).getDate()} {new Date(data.uploadTrend[Math.floor(data.uploadTrend.length/2)].date).toLocaleString('default', { month: 'short' })}</span>
+                    <span>{new Date(data.uploadTrend[data.uploadTrend.length-1].date).getDate()} {new Date(data.uploadTrend[data.uploadTrend.length-1].date).toLocaleString('default', { month: 'short' })}</span>
+                  </>
+                ) : null}
+              </div>
+            </div>
           </div>
         </div>
 

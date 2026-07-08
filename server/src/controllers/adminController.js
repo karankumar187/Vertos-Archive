@@ -332,6 +332,12 @@ exports.getAdminAnalytics = async (req, res) => {
         const totalUsers = await User.countDocuments();
         const activeUsers = await User.countDocuments({ isSuspended: false });
         const totalDocs = await Document.countDocuments({ verified: true });
+        const pendingApprovals = await Document.countDocuments({ verified: false });
+        
+        const Message = require('../models/Message');
+        const startOfToday = new Date();
+        startOfToday.setHours(0, 0, 0, 0);
+        const aiQueriesToday = await Message.countDocuments({ createdAt: { $gte: startOfToday } });
         
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -393,6 +399,8 @@ exports.getAdminAnalytics = async (req, res) => {
                 totalUsers,
                 activeUsers,
                 totalDocs,
+                pendingApprovals,
+                aiQueriesToday,
                 uploadTrend,
                 userGrowth,
                 topSubjects
