@@ -99,9 +99,13 @@ exports.addAnswer = async (req, res) => {
         console.log(`[Points] Contributor found: ${!!contributor}, current points: ${contributor?.points}`);
 
         if (!contributor) {
-          contributor = new Contributor({ userId: authorId, points: 2 });
+          contributor = new Contributor({ userId: authorId, points: 2, badges: [] });
         } else {
           contributor.points = (contributor.points || 0) + 2;
+        }
+
+        if (!contributor.badges) {
+            contributor.badges = [];
         }
 
         // Award badges at thresholds
