@@ -4,7 +4,7 @@ import { adminAPI } from "../../services/api";
 const IconUsers = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#c8861a" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>;
 const IconDocs = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#c8861a" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>;
 const IconActive = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>;
-const IconDownload = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>;
+const IconQueries = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>;
 
 function StatCard({ title, value, icon, change, isPositive }) {
   return (
@@ -82,7 +82,7 @@ export default function AdminAnalytics() {
         <StatCard title="Total Users" value={loading ? "..." : (data?.totalUsers?.toLocaleString() || 0)} icon={<IconUsers />} change="12.5%" isPositive={true} />
         <StatCard title="Active Users" value={loading ? "..." : (data?.activeUsers?.toLocaleString() || 0)} icon={<IconActive />} change="15.2%" isPositive={true} />
         <StatCard title="Total Documents" value={loading ? "..." : (data?.totalDocs?.toLocaleString() || 0)} icon={<IconDocs />} change="18.7%" isPositive={true} />
-        <StatCard title="Downloads" value={loading ? "..." : "12,540"} icon={<IconDownload />} change="22.1%" isPositive={true} />
+        <StatCard title="Total Queries" value={loading ? "..." : (data?.totalQueries?.toLocaleString() || 0)} icon={<IconQueries />} change="15.3%" isPositive={true} />
       </div>
 
       {/* Charts Area */}

@@ -330,7 +330,7 @@ exports.suspendUser = async (req, res) => {
 exports.getAdminAnalytics = async (req, res) => {
     try {
         const totalUsers = await User.countDocuments();
-        const activeUsers = await User.countDocuments({ isSuspended: false });
+        const activeUsers = await User.countDocuments({ isSuspended: { $ne: true } });
         const totalDocs = await Document.countDocuments({ verified: true });
         const pendingApprovals = await Document.countDocuments({ verified: false });
         
@@ -338,6 +338,7 @@ exports.getAdminAnalytics = async (req, res) => {
         const startOfToday = new Date();
         startOfToday.setHours(0, 0, 0, 0);
         const aiQueriesToday = await Message.countDocuments({ createdAt: { $gte: startOfToday } });
+        const totalQueries = await Message.countDocuments();
         
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -401,6 +402,7 @@ exports.getAdminAnalytics = async (req, res) => {
                 totalDocs,
                 pendingApprovals,
                 aiQueriesToday,
+                totalQueries,
                 uploadTrend,
                 userGrowth,
                 topSubjects
