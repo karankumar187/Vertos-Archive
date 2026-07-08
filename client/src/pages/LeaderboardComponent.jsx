@@ -330,7 +330,7 @@ function Row({ entry, isMe }) {
       </div>
 
       {/* Docs */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
         <DocIcon />
         <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.9rem", fontWeight: 600, color: "#4b3823" }}>
           {entry.docs}
@@ -338,7 +338,7 @@ function Row({ entry, isMe }) {
       </div>
 
       {/* Discussions */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8b6535" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
         <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.9rem", fontWeight: 600, color: "#4b3823" }}>
           {entry.discussions || 0}
@@ -376,7 +376,7 @@ export default function LeaderboardPage() {
     try {
       if (isRefresh) setRefreshing(true);
       else setLoading(true);
-      const res = await leaderboardAPI.getLeaderboard();
+      const res = await leaderboardAPI.getLeaderboard(period);
       if (res.data?.success) {
         setLeaderboard(res.data.leaderboard);
         if (res.data.stats) {
@@ -519,7 +519,7 @@ export default function LeaderboardPage() {
               <div key={h} style={{
                 fontFamily: "'Inter', sans-serif", fontSize: "0.75rem", fontWeight: 700,
                 color: "#8b6535", textTransform: "uppercase", letterSpacing: "0.06em",
-                textAlign: (i >= 2 && i <= 5) ? "center" : "left",
+                textAlign: (i >= 4 && i <= 5) ? "center" : "left",
               }}>{h}</div>
             ))}
           </div>
