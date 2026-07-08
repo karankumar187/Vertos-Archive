@@ -4,6 +4,7 @@ const rateLimit = require('express-rate-limit');
 const passport = require('passport');
 const jwt = require('jsonwebtoken');
 const { register, login, getMe, updateProfile, changePassword } = require('../controllers/authController');
+const { getPublishedAnnouncements } = require('../controllers/announcementController');
 const { protect } = require('../middleware/auth');
 const { JWT_SECRET, JWT_EXPIRE, CLIENT_URL } = require('../config/config');
 const User = require('../models/User');
@@ -53,6 +54,9 @@ router.get('/user-count', async (req, res) => {
         res.json({ success: false, count: 0 });
     }
 });
+
+// ─── Public Announcements ────────────────────────────────────────────────────
+router.get('/announcements', getPublishedAnnouncements);
 
 // ─── Google OAuth Routes ────────────────────────────────────────────────────
 

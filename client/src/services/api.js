@@ -110,4 +110,9 @@ export const archiveAPI = {
     getArchive: (params) => api.get('/archive', { params }),
 };
 
+// Public Announcements API (no admin required)
+export const announcementsAPI = {
+    getPublished: () => api.get('/auth/announcements'),
+};
+
 export default api;

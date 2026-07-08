@@ -20,6 +20,7 @@ const announcementSchema = new mongoose.Schema({
     },
     scheduledAt: { type: Date },
     publishedAt: { type: Date },
+    eventDate: { type: Date },  // for type=Event, shown in calendar views
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
 }, { timestamps: true });
 

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
-import { eventsAPI } from "../services/api";
+import { eventsAPI, announcementsAPI } from "../services/api";
 import campusSketch from "../assets/campus-sketch.png";
-import { cacheGet, cacheSet, cacheInvalidate } from "../utils/localCache";
+import { cacheGet, cacheSet } from "../utils/localCache";
 
 const EventCard = ({ event, currentUserId, onInterestToggle }) => {
   const isInterested = event.interestedUsers?.includes(currentUserId);
@@ -29,7 +29,7 @@ const EventCard = ({ event, currentUserId, onInterestToggle }) => {
       <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
           <h3 style={{ margin: "0 0 8px 0", fontSize: "1.2rem", fontWeight: 700, color: "#1f1209" }}>{event.title}</h3>
-          <span style={{ fontSize: "0.7rem", fontWeight: 700, color: accentColor, background: accentColor + "1A", padding: "4px 10px", borderRadius: "12px" }}>
+          <span style={{ fontSize: "0.7rem", fontWeight: 700, color: accentColor, background: accentColor + "1A", padding: "4px 10px", borderRadius: "12px", flexShrink: 0 }}>
             {event.type}
           </span>
         </div>
@@ -39,24 +39,28 @@ const EventCard = ({ event, currentUserId, onInterestToggle }) => {
         
         <div style={{ display: "flex", alignItems: "center", gap: "16px", marginTop: "auto", paddingTop: "12px", borderTop: "1px solid #f1f5f9" }}>
           <div style={{ fontSize: "0.8rem", color: "#64748b", display: "flex", alignItems: "center", gap: "6px" }}>
-            <span style={{ fontSize: "1rem" }}>📍</span> {event.location}
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            {event.location || event.audience || 'Campus'}
           </div>
           <div style={{ fontSize: "0.8rem", color: "#64748b", display: "flex", alignItems: "center", gap: "6px" }}>
-            <span style={{ fontSize: "1rem" }}>👥</span> {event.interestedUsers?.length || 0} Interested
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+            {event.interestedUsers?.length || 0} Interested
           </div>
           <div style={{ flex: 1 }}></div>
-          <button 
-            onClick={() => onInterestToggle(event._id)}
-            style={{
-              padding: "8px 16px", borderRadius: "8px", fontWeight: 600, fontSize: "0.85rem",
-              cursor: "pointer", transition: "all 0.2s",
-              background: isInterested ? accentColor : "transparent",
-              color: isInterested ? "#fff" : accentColor,
-              border: `1px solid ${accentColor}`,
-            }}
-          >
-            {isInterested ? '✓ Interested' : 'Count me in'}
-          </button>
+          {!event._fromAnnouncement && (
+            <button 
+              onClick={() => onInterestToggle(event._id)}
+              style={{
+                padding: "8px 16px", borderRadius: "8px", fontWeight: 600, fontSize: "0.85rem",
+                cursor: "pointer", transition: "all 0.2s",
+                background: isInterested ? accentColor : "transparent",
+                color: isInterested ? "#fff" : accentColor,
+                border: `1px solid ${accentColor}`,
+              }}
+            >
+              {isInterested ? '\u2713 Interested' : 'Count me in'}
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -71,11 +75,27 @@ export default function HappeningTab() {
   const fetchEvents = async (background = false) => {
     try {
       if (!background) setLoading(true);
-      const { data } = await eventsAPI.getEvents();
-      if (data.success) {
-        setEvents(data.data);
-        cacheSet('community_events', data.data);
-      }
+      const [evRes, annRes] = await Promise.all([
+        eventsAPI.getEvents(),
+        announcementsAPI.getPublished()
+      ]);
+      const regularEvents = evRes.data?.success ? evRes.data.data : [];
+      const announcementEvents = (annRes.data?.data || [])
+        .filter(a => a.type === 'Event')
+        .map(a => ({
+          _fromAnnouncement: true,
+          _id: a._id,
+          title: a.title,
+          description: a.content,
+          type: 'Event',
+          date: a.eventDate || a.createdAt,
+          location: '',
+          audience: a.audience,
+          interestedUsers: []
+        }));
+      const merged = [...regularEvents, ...announcementEvents];
+      setEvents(merged);
+      cacheSet('community_events', merged);
     } catch (error) {
       console.error("Error fetching events:", error);
     } finally {

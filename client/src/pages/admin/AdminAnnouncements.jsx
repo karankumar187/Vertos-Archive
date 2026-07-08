@@ -10,7 +10,8 @@ function AnnouncementModal({ announcement, onClose, onSuccess }) {
     content: announcement?.content || '',
     type: announcement?.type || 'General',
     audience: announcement?.audience || 'All Students',
-    status: announcement?.status || 'draft'
+    status: announcement?.status || 'draft',
+    eventDate: announcement?.eventDate ? new Date(announcement.eventDate).toISOString().split('T')[0] : ''
   });
   const [loading, setLoading] = useState(false);
 
@@ -64,6 +65,14 @@ function AnnouncementModal({ announcement, onClose, onSuccess }) {
               </select>
             </div>
           </div>
+
+          {/* Event Date — only shown for Event type */}
+          {form.type === 'Event' && (
+            <div>
+              <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#5c4021', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Event Date</label>
+              <input type="date" value={form.eventDate} onChange={e => setForm({...form, eventDate: e.target.value})} style={{ width: '100%', padding: '10px 14px', border: '1px solid #ddd0b8', borderRadius: '8px', outline: 'none', boxSizing: 'border-box' }} />
+            </div>
+          )}
 
           <div>
             <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#5c4021', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Status</label>

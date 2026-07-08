@@ -7,7 +7,7 @@ import ContributePage from "./ContributePage";
 import QueriesTab from "./QueriesTab";
 import ArchiveTab from "./ArchiveTab";
 import HappeningTab from "./HappeningTab";
-import { queriesAPI, eventsAPI, leaderboardAPI } from "../services/api";
+import { queriesAPI, eventsAPI, leaderboardAPI, announcementsAPI } from "../services/api";
 import { cacheGet, cacheSet } from "../utils/localCache";
 
 /* ─── SVG Icon Components ───────────────────────────────────── */
@@ -198,10 +198,11 @@ function FeedTab({ setActiveTab }) {
     const fetchFeedData = async (background = false) => {
       try {
         if (!background) setLoading(true);
-        const [ldbRes, qRes, evRes] = await Promise.all([
+        const [ldbRes, qRes, evRes, annRes] = await Promise.all([
           leaderboardAPI.getLeaderboard('All Time').catch(() => ({ data: {} })),
           queriesAPI.getQueries().catch(() => ({ data: { data: [] } })),
-          eventsAPI.getEvents().catch(() => ({ data: { data: [] } }))
+          eventsAPI.getEvents().catch(() => ({ data: { data: [] } })),
+          announcementsAPI.getPublished().catch(() => ({ data: { data: [] } }))
         ]);
 
         const ldbData = ldbRes.data;
@@ -238,14 +239,29 @@ function FeedTab({ setActiveTab }) {
           }));
 
         const allEvents = evRes.data?.data || [];
-        const newUpcomingEvents = allEvents.slice(0, 3).map(ev => {
+        // Also pull Event-type published announcements from admin
+        const allAnnouncements = annRes.data?.data || [];
+        const announcementEvents = allAnnouncements
+          .filter(a => a.type === 'Event')
+          .map(a => ({
+            _fromAnnouncement: true,
+            title: a.title,
+            description: a.content,
+            type: 'Event',
+            date: a.eventDate || a.createdAt,
+            location: a.audience || 'All Students',
+            interestedUsers: []
+          }));
+        const combinedEvents = [...allEvents, ...announcementEvents];
+        const newUpcomingEvents = combinedEvents.slice(0, 3).map(ev => {
           const dateObj = new Date(ev.date);
           return {
             month: dateObj.toLocaleString('default', { month: 'short' }).toUpperCase(),
             day: dateObj.getDate(), title: ev.title,
-            desc: `${ev.type} • ${ev.location}`,
+            desc: `${ev.type} • ${ev.location || ev.audience || ''}`,
             interested: ev.interestedUsers?.length || 0,
-            color: ev.type === 'Hackathon' ? '#c8861a' : ev.type === 'Workshop' ? '#7c3aed' : '#059669'
+            color: ev.type === 'Hackathon' ? '#c8861a' : ev.type === 'Workshop' ? '#7c3aed' : ev.type === 'Event' ? '#db2777' : '#059669',
+            typeBadge: ev.type
           };
         });
 
@@ -430,8 +446,11 @@ function FeedTab({ setActiveTab }) {
                   <span style={{ fontSize: "0.55rem", fontWeight: 700, color: ev.color, textTransform: "uppercase" }}>{ev.month}</span>
                   <span style={{ fontSize: "1.1rem", fontWeight: 800, color: "#1f1209", lineHeight: 1 }}>{ev.day}</span>
                 </div>
-                <div>
-                  <div style={{ fontSize: "0.88rem", fontWeight: 700, color: "#1f1209" }}>{ev.title}</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "2px" }}>
+                    <div style={{ fontSize: "0.88rem", fontWeight: 700, color: "#1f1209" }}>{ev.title}</div>
+                    {ev.typeBadge && <span style={{ fontSize: "0.62rem", fontWeight: 700, color: ev.color, background: ev.color + "1A", padding: "2px 7px", borderRadius: "10px", flexShrink: 0 }}>{ev.typeBadge}</span>}
+                  </div>
                   <div style={{ fontSize: "0.72rem", color: "#8b5e0a" }}>{ev.desc}</div>
                   <div style={{ fontSize: "0.68rem", color: ev.color, fontWeight: 600 }}>{ev.interested} Interested</div>
                 </div>
