@@ -31,14 +31,35 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const CACHE_KEY = "admin_dashboard_cache";
+    const CACHE_TTL = 5 * 60 * 1000;
+
     const fetchData = async () => {
+      const cached = localStorage.getItem(CACHE_KEY);
+      if (cached) {
+        try {
+          const { timestamp, stats, recentLogs } = JSON.parse(cached);
+          if (Date.now() - timestamp < CACHE_TTL) {
+            setData(stats);
+            setLogs(recentLogs);
+            setLoading(false);
+            return;
+          }
+        } catch (e) {
+          console.error("Cache parse error", e);
+        }
+      }
+
       try {
         const [statsRes, logsRes] = await Promise.all([
           adminAPI.getAnalytics().catch(() => ({ data: { data: {} } })),
           adminAPI.getActivityLogs().catch(() => ({ data: { data: [] } }))
         ]);
-        setData(statsRes.data?.data || {});
-        setLogs(logsRes.data?.data?.slice(0, 5) || []);
+        const newStats = statsRes.data?.data || {};
+        const newLogs = logsRes.data?.data?.slice(0, 5) || [];
+        setData(newStats);
+        setLogs(newLogs);
+        localStorage.setItem(CACHE_KEY, JSON.stringify({ timestamp: Date.now(), stats: newStats, recentLogs: newLogs }));
       } catch (err) {
         console.error(err);
       } finally {

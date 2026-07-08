@@ -30,10 +30,29 @@ export default function AdminAnalytics() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const CACHE_KEY = "admin_analytics_cache";
+    const CACHE_TTL = 5 * 60 * 1000;
+
     const fetchData = async () => {
+      const cached = localStorage.getItem(CACHE_KEY);
+      if (cached) {
+        try {
+          const { timestamp, stats } = JSON.parse(cached);
+          if (Date.now() - timestamp < CACHE_TTL) {
+            setData(stats);
+            setLoading(false);
+            return;
+          }
+        } catch (e) {
+          console.error("Cache parse error", e);
+        }
+      }
+
       try {
         const res = await adminAPI.getAnalytics();
-        setData(res.data?.data || {});
+        const newStats = res.data?.data || {};
+        setData(newStats);
+        localStorage.setItem(CACHE_KEY, JSON.stringify({ timestamp: Date.now(), stats: newStats }));
       } catch (err) {
         console.error(err);
       } finally {

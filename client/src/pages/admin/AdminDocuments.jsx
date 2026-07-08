@@ -173,15 +173,38 @@ export default function AdminDocuments() {
     fetchData();
   }, []);
 
-  const fetchData = async () => {
+  const fetchData = async (force = false) => {
+    const CACHE_KEY = "admin_documents_cache";
+    const CACHE_TTL = 5 * 60 * 1000;
+
+    if (!force) {
+      const cached = localStorage.getItem(CACHE_KEY);
+      if (cached) {
+        try {
+          const { timestamp, pending, live } = JSON.parse(cached);
+          if (Date.now() - timestamp < CACHE_TTL) {
+            setPendingDocs(pending);
+            setLiveDocs(live);
+            setLoading(false);
+            return;
+          }
+        } catch (e) {
+          console.error("Cache parse error", e);
+        }
+      }
+    }
+
     setLoading(true);
     try {
       const [pendingRes, liveRes] = await Promise.all([
         adminAPI.getPending(),
         adminAPI.getLiveDocuments()
       ]);
-      setPendingDocs(pendingRes.data.data || []);
-      setLiveDocs(liveRes.data.data || []);
+      const newPending = pendingRes.data?.data || [];
+      const newLive = liveRes.data?.data || [];
+      setPendingDocs(newPending);
+      setLiveDocs(newLive);
+      localStorage.setItem(CACHE_KEY, JSON.stringify({ timestamp: Date.now(), pending: newPending, live: newLive }));
     } catch (err) {
       console.error(err);
     } finally {
@@ -191,14 +214,14 @@ export default function AdminDocuments() {
 
   const handleReviewSuccess = (id) => {
     setReviewModal({ open: false, doc: null, mode: null });
-    fetchData();
+    fetchData(true);
   };
 
   const handleDeleteLive = async (id) => {
     if (!window.confirm('Are you sure you want to permanently delete this document? This cannot be undone.')) return;
     try {
       await adminAPI.deleteDocument(id);
-      setLiveDocs(prev => prev.filter(d => d._id !== id));
+      fetchData(true);
     } catch (err) {
       console.error(err);
       alert('Failed to delete document');

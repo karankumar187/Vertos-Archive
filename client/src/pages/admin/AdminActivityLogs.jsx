@@ -6,10 +6,30 @@ export default function AdminActivityLogs() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const CACHE_KEY = "admin_activity_logs_cache";
+    const CACHE_TTL = 5 * 60 * 1000;
+
     const fetchLogs = async () => {
+      const cached = localStorage.getItem(CACHE_KEY);
+      if (cached) {
+        try {
+          const { timestamp, data } = JSON.parse(cached);
+          if (Date.now() - timestamp < CACHE_TTL) {
+            setLogs(data);
+            setLoading(false);
+            return;
+          }
+        } catch (e) {
+          console.error("Cache parse error", e);
+        }
+      }
+
+      setLoading(true);
       try {
         const res = await adminAPI.getActivityLogs();
-        setLogs(res.data?.data || []);
+        const newData = res.data?.data || [];
+        setLogs(newData);
+        localStorage.setItem(CACHE_KEY, JSON.stringify({ timestamp: Date.now(), data: newData }));
       } catch (err) {
         console.error(err);
       } finally {

@@ -10,11 +10,32 @@ export default function AdminCommunity() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchLeaderboard = async () => {
+    const fetchLeaderboard = async (force = false) => {
+      const CACHE_KEY = "admin_community_cache";
+      const CACHE_TTL = 5 * 60 * 1000;
+
+      if (!force) {
+        const cached = localStorage.getItem(CACHE_KEY);
+        if (cached) {
+          try {
+            const { timestamp, data } = JSON.parse(cached);
+            if (Date.now() - timestamp < CACHE_TTL) {
+              setLeaderboard(data);
+              setLoading(false);
+              return;
+            }
+          } catch (e) {
+            console.error("Cache parse error", e);
+          }
+        }
+      }
+
       setLoading(true);
       try {
         const res = await leaderboardAPI.getLeaderboard('All Time');
-        setLeaderboard(res.data?.leaderboard || []);
+        const newUsers = res.data?.leaderboard || [];
+        setLeaderboard(newUsers);
+        localStorage.setItem(CACHE_KEY, JSON.stringify({ timestamp: Date.now(), data: newUsers }));
       } catch (err) {
         console.error(err);
       } finally {

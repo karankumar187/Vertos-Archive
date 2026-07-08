@@ -10,11 +10,32 @@ export default function AdminUsers() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
 
-  const fetchUsers = async () => {
+  const fetchUsers = async (force = false) => {
+    const CACHE_KEY = "admin_users_cache";
+    const CACHE_TTL = 5 * 60 * 1000;
+
+    if (!force) {
+      const cached = localStorage.getItem(CACHE_KEY);
+      if (cached) {
+        try {
+          const { timestamp, data } = JSON.parse(cached);
+          if (Date.now() - timestamp < CACHE_TTL) {
+            setUsers(data);
+            setLoading(false);
+            return;
+          }
+        } catch (e) {
+          console.error("Cache parse error", e);
+        }
+      }
+    }
+
     setLoading(true);
     try {
       const res = await adminAPI.getUsers();
-      setUsers(res.data.data || []);
+      const newUsers = res.data?.data || [];
+      setUsers(newUsers);
+      localStorage.setItem(CACHE_KEY, JSON.stringify({ timestamp: Date.now(), data: newUsers }));
     } catch (err) {
       console.error(err);
     } finally {
@@ -31,23 +52,19 @@ export default function AdminUsers() {
     if (!window.confirm(`Are you sure you want to ${isSuspending ? 'suspend' : 'activate'} ${user.name}?`)) return;
     try {
       await adminAPI.suspendUser(user._id, isSuspending);
-      fetchUsers();
+      fetchUsers(true);
     } catch (err) {
       console.error(err);
       alert('Failed to update user status');
     }
   };
 
-  const handleChangeRole = async (user) => {
-    const newRole = prompt(`Change role for ${user.name} (admin/user):`, user.role);
-    if (!newRole || newRole === user.role) return;
-    if (!['admin', 'user'].includes(newRole)) {
-      alert("Role must be 'admin' or 'user'");
-      return;
-    }
+  const handleRoleChange = async (user) => {
+    const newRole = user.role === 'admin' ? 'user' : 'admin';
+    if (!window.confirm(`Change ${user.name}'s role to ${newRole}?`)) return;
     try {
       await adminAPI.updateUserRole(user._id, newRole);
-      fetchUsers();
+      fetchUsers(true);
     } catch (err) {
       console.error(err);
       alert('Failed to update user role');
@@ -128,7 +145,7 @@ export default function AdminUsers() {
                       </span>
                     </td>
                     <td style={{ padding: "16px 24px", textAlign: "right" }}>
-                      <button onClick={() => handleChangeRole(user)} style={{ background: "none", border: "none", color: "#8b5e0a", cursor: "pointer", marginRight: "12px" }} title="Edit Role"><IconEdit /></button>
+                      <button onClick={() => handleRoleChange(user)} style={{ background: "none", border: "none", color: "#8b5e0a", cursor: "pointer", marginRight: "12px" }} title="Edit Role"><IconEdit /></button>
                       <button onClick={() => handleSuspend(user)} style={{ background: "none", border: "none", color: user.status === 'Active' ? "#dc2626" : "#059669", cursor: "pointer" }} title={user.status === 'Active' ? "Suspend User" : "Activate User"}>
                         {user.status === 'Active' ? <IconBan /> : <IconCheck />}
                       </button>

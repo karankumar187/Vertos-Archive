@@ -90,11 +90,32 @@ export default function AdminAnnouncements() {
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState({ open: false, ann: null });
 
-  const fetchAnnouncements = async () => {
+  const fetchAnnouncements = async (force = false) => {
+    const CACHE_KEY = "admin_announcements_cache";
+    const CACHE_TTL = 5 * 60 * 1000;
+
+    if (!force) {
+      const cached = localStorage.getItem(CACHE_KEY);
+      if (cached) {
+        try {
+          const { timestamp, data } = JSON.parse(cached);
+          if (Date.now() - timestamp < CACHE_TTL) {
+            setAnnouncements(data);
+            setLoading(false);
+            return;
+          }
+        } catch (e) {
+          console.error("Cache parse error", e);
+        }
+      }
+    }
+
     setLoading(true);
     try {
       const res = await adminAPI.getAnnouncements();
-      setAnnouncements(res.data?.data || []);
+      const newData = res.data?.data || [];
+      setAnnouncements(newData);
+      localStorage.setItem(CACHE_KEY, JSON.stringify({ timestamp: Date.now(), data: newData }));
     } catch (err) {
       console.error(err);
     } finally {
@@ -110,7 +131,7 @@ export default function AdminAnnouncements() {
     if (!window.confirm("Delete this announcement?")) return;
     try {
       await adminAPI.deleteAnnouncement(id);
-      fetchAnnouncements();
+      fetchAnnouncements(true);
     } catch (err) {
       alert("Failed to delete");
     }
@@ -174,7 +195,7 @@ export default function AdminAnnouncements() {
         </div>
       </div>
       
-      {modal.open && <AnnouncementModal announcement={modal.ann} onClose={() => setModal({ open: false, ann: null })} onSuccess={() => { setModal({ open: false, ann: null }); fetchAnnouncements(); }} />}
+      {modal.open && <AnnouncementModal announcement={modal.ann} onClose={() => setModal({ open: false, ann: null })} onSuccess={() => { setModal({ open: false, ann: null }); fetchAnnouncements(true); }} />}
     </div>
   );
 }
