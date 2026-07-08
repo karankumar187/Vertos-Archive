@@ -55,6 +55,21 @@ export const adminAPI = {
     approveUpload:   (id, data = {}) => api.post(`/admin/approve/${id}`, data),
     rejectUpload:    (id, reviewComment) => api.post(`/admin/reject/${id}`, { reviewComment }),
     checkDuplicate:  (data) => api.post('/admin/check-duplicate', data),
+    
+    // Users
+    getUsers:        () => api.get('/admin/users'),
+    updateUserRole:  (id, role) => api.put(`/admin/users/${id}/role`, { role }),
+    suspendUser:     (id, suspend) => api.put(`/admin/users/${id}/suspend`, { suspend }),
+    
+    // Analytics & Logs
+    getAnalytics:    () => api.get('/admin/analytics'),
+    getActivityLogs: () => api.get('/admin/logs'),
+    
+    // Announcements
+    getAnnouncements:() => api.get('/admin/announcements'),
+    createAnnouncement: (data) => api.post('/admin/announcements', data),
+    updateAnnouncement: (id, data) => api.put(`/admin/announcements/${id}`, data),
+    deleteAnnouncement: (id) => api.delete(`/admin/announcements/${id}`)
 };
 
 // ─── Chat API ─────────────────────────────────────────────────────────────
