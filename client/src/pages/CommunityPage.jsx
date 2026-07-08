@@ -279,9 +279,7 @@ function FeedTab({ setActiveTab }) {
           }
         } catch (_) { /* silently fail */ }
 
-        // All published announcements for the sidebar widget (non-Event ones)
-        const allAnnouncements = annRes.data?.data || [];
-        const newAnnouncements = allAnnouncements.slice(0, 5); // show latest 5
+        const newAnnouncements = allAnnouncements.filter(a => a.type !== 'Event').slice(0, 5); // show latest 5 non-event announcements
 
         const freshData = { topContributors: newTopContributors, activeDiscussions: newActiveDiscussions, upcomingEvents: newUpcomingEvents, announcements: newAnnouncements, stats: { ...newStats, members: totalMembers } };
         applyData(freshData);
