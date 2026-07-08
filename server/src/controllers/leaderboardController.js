@@ -1,6 +1,7 @@
 const Contributor = require('../models/Contributor');
 const Document = require('../models/Document');
 const User = require('../models/User');
+const Query = require('../models/Query');
 
 // @desc    Get leaderboard rankings and global stats
 // @route   GET /api/leaderboard
