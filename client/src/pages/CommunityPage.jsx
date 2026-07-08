@@ -212,7 +212,7 @@ function FeedTab({ setActiveTab }) {
         let newStats = { docs: '-', contributors: '-', queries: '-', members: '-' };
 
         if (ldbData?.leaderboard) {
-          newTopContributors = ldbData.leaderboard.slice(0, 3).map((u, i) => ({
+          newTopContributors = ldbData.leaderboard.slice(0, 10).map((u, i) => ({
             name: u.name || 'Anonymous',
             dept: u.regNo || 'N/A',
             pts: u.points,
@@ -232,7 +232,7 @@ function FeedTab({ setActiveTab }) {
         newStats = { ...newStats, queries: allQueries.length.toString() };
         const newActiveDiscussions = [...allQueries]
           .sort((a, b) => (b.answers?.length || 0) - (a.answers?.length || 0))
-          .slice(0, 3)
+          .slice(0, 10)
           .map(q => ({
             q: q.title, by: q.author?.name || 'Anonymous',
             ago: new Date(q.createdAt).toLocaleDateString(),
@@ -255,7 +255,7 @@ function FeedTab({ setActiveTab }) {
             interestedUsers: []
           }));
         const combinedEvents = [...allEvents, ...announcementEvents];
-        const newUpcomingEvents = combinedEvents.slice(0, 3).map(ev => {
+        const newUpcomingEvents = combinedEvents.slice(0, 10).map(ev => {
           const dateObj = new Date(ev.date);
           return {
             month: dateObj.toLocaleString('default', { month: 'short' }).toUpperCase(),
@@ -425,79 +425,85 @@ function FeedTab({ setActiveTab }) {
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(290px, 1fr))", gap: "20px" }}>
 
         {/* Top Contributors */}
-        <div style={{ background: "#fff", borderRadius: "16px", padding: "24px", border: "1px solid #f0e6d2", boxShadow: "0 2px 8px rgba(160,110,40,0.04)" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+        <div style={{ background: "#fff", borderRadius: "16px", padding: "24px", border: "1px solid #f0e6d2", boxShadow: "0 2px 8px rgba(160,110,40,0.04)", display: "flex", flexDirection: "column", maxHeight: "420px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", flexShrink: 0 }}>
             <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 700, color: "#1f1209", display: "flex", alignItems: "center", gap: "6px" }}>
               <TrophyIcon /> Top Contributors
             </h3>
             <button onClick={() => setActiveTab('leaderboard')} style={{ background: "none", border: "none", color: "#c8861a", fontSize: "0.8rem", fontWeight: 600, cursor: "pointer" }}>View All</button>
           </div>
-          {topContributors.length > 0 ? topContributors.map((u, i) => (
-            <div key={i} style={{ display: "flex", alignItems: "center", gap: "12px", justifyContent: "space-between", marginBottom: i < 2 ? "14px" : 0, paddingBottom: i < 2 ? "14px" : 0, borderBottom: i < 2 ? "1px solid #f5efeb" : "none" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <div style={{ width: 24, height: 24, borderRadius: "50%", background: u.color + "22", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <span style={{ fontSize: "0.7rem", fontWeight: 800, color: u.color }}>{i + 1}</span>
+          <div style={{ flex: 1, overflowY: "auto", paddingRight: "4px", display: "flex", flexDirection: "column", gap: "14px" }}>
+            {topContributors.length > 0 ? topContributors.map((u, i) => (
+              <div key={i} style={{ display: "flex", alignItems: "center", gap: "12px", justifyContent: "space-between", paddingBottom: i !== topContributors.length - 1 ? "14px" : 0, borderBottom: i !== topContributors.length - 1 ? "1px solid #f5efeb" : "none", flexShrink: 0 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <div style={{ width: 24, height: 24, borderRadius: "50%", background: u.color + "22", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <span style={{ fontSize: "0.7rem", fontWeight: 800, color: u.color }}>{i + 1}</span>
+                  </div>
+                  <Avatar user={u} size={36} />
+                  <div>
+                    <div style={{ fontSize: "0.88rem", fontWeight: 600, color: "#1f1209" }}>{u.name}</div>
+                    <div style={{ fontSize: "0.72rem", color: "#8b5e0a" }}>{u.dept}</div>
+                  </div>
                 </div>
-                <Avatar user={u} size={36} />
-                <div>
-                  <div style={{ fontSize: "0.88rem", fontWeight: 600, color: "#1f1209" }}>{u.name}</div>
-                  <div style={{ fontSize: "0.72rem", color: "#8b5e0a" }}>{u.dept}</div>
-                </div>
+                <div style={{ fontSize: "0.88rem", fontWeight: 700, color: u.color }}>{u.pts} pts</div>
               </div>
-              <div style={{ fontSize: "0.88rem", fontWeight: 700, color: u.color }}>{u.pts} pts</div>
-            </div>
-          )) : <div style={{ fontSize: "0.8rem", color: "#8b5e0a" }}>No data yet.</div>}
+            )) : <div style={{ fontSize: "0.8rem", color: "#8b5e0a" }}>No data yet.</div>}
+          </div>
         </div>
 
         {/* Active Discussions */}
-        <div style={{ background: "#fff", borderRadius: "16px", padding: "24px", border: "1px solid #f0e6d2", boxShadow: "0 2px 8px rgba(160,110,40,0.04)" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+        <div style={{ background: "#fff", borderRadius: "16px", padding: "24px", border: "1px solid #f0e6d2", boxShadow: "0 2px 8px rgba(160,110,40,0.04)", display: "flex", flexDirection: "column", maxHeight: "420px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", flexShrink: 0 }}>
             <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 700, color: "#1f1209", display: "flex", alignItems: "center", gap: "6px" }}>
               <FireIcon /> Active Discussions
             </h3>
             <button onClick={() => setActiveTab('queries')} style={{ background: "none", border: "none", color: "#c8861a", fontSize: "0.8rem", fontWeight: 600, cursor: "pointer" }}>View All</button>
           </div>
-          {activeDiscussions.length > 0 ? activeDiscussions.map((d, i) => (
-            <div key={i} onClick={() => setActiveTab('queries')} style={{ paddingBottom: i < 2 ? "14px" : 0, marginBottom: i < 2 ? "14px" : 0, borderBottom: i < 2 ? "1px solid #f5efeb" : "none", cursor: "pointer" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "6px" }}>
-                <div style={{ fontSize: "0.88rem", fontWeight: 600, color: "#1f1209", flex: 1, paddingRight: "10px", lineHeight: 1.4 }}>{d.q}</div>
-                <span style={{ fontSize: "0.68rem", padding: "3px 8px", background: d.tagBg, color: d.tagColor, borderRadius: "12px", fontWeight: 700, whiteSpace: "nowrap" }}>{d.tag}</span>
+          <div style={{ flex: 1, overflowY: "auto", paddingRight: "4px", display: "flex", flexDirection: "column", gap: "14px" }}>
+            {activeDiscussions.length > 0 ? activeDiscussions.map((d, i) => (
+              <div key={i} onClick={() => setActiveTab('queries')} style={{ paddingBottom: i !== activeDiscussions.length - 1 ? "14px" : 0, borderBottom: i !== activeDiscussions.length - 1 ? "1px solid #f5efeb" : "none", cursor: "pointer", flexShrink: 0 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "6px" }}>
+                  <div style={{ fontSize: "0.88rem", fontWeight: 600, color: "#1f1209", flex: 1, paddingRight: "10px", lineHeight: 1.4 }}>{d.q}</div>
+                  <span style={{ fontSize: "0.68rem", padding: "3px 8px", background: d.tagBg, color: d.tagColor, borderRadius: "12px", fontWeight: 700, whiteSpace: "nowrap" }}>{d.tag}</span>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <span style={{ fontSize: "0.72rem", color: "#8b5e0a" }}>Asked by <b>{d.by}</b> • {d.ago}</span>
+                  <span style={{ fontSize: "0.7rem", color: "#8b5e0a", display: "flex", alignItems: "center", gap: "3px" }}>
+                    <ChatIcon style={{ width: 10 }} /> {d.answers} answers
+                  </span>
+                </div>
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ fontSize: "0.72rem", color: "#8b5e0a" }}>Asked by <b>{d.by}</b> • {d.ago}</span>
-                <span style={{ fontSize: "0.7rem", color: "#8b5e0a", display: "flex", alignItems: "center", gap: "3px" }}>
-                  <ChatIcon style={{ width: 10 }} /> {d.answers} answers
-                </span>
-              </div>
-            </div>
-          )) : <div style={{ fontSize: "0.8rem", color: "#8b5e0a" }}>No active discussions yet.</div>}
+            )) : <div style={{ fontSize: "0.8rem", color: "#8b5e0a" }}>No active discussions yet.</div>}
+          </div>
         </div>
 
         {/* Upcoming Events + Announcements widget */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-          <div style={{ background: "#fff", borderRadius: "16px", padding: "24px", border: "1px solid #f0e6d2", boxShadow: "0 2px 8px rgba(160,110,40,0.04)", flex: 1 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px", maxHeight: "420px" }}>
+          <div style={{ background: "#fff", borderRadius: "16px", padding: "24px", border: "1px solid #f0e6d2", boxShadow: "0 2px 8px rgba(160,110,40,0.04)", flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", flexShrink: 0 }}>
               <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 700, color: "#1f1209", display: "flex", alignItems: "center", gap: "6px" }}>
                 <CalIcon /> Upcoming Events
               </h3>
               <button onClick={() => setActiveTab('happening')} style={{ background: "none", border: "none", color: "#c8861a", fontSize: "0.8rem", fontWeight: 600, cursor: "pointer" }}>View All</button>
             </div>
-            {upcomingEvents.length > 0 ? upcomingEvents.map((ev, i) => (
-              <div key={i} style={{ display: "flex", gap: "14px", alignItems: "center", marginBottom: i < 2 ? "14px" : 0, paddingBottom: i < 2 ? "14px" : 0, borderBottom: i < 2 ? "1px solid #f5efeb" : "none" }}>
-                <div style={{ width: 44, height: 44, borderRadius: "10px", background: ev.color + "1A", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  <span style={{ fontSize: "0.55rem", fontWeight: 700, color: ev.color, textTransform: "uppercase" }}>{ev.month}</span>
-                  <span style={{ fontSize: "1.1rem", fontWeight: 800, color: "#1f1209", lineHeight: 1 }}>{ev.day}</span>
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "2px" }}>
-                    <div style={{ fontSize: "0.88rem", fontWeight: 700, color: "#1f1209" }}>{ev.title}</div>
-                    {ev.typeBadge && <span style={{ fontSize: "0.62rem", fontWeight: 700, color: ev.color, background: ev.color + "1A", padding: "2px 7px", borderRadius: "10px", flexShrink: 0 }}>{ev.typeBadge}</span>}
+            <div style={{ flex: 1, overflowY: "auto", paddingRight: "4px", display: "flex", flexDirection: "column", gap: "14px" }}>
+              {upcomingEvents.length > 0 ? upcomingEvents.map((ev, i) => (
+                <div key={i} style={{ display: "flex", gap: "14px", alignItems: "center", paddingBottom: i !== upcomingEvents.length - 1 ? "14px" : 0, borderBottom: i !== upcomingEvents.length - 1 ? "1px solid #f5efeb" : "none", flexShrink: 0 }}>
+                  <div style={{ width: 44, height: 44, borderRadius: "10px", background: ev.color + "1A", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <span style={{ fontSize: "0.55rem", fontWeight: 700, color: ev.color, textTransform: "uppercase" }}>{ev.month}</span>
+                    <span style={{ fontSize: "1.1rem", fontWeight: 800, color: "#1f1209", lineHeight: 1 }}>{ev.day}</span>
                   </div>
-                  <div style={{ fontSize: "0.72rem", color: "#8b5e0a" }}>{ev.desc}</div>
-                  <div style={{ fontSize: "0.68rem", color: ev.color, fontWeight: 600 }}>{ev.interested} Interested</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "2px" }}>
+                      <div style={{ fontSize: "0.88rem", fontWeight: 700, color: "#1f1209" }}>{ev.title}</div>
+                      {ev.typeBadge && <span style={{ fontSize: "0.62rem", fontWeight: 700, color: ev.color, background: ev.color + "1A", padding: "2px 7px", borderRadius: "10px", flexShrink: 0 }}>{ev.typeBadge}</span>}
+                    </div>
+                    <div style={{ fontSize: "0.72rem", color: "#8b5e0a" }}>{ev.desc}</div>
+                    <div style={{ fontSize: "0.68rem", color: ev.color, fontWeight: 600 }}>{ev.interested} Interested</div>
+                  </div>
                 </div>
-              </div>
-            )) : <div style={{ fontSize: "0.8rem", color: "#8b5e0a" }}>No upcoming events scheduled.</div>}
+              )) : <div style={{ fontSize: "0.8rem", color: "#8b5e0a" }}>No upcoming events scheduled.</div>}
+            </div>
           </div>
 
           {/* CTA Card */}
