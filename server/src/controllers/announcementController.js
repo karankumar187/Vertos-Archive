@@ -39,19 +39,6 @@ exports.createAnnouncement = async (req, res) => {
         res.status(500).json({ success: false, message: 'Server error' });
     }
 };
-        await ActivityLog.create({
-            adminId: req.user._id,
-            action: 'Created Announcement',
-            targetType: 'Announcement',
-            targetName: title,
-            targetId: ann._id,
-            ipAddress: req.ip || 'N/A'
-        });
-        res.status(201).json({ success: true, data: ann });
-    } catch (err) {
-        res.status(500).json({ success: false, message: 'Server error' });
-    }
-};
 
 // @desc  Update announcement
 // @route PUT /api/admin/announcements/:id

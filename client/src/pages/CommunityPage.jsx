@@ -182,6 +182,7 @@ function FeedTab({ setActiveTab }) {
   const [topContributors, setTopContributors] = useState([]);
   const [activeDiscussions, setActiveDiscussions] = useState([]);
   const [upcomingEvents, setUpcomingEvents] = useState([]);
+  const [announcements, setAnnouncements] = useState([]);
   const [stats, setStats] = useState({ docs: '-', contributors: '-', queries: '-', members: '-' });
   const [loading, setLoading] = useState(true);
 
@@ -192,6 +193,7 @@ function FeedTab({ setActiveTab }) {
       if (d.topContributors) setTopContributors(d.topContributors);
       if (d.activeDiscussions) setActiveDiscussions(d.activeDiscussions);
       if (d.upcomingEvents) setUpcomingEvents(d.upcomingEvents);
+      if (d.announcements) setAnnouncements(d.announcements);
       if (d.stats) setStats(d.stats);
     };
 
@@ -277,7 +279,11 @@ function FeedTab({ setActiveTab }) {
           }
         } catch (_) { /* silently fail */ }
 
-        const freshData = { topContributors: newTopContributors, activeDiscussions: newActiveDiscussions, upcomingEvents: newUpcomingEvents, stats: { ...newStats, members: totalMembers } };
+        // All published announcements for the sidebar widget (non-Event ones)
+        const allAnnouncements = annRes.data?.data || [];
+        const newAnnouncements = allAnnouncements.slice(0, 5); // show latest 5
+
+        const freshData = { topContributors: newTopContributors, activeDiscussions: newActiveDiscussions, upcomingEvents: newUpcomingEvents, announcements: newAnnouncements, stats: { ...newStats, members: totalMembers } };
         applyData(freshData);
         cacheSet(CACHE_KEY, freshData);
       } catch (err) {
@@ -379,6 +385,44 @@ function FeedTab({ setActiveTab }) {
       </div>
 
 
+      {/* ── ANNOUNCEMENTS STRIP ── */}
+      {announcements.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 700, color: "#1f1209", display: "flex", alignItems: "center", gap: "8px" }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c8861a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 17H2a3 3 0 0 0 3-3V9a7 7 0 0 1 14 0v5a3 3 0 0 0 3 3zm-8.27 4a2 2 0 0 1-3.46 0"/></svg>
+              Announcements
+            </h3>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            {announcements.map((ann, i) => {
+              const typeColors = {
+                'General':     { bg: '#f0f9ff', border: '#bae6fd', text: '#0369a1', badge: '#0ea5e9' },
+                'Exam':        { bg: '#fff7ed', border: '#fed7aa', text: '#c2410c', badge: '#f97316' },
+                'Placement':   { bg: '#f0fdf4', border: '#bbf7d0', text: '#15803d', badge: '#16a34a' },
+                'Event':       { bg: '#fdf4ff', border: '#e9d5ff', text: '#7e22ce', badge: '#a855f7' },
+                'Maintenance': { bg: '#fafaf9', border: '#e7e5e4', text: '#57534e', badge: '#78716c' },
+                'Academic':    { bg: '#fefce8', border: '#fef08a', text: '#854d0e', badge: '#ca8a04' },
+              };
+              const tc = typeColors[ann.type] || typeColors['General'];
+              return (
+                <div key={i} style={{
+                  background: tc.bg, border: `1px solid ${tc.border}`, borderRadius: "12px",
+                  padding: "12px 16px", display: "flex", alignItems: "flex-start", gap: "12px"
+                }}>
+                  <span style={{ padding: "3px 9px", background: tc.badge, color: "#fff", borderRadius: "8px", fontSize: "0.68rem", fontWeight: 700, flexShrink: 0, marginTop: "1px" }}>{ann.type}</span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: "0.88rem", fontWeight: 700, color: "#1f1209", marginBottom: "2px" }}>{ann.title}</div>
+                    <div style={{ fontSize: "0.78rem", color: tc.text, lineHeight: 1.5 }}>{ann.content}</div>
+                    <div style={{ fontSize: "0.68rem", color: "#9ca3af", marginTop: "4px" }}>{new Date(ann.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} · {ann.audience}</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* ── BOTTOM 3-COL GRID ── */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(290px, 1fr))", gap: "20px" }}>
 
@@ -431,7 +475,7 @@ function FeedTab({ setActiveTab }) {
           )) : <div style={{ fontSize: "0.8rem", color: "#8b5e0a" }}>No active discussions yet.</div>}
         </div>
 
-        {/* Upcoming Events + CTA */}
+        {/* Upcoming Events + Announcements widget */}
         <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
           <div style={{ background: "#fff", borderRadius: "16px", padding: "24px", border: "1px solid #f0e6d2", boxShadow: "0 2px 8px rgba(160,110,40,0.04)", flex: 1 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
