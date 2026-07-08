@@ -9,6 +9,7 @@ import ArchiveTab from "./ArchiveTab";
 import HappeningTab from "./HappeningTab";
 import { queriesAPI, eventsAPI, leaderboardAPI, announcementsAPI } from "../services/api";
 import { cacheGet, cacheSet } from "../utils/localCache";
+import EventDetailsModal from "../components/EventDetailsModal";
 
 /* ─── SVG Icon Components ───────────────────────────────────── */
 const TrophyIcon = () => (
@@ -185,6 +186,7 @@ function FeedTab({ setActiveTab }) {
   const [announcements, setAnnouncements] = useState([]);
   const [stats, setStats] = useState({ docs: '-', contributors: '-', queries: '-', members: '-' });
   const [loading, setLoading] = useState(true);
+  const [selectedEvent, setSelectedEvent] = useState(null);
 
   useEffect(() => {
     const CACHE_KEY = 'community_feed_data';
@@ -247,23 +249,32 @@ function FeedTab({ setActiveTab }) {
           .filter(a => a.type === 'Event')
           .map(a => ({
             _fromAnnouncement: true,
+            _id: a._id,
             title: a.title,
             description: a.content,
+            content: a.content,
             type: 'Event',
             date: a.eventDate || a.createdAt,
+            eventDate: a.eventDate || a.createdAt,
             location: a.audience || 'All Students',
-            interestedUsers: []
+            audience: a.audience,
+            registrationLink: a.registrationLink || null,
+            registeredUsers: a.registeredUsers || []
           }));
         const combinedEvents = [...allEvents, ...announcementEvents];
         const newUpcomingEvents = combinedEvents.slice(0, 10).map(ev => {
-          const dateObj = new Date(ev.date);
+          const dateObj = new Date(ev.date || ev.eventDate);
           return {
+            _id: ev._id,
+            _fromAnnouncement: ev._fromAnnouncement,
             month: dateObj.toLocaleString('default', { month: 'short' }).toUpperCase(),
             day: dateObj.getDate(), title: ev.title,
             desc: `${ev.type} • ${ev.location || ev.audience || ''}`,
-            interested: ev.interestedUsers?.length || 0,
+            registered: ev.registeredUsers?.length || 0,
             color: ev.type === 'Hackathon' ? '#c8861a' : ev.type === 'Workshop' ? '#7c3aed' : ev.type === 'Event' ? '#db2777' : '#059669',
-            typeBadge: ev.type
+            typeBadge: ev.type,
+            // Keep raw fields for modal
+            _raw: ev
           };
         });
 
@@ -304,6 +315,17 @@ function FeedTab({ setActiveTab }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "28px", paddingBottom: "64px" }}>
+
+      {/* Event Details Modal */}
+      {selectedEvent && (
+        <EventDetailsModal
+          event={selectedEvent._raw || selectedEvent}
+          onClose={() => setSelectedEvent(null)}
+          onRegisterSuccess={(id, count) => {
+            setUpcomingEvents(prev => prev.map(ev => ev._id === id ? { ...ev, registered: count } : ev));
+          }}
+        />
+      )}
 
       {/* ── HERO BANNER ── */}
       <div style={{
@@ -488,7 +510,12 @@ function FeedTab({ setActiveTab }) {
             </div>
             <div style={{ flex: 1, overflowY: "auto", paddingRight: "4px", display: "flex", flexDirection: "column", gap: "14px" }}>
               {upcomingEvents.length > 0 ? upcomingEvents.map((ev, i) => (
-                <div key={i} style={{ display: "flex", gap: "14px", alignItems: "center", paddingBottom: i !== upcomingEvents.length - 1 ? "14px" : 0, borderBottom: i !== upcomingEvents.length - 1 ? "1px solid #f5efeb" : "none", flexShrink: 0 }}>
+                <div key={i}
+                  onClick={() => setSelectedEvent(ev)}
+                  style={{ display: "flex", gap: "14px", alignItems: "center", paddingBottom: i !== upcomingEvents.length - 1 ? "14px" : 0, borderBottom: i !== upcomingEvents.length - 1 ? "1px solid #f5efeb" : "none", flexShrink: 0, cursor: "pointer", borderRadius: "8px", transition: "background 0.15s" }}
+                  onMouseEnter={e => e.currentTarget.style.background = "#fdf8f1"}
+                  onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                >
                   <div style={{ width: 44, height: 44, borderRadius: "10px", background: ev.color + "1A", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                     <span style={{ fontSize: "0.55rem", fontWeight: 700, color: ev.color, textTransform: "uppercase" }}>{ev.month}</span>
                     <span style={{ fontSize: "1.1rem", fontWeight: 800, color: "#1f1209", lineHeight: 1 }}>{ev.day}</span>
@@ -498,8 +525,7 @@ function FeedTab({ setActiveTab }) {
                       <div style={{ fontSize: "0.88rem", fontWeight: 700, color: "#1f1209" }}>{ev.title}</div>
                       {ev.typeBadge && <span style={{ fontSize: "0.62rem", fontWeight: 700, color: ev.color, background: ev.color + "1A", padding: "2px 7px", borderRadius: "10px", flexShrink: 0 }}>{ev.typeBadge}</span>}
                     </div>
-                    <div style={{ fontSize: "0.72rem", color: "#8b5e0a" }}>{ev.desc}</div>
-                    <div style={{ fontSize: "0.68rem", color: ev.color, fontWeight: 600 }}>{ev.interested} Interested</div>
+                    <div style={{ fontSize: "0.68rem", color: ev.color, fontWeight: 600 }}>{ev.registered || 0} Registered</div>
                   </div>
                 </div>
               )) : <div style={{ fontSize: "0.8rem", color: "#8b5e0a" }}>No upcoming events scheduled.</div>}

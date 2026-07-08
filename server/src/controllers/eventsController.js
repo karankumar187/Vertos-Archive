@@ -31,7 +31,8 @@ exports.createEvent = async (req, res) => {
       description,
       date,
       location,
-      type: type || 'Other'
+      type: type || 'Other',
+      registrationLink: req.body.registrationLink || null
     });
 
     await newEvent.save();
@@ -43,7 +44,7 @@ exports.createEvent = async (req, res) => {
   }
 };
 
-exports.toggleInterest = async (req, res) => {
+exports.registerForEvent = async (req, res) => {
   try {
     const { id } = req.params;
     const userId = req.user.id;
@@ -53,18 +54,21 @@ exports.toggleInterest = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Event not found' });
     }
 
-    const index = event.interestedUsers.indexOf(userId);
-    if (index === -1) {
-      event.interestedUsers.push(userId); // Add interest
-    } else {
-      event.interestedUsers.splice(index, 1); // Remove interest
+    // One-time registration only - no toggle
+    const alreadyRegistered = event.registeredUsers.map(u => u.toString()).includes(userId.toString());
+    if (!alreadyRegistered) {
+      event.registeredUsers.push(userId);
+      await event.save();
     }
 
-    await event.save();
-
-    res.json({ success: true, data: event });
+    res.json({
+      success: true,
+      data: event,
+      alreadyRegistered,
+      registeredCount: event.registeredUsers.length
+    });
   } catch (error) {
-    console.error('Error toggling event interest:', error);
-    res.status(500).json({ success: false, message: 'Server error toggling interest' });
+    console.error('Error registering for event:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 };

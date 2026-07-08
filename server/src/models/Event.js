@@ -25,7 +25,11 @@ const eventSchema = new mongoose.Schema({
     enum: ['Hackathon', 'Workshop', 'Seminar', 'Other'],
     default: 'Other'
   },
-  interestedUsers: [{
+  registrationLink: {
+    type: String,
+    trim: true
+  },
+  registeredUsers: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
   }],

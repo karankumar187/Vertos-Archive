@@ -18,12 +18,13 @@ exports.getAnnouncements = async (req, res) => {
 // @route POST /api/admin/announcements
 exports.createAnnouncement = async (req, res) => {
     try {
-        const { title, content, type, audience, status, scheduledAt, eventDate } = req.body;
+        const { title, content, type, audience, status, scheduledAt, eventDate, registrationLink } = req.body;
         const ann = await Announcement.create({
             title, content, type, audience, status,
             scheduledAt: scheduledAt || null,
             publishedAt: status === 'published' ? new Date() : null,
             eventDate: eventDate || null,
+            registrationLink: registrationLink || null,
             createdBy: req.user._id
         });
         await ActivityLog.create({
@@ -44,8 +45,8 @@ exports.createAnnouncement = async (req, res) => {
 // @route PUT /api/admin/announcements/:id
 exports.updateAnnouncement = async (req, res) => {
     try {
-        const { title, content, type, audience, status, scheduledAt, eventDate } = req.body;
-        const update = { title, content, type, audience, status, scheduledAt, eventDate: eventDate || null };
+        const { title, content, type, audience, status, scheduledAt, eventDate, registrationLink } = req.body;
+        const update = { title, content, type, audience, status, scheduledAt, eventDate: eventDate || null, registrationLink: registrationLink || null };
         if (status === 'published') update.publishedAt = new Date();
         const ann = await Announcement.findByIdAndUpdate(req.params.id, update, { new: true });
         if (!ann) return res.status(404).json({ success: false, message: 'Not found' });
@@ -88,8 +89,26 @@ exports.getPublishedAnnouncements = async (req, res) => {
     try {
         const announcements = await Announcement.find({ status: 'published' })
             .sort({ createdAt: -1 })
-            .select('title content type audience eventDate publishedAt createdAt');
+            .select('title content type audience eventDate publishedAt createdAt registrationLink registeredUsers');
         res.json({ success: true, data: announcements });
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+};
+
+// @desc  Register for announcement event
+// @route POST /api/auth/announcements/:id/register
+exports.registerForAnnouncement = async (req, res) => {
+    try {
+        const ann = await Announcement.findById(req.params.id);
+        if (!ann) return res.status(404).json({ success: false, message: 'Not found' });
+        
+        if (!ann.registeredUsers.includes(req.user._id)) {
+            ann.registeredUsers.push(req.user._id);
+            await ann.save();
+        }
+        
+        res.json({ success: true, message: 'Registered successfully', registeredCount: ann.registeredUsers.length });
     } catch (err) {
         res.status(500).json({ success: false, message: 'Server error' });
     }

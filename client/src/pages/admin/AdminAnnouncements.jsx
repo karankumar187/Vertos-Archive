@@ -11,7 +11,8 @@ function AnnouncementModal({ announcement, onClose, onSuccess }) {
     type: announcement?.type || 'General',
     audience: announcement?.audience || 'All Students',
     status: announcement?.status || 'draft',
-    eventDate: announcement?.eventDate ? new Date(announcement.eventDate).toISOString().split('T')[0] : ''
+    eventDate: announcement?.eventDate ? new Date(announcement.eventDate).toISOString().split('T')[0] : '',
+    registrationLink: announcement?.registrationLink || ''
   });
   const [loading, setLoading] = useState(false);
 
@@ -66,12 +67,18 @@ function AnnouncementModal({ announcement, onClose, onSuccess }) {
             </div>
           </div>
 
-          {/* Event Date — only shown for Event type */}
+          {/* Event Date & Registration Link — only shown for Event type */}
           {form.type === 'Event' && (
-            <div>
-              <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#5c4021', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Event Date</label>
-              <input type="date" value={form.eventDate} onChange={e => setForm({...form, eventDate: e.target.value})} style={{ width: '100%', padding: '10px 14px', border: '1px solid #ddd0b8', borderRadius: '8px', outline: 'none', boxSizing: 'border-box' }} />
-            </div>
+            <>
+              <div>
+                <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#5c4021', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Event Date</label>
+                <input type="date" value={form.eventDate} onChange={e => setForm({...form, eventDate: e.target.value})} style={{ width: '100%', padding: '10px 14px', border: '1px solid #ddd0b8', borderRadius: '8px', outline: 'none', boxSizing: 'border-box' }} />
+              </div>
+              <div>
+                <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#5c4021', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Registration Link (optional)</label>
+                <input type="url" placeholder="https://forms.google.com/..." value={form.registrationLink} onChange={e => setForm({...form, registrationLink: e.target.value})} style={{ width: '100%', padding: '10px 14px', border: '1px solid #ddd0b8', borderRadius: '8px', outline: 'none', boxSizing: 'border-box' }} />
+              </div>
+            </>
           )}
 
           <div>

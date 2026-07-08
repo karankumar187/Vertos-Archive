@@ -5,6 +5,6 @@ const { protect } = require('../middleware/auth');
 
 router.get('/', protect, eventsController.getAllEvents);
 router.post('/', protect, eventsController.createEvent);
-router.post('/:id/interest', protect, eventsController.toggleInterest);
+router.post('/:id/register', protect, eventsController.registerForEvent);
 
 module.exports = router;

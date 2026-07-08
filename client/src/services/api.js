@@ -103,7 +103,7 @@ export const queriesAPI = {
 export const eventsAPI = {
     getEvents: () => api.get('/events'),
     createEvent: (data) => api.post('/events', data),
-    toggleInterest: (id) => api.post(`/events/${id}/interest`),
+    registerForEvent: (id) => api.post(`/events/${id}/register`),
 };
 
 export const archiveAPI = {
@@ -113,6 +113,7 @@ export const archiveAPI = {
 // Public Announcements API (no admin required)
 export const announcementsAPI = {
     getPublished: () => api.get('/auth/announcements'),
+    registerForAnnouncement: (id) => api.post(`/auth/announcements/${id}/register`),
 };
 
 export default api;

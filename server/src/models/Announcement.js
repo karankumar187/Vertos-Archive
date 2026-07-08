@@ -21,6 +21,8 @@ const announcementSchema = new mongoose.Schema({
     scheduledAt: { type: Date },
     publishedAt: { type: Date },
     eventDate: { type: Date },  // for type=Event, shown in calendar views
+    registrationLink: { type: String }, // external link for events
+    registeredUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }], // users who clicked register
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
 }, { timestamps: true });
 
