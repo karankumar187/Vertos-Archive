@@ -231,7 +231,7 @@ function FeedTab({ setActiveTab }) {
         const allQueries = qRes.data?.data || [];
         newStats = { ...newStats, queries: allQueries.length.toString() };
         const newActiveDiscussions = [...allQueries]
-          .sort((a, b) => (b.answers?.length || 0) - (a.answers?.length || 0))
+          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
           .slice(0, 10)
           .map(q => ({
             q: q.title, by: q.author?.name || 'Anonymous',

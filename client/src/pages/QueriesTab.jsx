@@ -62,6 +62,7 @@ export default function QueriesTab() {
   const [loading, setLoading] = useState(true);
   const [selectedQuery, setSelectedQuery] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState("latest");
   
   // Ask form
   const [showAskForm, setShowAskForm] = useState(false);
@@ -233,7 +234,11 @@ export default function QueriesTab() {
   const filteredQueries = queries.filter(q => 
     q.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
     q.description.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  ).sort((a, b) => {
+    if (sortBy === 'latest') return new Date(b.createdAt) - new Date(a.createdAt);
+    if (sortBy === 'popular') return (b.answers?.length || 0) - (a.answers?.length || 0);
+    return 0;
+  });
 
   // --- Reusable UI Parts ---
   
@@ -455,8 +460,8 @@ export default function QueriesTab() {
           <SearchBar style={{ marginBottom: "24px" }} />
           
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "32px" }}>
-            <button style={{ background: "#fff", border: "1px solid #f0e6d2", padding: "10px 20px", borderRadius: "12px", display: "flex", alignItems: "center", gap: "8px", fontWeight: 700, color: "#1f1209", cursor: "pointer", boxShadow: "0 2px 4px rgba(0,0,0,0.02)" }}>
-              Latest first <FilterIcon />
+            <button onClick={() => setSortBy(prev => prev === 'latest' ? 'popular' : 'latest')} style={{ background: "#fff", border: "1px solid #f0e6d2", padding: "10px 20px", borderRadius: "12px", display: "flex", alignItems: "center", gap: "8px", fontWeight: 700, color: "#1f1209", cursor: "pointer", boxShadow: "0 2px 4px rgba(0,0,0,0.02)" }}>
+              {sortBy === 'latest' ? 'Latest first' : 'Popular first'} <FilterIcon />
             </button>
             <div style={{ display: "flex", alignItems: "center", gap: "24px" }}>
               <button onClick={() => setSearchQuery("")} style={{ background: "none", border: "none", display: "flex", alignItems: "center", gap: "8px", fontWeight: 700, color: "#8b6535", cursor: "pointer" }}>
