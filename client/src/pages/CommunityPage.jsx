@@ -199,7 +199,7 @@ function FeedTab({ setActiveTab }) {
       try {
         if (!background) setLoading(true);
         const [ldbRes, qRes, evRes] = await Promise.all([
-          leaderboardAPI.getLeaderboard().catch(() => ({ data: {} })),
+          leaderboardAPI.getLeaderboard('All Time').catch(() => ({ data: {} })),
           queriesAPI.getQueries().catch(() => ({ data: { data: [] } })),
           eventsAPI.getEvents().catch(() => ({ data: { data: [] } }))
         ]);
@@ -214,13 +214,15 @@ function FeedTab({ setActiveTab }) {
             dept: u.regNo || 'N/A',
             pts: u.points,
             avatar: u.avatar,
+            userId: u.userId,
             color: i === 0 ? '#c8861a' : i === 1 ? '#94a3b8' : '#cd7f32'
           }));
         }
         if (ldbData?.stats) {
           const docsEntry = ldbData.stats.find(s => s.label === 'Documents Shared');
           const contribEntry = ldbData.stats.find(s => s.label === 'Total Contributors');
-          newStats = { ...newStats, docs: docsEntry?.value || '-', contributors: contribEntry?.value || '-' };
+          const totalContribs = contribEntry?.value || '-';
+          newStats = { ...newStats, docs: docsEntry?.value || '-', contributors: totalContribs };
         }
 
         const allQueries = qRes.data?.data || [];
@@ -247,7 +249,19 @@ function FeedTab({ setActiveTab }) {
           };
         });
 
-        const freshData = { topContributors: newTopContributors, activeDiscussions: newActiveDiscussions, upcomingEvents: newUpcomingEvents, stats: newStats };
+        // Fetch total registered users
+        let totalMembers = '-';
+        try {
+          const usersRes = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5001/api'}/auth/user-count`, {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+          });
+          if (usersRes.ok) {
+            const usersData = await usersRes.json();
+            totalMembers = usersData.count?.toString() || '-';
+          }
+        } catch (_) { /* silently fail */ }
+
+        const freshData = { topContributors: newTopContributors, activeDiscussions: newActiveDiscussions, upcomingEvents: newUpcomingEvents, stats: { ...newStats, members: totalMembers } };
         applyData(freshData);
         cacheSet(CACHE_KEY, freshData);
       } catch (err) {
@@ -305,7 +319,13 @@ function FeedTab({ setActiveTab }) {
             </button>
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
               <div style={{ display: "flex" }}>
-                {["#c8861a","#b45309","#92400e"].map((c,i) => (
+                {topContributors.length > 0 ? topContributors.map((u, i) => (
+                  u.avatar
+                    ? <img key={i} src={u.avatar} alt={u.name} style={{ width: 28, height: 28, borderRadius: "50%", objectFit: "cover", border: "2px solid #fff", marginLeft: i > 0 ? "-8px" : 0, zIndex: 3-i, flexShrink: 0 }} />
+                    : <div key={i} style={{ width: 28, height: 28, borderRadius: "50%", background: u.color, border: "2px solid #fff", marginLeft: i > 0 ? "-8px" : 0, zIndex: 3-i, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <span style={{ fontSize: "0.6rem", fontWeight: 800, color: "#fff" }}>{u.name?.charAt(0)}</span>
+                      </div>
+                )) : ["#c8861a","#b45309","#92400e"].map((c,i) => (
                   <div key={i} style={{ width: 28, height: 28, borderRadius: "50%", background: c, border: "2px solid #fff", marginLeft: i > 0 ? "-8px" : 0, zIndex: 3-i }} />
                 ))}
               </div>
@@ -338,7 +358,7 @@ function FeedTab({ setActiveTab }) {
         <StatCard IconComp={DocIcon} value={loading ? '...' : stats.docs} label="Resources Shared" />
         <StatCard IconComp={TrophyIcon} value={loading ? '...' : stats.contributors} label="Top Contributors" />
         <StatCard IconComp={ChatIcon} value={loading ? '...' : stats.queries} label="Queries Asked" />
-        <StatCard IconComp={PeopleIcon} value={loading ? '...' : (topContributors.length > 0 ? topContributors.length + '+' : '-')} label="Active Mentors" />
+        <StatCard IconComp={PeopleIcon} value={loading ? '...' : (stats.members && stats.members !== '-' ? stats.members : (topContributors.length > 0 ? topContributors.length + '+' : '-'))} label="Total Members" />
         <StatCard IconComp={StarIcon} value={loading ? '...' : (upcomingEvents.length > 0 ? upcomingEvents.length.toString() : '0')} label="Upcoming Events" />
       </div>
 

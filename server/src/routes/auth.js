@@ -6,6 +6,7 @@ const jwt = require('jsonwebtoken');
 const { register, login, getMe, updateProfile, changePassword } = require('../controllers/authController');
 const { protect } = require('../middleware/auth');
 const { JWT_SECRET, JWT_EXPIRE, CLIENT_URL } = require('../config/config');
+const User = require('../models/User');
 
 const router = express.Router();
 
@@ -42,6 +43,16 @@ router.post('/login', authLimiter, loginValidation, login);
 router.get('/me', protect, getMe);
 router.put('/profile', protect, updateProfile);
 router.put('/change-password', protect, passwordValidation, changePassword);
+
+// ─── Public Stats ───────────────────────────────────────────────────────────
+router.get('/user-count', async (req, res) => {
+    try {
+        const count = await User.countDocuments();
+        res.json({ success: true, count });
+    } catch (err) {
+        res.json({ success: false, count: 0 });
+    }
+});
 
 // ─── Google OAuth Routes ────────────────────────────────────────────────────
 

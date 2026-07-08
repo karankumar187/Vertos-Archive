@@ -363,7 +363,7 @@ function Row({ entry, isMe }) {
 
 export default function LeaderboardPage() {
   const { user } = useAuth();
-  const [period, setPeriod] = useState("This Month");
+  const [period, setPeriod] = useState("All Time");
   const [leaderboard, setLeaderboard] = useState([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [showAll, setShowAll] = useState(false);
