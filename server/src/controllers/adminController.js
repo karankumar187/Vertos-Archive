@@ -330,29 +330,76 @@ exports.suspendUser = async (req, res) => {
 exports.getAdminAnalytics = async (req, res) => {
     try {
         const totalUsers = await User.countDocuments();
+        const activeUsers = await User.countDocuments({ isSuspended: false });
         const totalDocs = await Document.countDocuments({ verified: true });
         
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
         
-        // Mock data for charts since we don't have historical data in the DB
-        // In a real app we'd aggregate over time series
-        const uploadTrend = Array.from({length: 30}, (_, i) => ({
-            date: new Date(thirtyDaysAgo.getTime() + i * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-            count: Math.floor(Math.random() * 20)
-        }));
+        // Document Upload Trend (last 30 days)
+        const docAggregation = await Document.aggregate([
+            { $match: { createdAt: { $gte: thirtyDaysAgo } } },
+            { 
+                $group: { 
+                    _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } }, 
+                    count: { $sum: 1 } 
+                } 
+            },
+            { $sort: { "_id": 1 } }
+        ]);
+
+        // Map into an array covering the last 30 days (filling missing dates with 0)
+        const uploadTrend = [];
+        for (let i = 0; i < 30; i++) {
+            const d = new Date(thirtyDaysAgo.getTime() + i * 24 * 60 * 60 * 1000);
+            const dateStr = d.toISOString().split('T')[0];
+            const found = docAggregation.find(x => x._id === dateStr);
+            uploadTrend.push({ date: dateStr, count: found ? found.count : 0 });
+        }
+
+        // User Growth (last 30 days)
+        const userAggregation = await User.aggregate([
+            { $match: { createdAt: { $gte: thirtyDaysAgo } } },
+            { 
+                $group: { 
+                    _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } }, 
+                    count: { $sum: 1 } 
+                } 
+            },
+            { $sort: { "_id": 1 } }
+        ]);
+
+        const userGrowth = [];
+        for (let i = 0; i < 30; i++) {
+            const d = new Date(thirtyDaysAgo.getTime() + i * 24 * 60 * 60 * 1000);
+            const dateStr = d.toISOString().split('T')[0];
+            const found = userAggregation.find(x => x._id === dateStr);
+            userGrowth.push({ date: dateStr, count: found ? found.count : 0 });
+        }
+
+        // Top Subjects
+        const topSubjectsRaw = await Document.aggregate([
+            { $match: { verified: true } },
+            { $group: { _id: "$subject", count: { $sum: 1 } } },
+            { $sort: { count: -1 } },
+            { $limit: 4 }
+        ]);
+        
+        const topSubjects = topSubjectsRaw.map(s => ({ subject: s._id || 'Unknown', count: s.count }));
         
         res.json({
             success: true,
             data: {
                 totalUsers,
+                activeUsers,
                 totalDocs,
-                activeUsers: Math.floor(totalUsers * 0.8),
-                aiQueries: 1842,
-                uploadTrend
+                uploadTrend,
+                userGrowth,
+                topSubjects
             }
         });
     } catch (err) {
+        console.error('Analytics Error:', err);
         res.status(500).json({ success: false, message: 'Server error' });
     }
 };

@@ -74,16 +74,20 @@ export default function AdminDashboard() {
       {/* Main Content Area */}
       <div style={{ display: "flex", gap: "24px", flex: 1, minHeight: 0 }}>
         
-        {/* Chart (Placeholder SVG for now) */}
+        {/* Chart */}
         <div style={{ flex: 2, background: "#fff", borderRadius: "16px", padding: "24px", border: "1px solid #f0e6d2", display: "flex", flexDirection: "column" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
             <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 700, color: "#1f1209" }}>Upload Trend</h3>
             <span style={{ fontSize: "0.8rem", color: "#8b5e0a", fontWeight: 600 }}>Last 30 Days</span>
           </div>
-          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", border: "1px dashed #e9dcc8", borderRadius: "12px" }}>
-            <svg viewBox="0 0 400 100" style={{ width: "100%", height: "100%" }}>
-              <polyline points="0,80 50,70 100,90 150,40 200,60 250,20 300,50 350,30 400,10" fill="none" stroke="#c8861a" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
+          <div style={{ flex: 1, display: "flex", alignItems: "flex-end", gap: "4px", justifyContent: "space-between", border: "1px dashed #e9dcc8", borderRadius: "12px", padding: "10px" }}>
+            {data?.uploadTrend && data.uploadTrend.length > 0 ? data.uploadTrend.map((point, i) => {
+                const max = Math.max(...data.uploadTrend.map(p => p.count), 1);
+                const height = `${(point.count / max) * 100}%`;
+                return (
+                    <div key={i} title={`${point.date}: ${point.count}`} style={{ flex: 1, height: height, background: "#c8861a", borderRadius: "2px", minHeight: point.count > 0 ? "4px" : "0" }} />
+                );
+            }) : <div style={{ width: "100%", textAlign: "center", color: "#8b5e0a", fontSize: "0.9rem" }}>No data</div>}
           </div>
         </div>
 

@@ -75,11 +75,14 @@ export default function AdminAnalytics() {
             <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 700, color: "#1f1209" }}>User Growth</h3>
             <span style={{ fontSize: "0.8rem", color: "#8b5e0a", fontWeight: 600 }}>Last 30 Days ▾</span>
           </div>
-          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", border: "1px dashed #e9dcc8", borderRadius: "12px" }}>
-            {/* Placeholder Line Chart */}
-            <svg viewBox="0 0 400 100" style={{ width: "100%", height: "100%", padding: "10px" }}>
-              <polyline points="0,90 40,85 80,70 120,60 160,65 200,40 240,30 280,35 320,20 360,25 400,10" fill="none" stroke="#2563eb" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
+          <div style={{ flex: 1, display: "flex", alignItems: "flex-end", gap: "2px", justifyContent: "space-between", border: "1px dashed #e9dcc8", borderRadius: "12px", padding: "10px" }}>
+            {data?.userGrowth && data.userGrowth.map((point, i) => {
+                const max = Math.max(...data.userGrowth.map(p => p.count), 1);
+                const height = `${(point.count / max) * 100}%`;
+                return (
+                    <div key={i} title={`${point.date}: ${point.count}`} style={{ width: "10px", height: height, background: "#2563eb", borderRadius: "2px", minHeight: point.count > 0 ? "4px" : "0" }} />
+                );
+            })}
           </div>
         </div>
 
@@ -89,11 +92,14 @@ export default function AdminAnalytics() {
             <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 700, color: "#1f1209" }}>Documents Uploaded</h3>
             <span style={{ fontSize: "0.8rem", color: "#8b5e0a", fontWeight: 600 }}>Last 30 Days ▾</span>
           </div>
-          <div style={{ flex: 1, display: "flex", alignItems: "flex-end", justifyContent: "space-between", border: "1px dashed #e9dcc8", borderRadius: "12px", padding: "10px 20px" }}>
-            {/* Placeholder Bar Chart */}
-            {[20, 40, 30, 70, 50, 90, 60, 80, 45, 65, 30, 50, 80, 100, 90, 70, 60, 40].map((h, i) => (
-              <div key={i} style={{ width: "12px", height: `${h}%`, background: "#c8861a", borderRadius: "2px" }} />
-            ))}
+          <div style={{ flex: 1, display: "flex", alignItems: "flex-end", gap: "2px", justifyContent: "space-between", border: "1px dashed #e9dcc8", borderRadius: "12px", padding: "10px" }}>
+            {data?.uploadTrend && data.uploadTrend.map((point, i) => {
+                const max = Math.max(...data.uploadTrend.map(p => p.count), 1);
+                const height = `${(point.count / max) * 100}%`;
+                return (
+                    <div key={i} title={`${point.date}: ${point.count}`} style={{ width: "10px", height: height, background: "#c8861a", borderRadius: "2px", minHeight: point.count > 0 ? "4px" : "0" }} />
+                );
+            })}
           </div>
         </div>
 
@@ -101,32 +107,27 @@ export default function AdminAnalytics() {
         <div style={{ background: "#fff", borderRadius: "16px", padding: "24px", border: "1px solid #f0e6d2", display: "flex", flexDirection: "column" }}>
           <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 700, color: "#1f1209", marginBottom: "24px" }}>Top Subjects</h3>
           <div style={{ flex: 1, display: "flex", alignItems: "center", gap: "32px", padding: "0 20px" }}>
-            {/* Placeholder Donut */}
+            {/* Placeholder Donut based on top subjects */}
             <div style={{ width: 140, height: 140, borderRadius: "50%", background: "conic-gradient(#c8861a 0% 35%, #0ea5e9 35% 65%, #dc2626 65% 85%, #f59e0b 85% 100%)", position: "relative" }}>
               <div style={{ position: "absolute", inset: "25px", background: "#fff", borderRadius: "50%" }} />
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: "12px", flex: 1 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85rem" }}><span style={{ color: "#c8861a", fontWeight: 600 }}>Data Structures</span><span>35%</span></div>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85rem" }}><span style={{ color: "#0ea5e9", fontWeight: 600 }}>Operating System</span><span>30%</span></div>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85rem" }}><span style={{ color: "#dc2626", fontWeight: 600 }}>AI & ML</span><span>20%</span></div>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85rem" }}><span style={{ color: "#f59e0b", fontWeight: 600 }}>Others</span><span>15%</span></div>
+              {data?.topSubjects && data.topSubjects.length > 0 ? data.topSubjects.map((s, i) => {
+                  const colors = ["#c8861a", "#0ea5e9", "#dc2626", "#f59e0b"];
+                  const total = data.topSubjects.reduce((acc, curr) => acc + curr.count, 0) || 1;
+                  const pct = Math.round((s.count / total) * 100);
+                  return (
+                      <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85rem" }}>
+                          <span style={{ color: colors[i % colors.length], fontWeight: 600 }}>{s.subject}</span>
+                          <span>{pct}% ({s.count})</span>
+                      </div>
+                  );
+              }) : <div style={{ fontSize: "0.85rem", color: "#8b5e0a" }}>No document data yet.</div>}
             </div>
           </div>
         </div>
 
-        {/* AI Queries */}
-        <div style={{ background: "#fff", borderRadius: "16px", padding: "24px", border: "1px solid #f0e6d2", display: "flex", flexDirection: "column" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
-            <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 700, color: "#1f1209" }}>AI Queries</h3>
-            <span style={{ fontSize: "0.8rem", color: "#8b5e0a", fontWeight: 600 }}>Last 7 Days ▾</span>
-          </div>
-          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", border: "1px dashed #e9dcc8", borderRadius: "12px" }}>
-            <svg viewBox="0 0 400 100" style={{ width: "100%", height: "100%", padding: "10px" }}>
-              <polyline points="0,80 60,60 120,40 180,70 240,30 300,50 360,10" fill="none" stroke="#0ea5e9" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </div>
-        </div>
-
+        {/* Removed AI Queries box completely as requested by removing all mock data */}
       </div>
     </div>
   );
