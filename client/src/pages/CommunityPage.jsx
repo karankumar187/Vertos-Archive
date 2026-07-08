@@ -425,7 +425,7 @@ function FeedTab({ setActiveTab }) {
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(290px, 1fr))", gap: "20px" }}>
 
         {/* Top Contributors */}
-        <div style={{ background: "#fff", borderRadius: "16px", padding: "24px", border: "1px solid #f0e6d2", boxShadow: "0 2px 8px rgba(160,110,40,0.04)", display: "flex", flexDirection: "column", maxHeight: "420px" }}>
+        <div style={{ background: "#fff", borderRadius: "16px", padding: "24px", border: "1px solid #f0e6d2", boxShadow: "0 2px 8px rgba(160,110,40,0.04)", display: "flex", flexDirection: "column", maxHeight: "520px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", flexShrink: 0 }}>
             <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 700, color: "#1f1209", display: "flex", alignItems: "center", gap: "6px" }}>
               <TrophyIcon /> Top Contributors
@@ -452,7 +452,7 @@ function FeedTab({ setActiveTab }) {
         </div>
 
         {/* Active Discussions */}
-        <div style={{ background: "#fff", borderRadius: "16px", padding: "24px", border: "1px solid #f0e6d2", boxShadow: "0 2px 8px rgba(160,110,40,0.04)", display: "flex", flexDirection: "column", maxHeight: "420px" }}>
+        <div style={{ background: "#fff", borderRadius: "16px", padding: "24px", border: "1px solid #f0e6d2", boxShadow: "0 2px 8px rgba(160,110,40,0.04)", display: "flex", flexDirection: "column", maxHeight: "520px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", flexShrink: 0 }}>
             <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 700, color: "#1f1209", display: "flex", alignItems: "center", gap: "6px" }}>
               <FireIcon /> Active Discussions
@@ -478,7 +478,7 @@ function FeedTab({ setActiveTab }) {
         </div>
 
         {/* Upcoming Events + Announcements widget */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "16px", maxHeight: "420px" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px", maxHeight: "520px" }}>
           <div style={{ background: "#fff", borderRadius: "16px", padding: "24px", border: "1px solid #f0e6d2", boxShadow: "0 2px 8px rgba(160,110,40,0.04)", flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", flexShrink: 0 }}>
               <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 700, color: "#1f1209", display: "flex", alignItems: "center", gap: "6px" }}>
