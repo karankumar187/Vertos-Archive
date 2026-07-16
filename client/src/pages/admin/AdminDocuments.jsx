@@ -302,9 +302,9 @@ export default function AdminDocuments() {
       // Group by subject (normalized)
       const grouped = liveDocs.reduce((acc, doc) => {
         let sub = doc.subject || 'Unknown Course';
-        const normSub = sub.replace(/\s+/g, '').toUpperCase();
+        const normSub = sub.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
         
-        const existingKey = Object.keys(acc).find(k => k.replace(/\s+/g, '').toUpperCase() === normSub);
+        const existingKey = Object.keys(acc).find(k => k.replace(/[^a-zA-Z0-9]/g, '').toUpperCase() === normSub);
         if (existingKey) {
             sub = existingKey;
         }
