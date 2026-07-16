@@ -246,13 +246,35 @@ exports.deleteDocument = async (req, res) => {
             console.error('Error cleaning up message sources:', err);
         }
 
-        // 5. Delete from MongoDB
-        await Document.findByIdAndDelete(doc._id);
-
-        res.status(200).json({ success: true, message: 'Document permanently deleted from all storage layers.' });
+        // 5. Finally delete the Document itself
+        await Document.findByIdAndDelete(req.params.id);
+        
+        res.status(200).json({ success: true, message: 'Document permanently deleted' });
     } catch (error) {
         console.error('Delete document error:', error);
         res.status(500).json({ success: false, message: 'Server error deleting document' });
+    }
+};
+
+// @desc    Manually trigger reprocessing of a document
+// @route   POST /api/admin/documents/:id/reprocess
+// @access  Private/Admin
+exports.reprocessDocument = async (req, res) => {
+    try {
+        const doc = await Document.findById(req.params.id);
+        if (!doc) {
+            return res.status(404).json({ success: false, message: 'Document not found' });
+        }
+
+        // Trigger pipeline asynchronously
+        processDocument(doc._id).catch(err => {
+            console.error(`[Pipeline] Background reprocessing failed for doc ${doc._id}:`, err);
+        });
+
+        res.status(200).json({ success: true, message: 'Reprocessing started in the background.' });
+    } catch (error) {
+        console.error('Reprocess document error:', error);
+        res.status(500).json({ success: false, message: 'Server error triggering reprocessing' });
     }
 };
 

@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { protect, authorizeAdmin } = require('../middleware/auth');
-const { getPendingUploads, approveUpload, rejectUpload, checkDuplicate, getLiveDocuments, deleteDocument, getUsers, updateUserRole, suspendUser, getAdminAnalytics, getActivityLogs } = require('../controllers/adminController');
+const { getPendingUploads, approveUpload, rejectUpload, checkDuplicate, getLiveDocuments, deleteDocument, reprocessDocument, getUsers, updateUserRole, suspendUser, getAdminAnalytics, getActivityLogs } = require('../controllers/adminController');
 const { getAnnouncements, createAnnouncement, updateAnnouncement, deleteAnnouncement } = require('../controllers/announcementController');
 
 // All admin routes are protected and require admin role
@@ -16,6 +16,9 @@ router.get('/documents', getLiveDocuments);
 
 // Permanently delete a live document
 router.delete('/documents/:id', deleteDocument);
+
+// Reprocess a live document
+router.post('/documents/:id/reprocess', reprocessDocument);
 
 // Approve a document
 router.post('/approve/:id', approveUpload);

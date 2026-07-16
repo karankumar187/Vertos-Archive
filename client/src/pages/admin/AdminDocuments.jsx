@@ -228,6 +228,18 @@ export default function AdminDocuments() {
     }
   };
 
+  const handleReprocess = async (id) => {
+    if (!window.confirm('Are you sure you want to reprocess this document?')) return;
+    try {
+      await adminAPI.reprocessDocument(id);
+      alert('Reprocessing started in the background.');
+      fetchData(true);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to trigger reprocessing');
+    }
+  };
+
   // Currently we don't have an API to fetch "Rejected" documents that were soft-deleted/marked rejected.
   // The backend currently just updates pending status to rejected but pending uploads get cleaned up or ignored.
   // We'll show an empty list for rejected for now, or just focus on Pending & Approved.
@@ -332,7 +344,12 @@ export default function AdminDocuments() {
                             {doc.title}
                           </td>
                           <td style={{ padding: "12px 24px", fontSize: "0.85rem", color: "#6b4d1f" }}>{doc.uploaderID?.name || 'Unknown'}</td>
-                          <td style={{ padding: "12px 24px" }}><span style={{ padding: "4px 10px", background: "#fff", border: "1px solid #e9dcc8", color: "#8b5e0a", borderRadius: "12px", fontSize: "0.75rem", fontWeight: 600 }}>{doc.category}</span></td>
+                          <td style={{ padding: "12px 24px" }}>
+                            <span style={{ padding: "4px 10px", background: "#fff", border: "1px solid #e9dcc8", color: "#8b5e0a", borderRadius: "12px", fontSize: "0.75rem", fontWeight: 600 }}>{doc.category}</span>
+                            {doc.indexed === false && (
+                                <span style={{ marginLeft: "8px", padding: "4px 8px", background: "#fee2e2", color: "#b91c1c", borderRadius: "12px", fontSize: "0.65rem", fontWeight: 700 }}>Indexing Failed</span>
+                            )}
+                          </td>
                           <td style={{ padding: "12px 24px", fontSize: "0.85rem", color: "#6b4d1f" }}>{new Date(doc.createdAt).toLocaleDateString()}</td>
                           <td style={{ padding: "12px 24px", textAlign: "right" }}>
                             <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', alignItems: 'center' }}>
@@ -347,6 +364,11 @@ export default function AdminDocuments() {
                               <button onClick={() => handleDeleteLive(doc._id)} style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "30px", height: "30px", borderRadius: "8px", background: "#fee2e2", color: "#b91c1c", border: "none", cursor: "pointer" }} title="Delete Document">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
                               </button>
+                              {doc.indexed === false && (
+                                <button onClick={() => handleReprocess(doc._id)} style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "30px", height: "30px", borderRadius: "8px", background: "#eff6ff", color: "#2563eb", border: "none", cursor: "pointer" }} title="Reprocess Document">
+                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 2v6h6"/></svg>
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>

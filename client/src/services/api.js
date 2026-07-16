@@ -52,6 +52,7 @@ export const adminAPI = {
     getPending:      () => api.get('/admin/pending'),
     getLiveDocuments:() => api.get('/admin/documents'),
     deleteDocument:  (id) => api.delete(`/admin/documents/${id}`),
+    reprocessDocument: (id) => api.post(`/admin/documents/${id}/reprocess`),
     approveUpload:   (id, data = {}) => api.post(`/admin/approve/${id}`, data),
     rejectUpload:    (id, reviewComment) => api.post(`/admin/reject/${id}`, { reviewComment }),
     checkDuplicate:  (data) => api.post('/admin/check-duplicate', data),
