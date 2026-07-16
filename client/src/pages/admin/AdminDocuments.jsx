@@ -299,9 +299,16 @@ export default function AdminDocuments() {
     if (activeTab === "Approved") {
       if (liveDocs.length === 0) return <div style={{ padding: "24px", color: "#6b4d1f" }}>No approved documents yet.</div>;
       
-      // Group by subject
+      // Group by subject (normalized)
       const grouped = liveDocs.reduce((acc, doc) => {
-        const sub = doc.subject || 'Unknown Course';
+        let sub = doc.subject || 'Unknown Course';
+        const normSub = sub.replace(/\s+/g, '').toUpperCase();
+        
+        const existingKey = Object.keys(acc).find(k => k.replace(/\s+/g, '').toUpperCase() === normSub);
+        if (existingKey) {
+            sub = existingKey;
+        }
+
         if (!acc[sub]) acc[sub] = [];
         acc[sub].push(doc);
         return acc;
