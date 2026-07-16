@@ -71,10 +71,12 @@ exports.pushChunksToQdrant = async (documentId, chunks, embeddings, metadata) =>
 
     if (chunks.length === 0) return;
 
+    // Qdrant's HTTP request limit is 32MB. Batching avoids exceeding it
+    // even for very large documents with many/long chunks.
+    const BATCH_SIZE = 50;
+
     try {
         const points = chunks.map((chunkText, index) => {
-            // Generate a deterministic UUID for this chunk based on the doc ID and chunk index
-            // This prevents duplicate points if the pipeline is rerun
             const idHash = crypto.createHash('md5').update(`${documentId}_chunk_${index}`).digest('hex');
             const pointId = [
                 idHash.slice(0, 8),
@@ -96,12 +98,17 @@ exports.pushChunksToQdrant = async (documentId, chunks, embeddings, metadata) =>
             };
         });
 
-        await client.upsert(COLLECTION_NAME, {
-            wait: true, // wait for changes to actually be applied before resolving
-            points: points
-        });
+        // Split into batches and upsert sequentially
+        for (let i = 0; i < points.length; i += BATCH_SIZE) {
+            const batch = points.slice(i, i + BATCH_SIZE);
+            await client.upsert(COLLECTION_NAME, {
+                wait: true,
+                points: batch
+            });
+            console.log(`[Qdrant] Pushed batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(points.length / BATCH_SIZE)} (${batch.length} points) for document ${documentId}`);
+        }
 
-        console.log(`[Qdrant] Successfully pushed ${points.length} chunks for document ${documentId}`);
+        console.log(`[Qdrant] Successfully pushed all ${points.length} chunks for document ${documentId}`);
     } catch (error) {
         console.error(`[Qdrant] Error pushing chunks for document ${documentId}:`, error);
         throw error;

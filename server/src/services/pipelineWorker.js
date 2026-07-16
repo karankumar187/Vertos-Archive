@@ -109,7 +109,8 @@ exports.processDocument = async (documentId) => {
                 console.warn(`[Pipeline] LLM insight generation failed (non-fatal):`, insightErr.message);
             }
 
-            // Generate Embeddings & Push to Qdrant — non-fatal
+            // Generate Embeddings & Push to Qdrant
+            let qdrantSuccess = false;
             try {
                 console.log(`[Pipeline] Generating embeddings for ${chunks.length} chunks...`);
                 const { generateEmbeddings } = require('./openai.service');
@@ -122,7 +123,7 @@ exports.processDocument = async (documentId) => {
 
                 const embeddings = await generateEmbeddings(contextualizedChunks);
 
-                console.log(`[Pipeline] Pushing chunks to Qdrant Vector DB...`);
+                console.log(`[Pipeline] Pushing ${contextualizedChunks.length} chunks to Qdrant (in batches)...`);
                 const { pushChunksToQdrant } = require('./qdrant.service');
 
                 const metadata = {
@@ -137,8 +138,10 @@ exports.processDocument = async (documentId) => {
                 };
 
                 await pushChunksToQdrant(documentId, contextualizedChunks, embeddings, metadata);
+                qdrantSuccess = true;
             } catch (qdrantErr) {
-                console.warn(`[Pipeline] Qdrant push failed (non-fatal):`, qdrantErr.message);
+                console.error(`[Pipeline] ⚠️  Qdrant push FAILED for document ${documentId}:`, qdrantErr.message);
+                console.error(`[Pipeline] Document will NOT be marked as indexed. Re-process it to retry.`);
             }
         } else {
             console.warn(`[Pipeline] No chunks available — skipping embeddings and insights.`);
@@ -153,10 +156,15 @@ exports.processDocument = async (documentId) => {
         });
         await suggestion.save();
 
-        doc.indexed = true;
-        await doc.save();
-
-        console.log(`[Pipeline] ✅ Successfully processed document: ${documentId} (${chunks.length} chunks indexed)`);
+        if (qdrantSuccess || chunks.length === 0) {
+            doc.indexed = true;
+            await doc.save();
+            console.log(`[Pipeline] ✅ Successfully processed document: ${documentId} (${chunks.length} chunks indexed)`);
+        } else {
+            // Keep doc.indexed = false so it can be retried
+            await doc.save();
+            console.error(`[Pipeline] ❌ Document ${documentId} processed but NOT indexed in Qdrant. Will appear as pending for retry.`);
+        }
         return true;
     } catch (error) {
         console.error(`[Pipeline] Fatal error processing document ${documentId}:`, error);
