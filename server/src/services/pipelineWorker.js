@@ -99,6 +99,7 @@ exports.processDocument = async (documentId) => {
 
         // ── Steps 5–6: Insights + Embeddings (only if chunks exist) ─────────
         let insights = { topics: '', questions: '' };
+        let qdrantSuccess = false;
 
         if (chunks.length > 0) {
             // Generate LLM insights — non-fatal
@@ -110,7 +111,6 @@ exports.processDocument = async (documentId) => {
             }
 
             // Generate Embeddings & Push to Qdrant
-            let qdrantSuccess = false;
             try {
                 console.log(`[Pipeline] Generating embeddings for ${chunks.length} chunks...`);
                 const { generateEmbeddings } = require('./openai.service');
