@@ -155,6 +155,7 @@ app.get('/api/file/view', async (req, res) => {
     }
     
     try {
+        const cloudinary = require('./src/config/cloudinary').cloudinary;
         const https = require('https');
         const urlObj = new URL(url);
         const originalFilename = urlObj.pathname.split('/').pop() || 'document';
@@ -163,8 +164,7 @@ app.get('/api/file/view', async (req, res) => {
         
         let filenameBase = originalFilename.split('.').slice(0, -1).join('.');
         if (title) {
-            // Sanitize title for filename
-            filenameBase = title.replace(/[^a-zA-Z0-9 -_]/g, '').trim() || filenameBase;
+            filenameBase = title.replace(/[^a-zA-Z0-9 \-_]/g, '').trim() || filenameBase;
         }
         const filename = `${filenameBase}.${ext}`;
         
@@ -176,9 +176,35 @@ app.get('/api/file/view', async (req, res) => {
             pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
             jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp'
         };
+        const forceDownload = download === '1';
+
+        // ── For images: generate a signed CDN URL and REDIRECT the browser to it.
+        // Piping is unreliable for images due to streaming/redirect complexity.
+        // A signed res.cloudinary.com URL is directly accessible by the browser.
+        const isImageExt = ['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(ext);
+        if (isImageExt && !forceDownload) {
+            const match = url.match(/\/(raw|image|video)\/(upload|authenticated)\/(?:s--[a-zA-Z0-9_-]+--\/)?(?:v\d+\/)?(.+?)$/);
+            if (match) {
+                const resource_type = match[1];
+                const type = match[2];
+                const publicIdWithExt = match[3];
+                const extMatch = publicIdWithExt.match(/\.([a-z0-9]+)$/i);
+                const format = extMatch ? extMatch[1] : undefined;
+                const publicId = extMatch ? publicIdWithExt.slice(0, -extMatch[0].length) : publicIdWithExt;
+                const signedUrl = cloudinary.url(publicId, {
+                    sign_url: true,
+                    type,
+                    resource_type,
+                    ...(format ? { format } : {}),
+                    secure: true,
+                });
+                return res.redirect(302, signedUrl);
+            }
+        }
+
+        // ── For PDFs/docs/downloads: stream through backend proxy ──
         const contentType = mimeMap[ext] || 'application/octet-stream';
         const isInlineable = ['pdf', 'jpg', 'jpeg', 'png', 'webp'].includes(ext);
-        const forceDownload = download === '1';
         
         res.setHeader('Content-Type', contentType);
         res.setHeader('Content-Disposition', (forceDownload || !isInlineable) ? `attachment; filename="${filename}"` : `inline; filename="${filename}"`);
@@ -192,33 +218,15 @@ app.get('/api/file/view', async (req, res) => {
                 return;
             }
             
-            // Helper to get authenticated URL for files (raw, image, video)
+            // Generate signed URL for authenticated Cloudinary resources
             const getSafeTargetUrl = (u) => {
                 const match = u.match(/\/(raw|image|video)\/(upload|authenticated)\/(?:s--[a-zA-Z0-9_-]+--\/)?(?:v\d+\/)?(.+?)$/);
                 if (match) {
-                    const cloudinary = require('./src/config/cloudinary').cloudinary;
                     const resource_type = match[1];
                     const type = match[2];
                     const publicIdWithExt = match[3];
-
-                    if (resource_type === 'image' || resource_type === 'video') {
-                        // Use cloudinary.url() with sign_url:true to get a proper signed CDN URL
-                        // (private_download_url goes to api.cloudinary.com which returns a redirect,
-                        //  but cloudinary.url() gives a direct res.cloudinary.com signed URL that can be piped)
-                        const extMatch = publicIdWithExt.match(/\.([a-z0-9]+)$/i);
-                        const format = extMatch ? extMatch[1] : undefined;
-                        const publicId = extMatch ? publicIdWithExt.slice(0, -extMatch[0].length) : publicIdWithExt;
-                        return cloudinary.url(publicId, {
-                            sign_url: true,
-                            type,
-                            resource_type,
-                            ...(format ? { format } : {}),
-                            secure: true,
-                        });
-                    } else {
-                        // raw: keep full public ID with extension, no format stripping
-                        return cloudinary.utils.private_download_url(publicIdWithExt, '', { type, resource_type });
-                    }
+                    // raw: keep full public ID with extension
+                    return cloudinary.utils.private_download_url(publicIdWithExt, '', { type, resource_type });
                 }
                 return u;
             };
@@ -227,7 +235,6 @@ app.get('/api/file/view', async (req, res) => {
             
             https.get(safeUrl, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' } }, (fileRes) => {
                 if ([301, 302, 307, 308].includes(fileRes.statusCode) && fileRes.headers.location) {
-                    // Follow redirect
                     const redirectUrl = new URL(fileRes.headers.location, safeUrl).href;
                     fetchAndPipe(redirectUrl, redirectCount + 1, retryWithPdf);
                     fileRes.resume();
@@ -235,7 +242,6 @@ app.get('/api/file/view', async (req, res) => {
                 }
                 
                 if (fileRes.statusCode !== 200) {
-                    // If 404 (or 401 ACL failure) on a raw URL that lacks an extension, try appending the correct extension
                     const targetExtStr = `.${ext}`;
                     if ([401, 404].includes(fileRes.statusCode) && !retryWithPdf && ext && !targetUrl.toLowerCase().endsWith(targetExtStr)) {
                         console.log(`[FileProxy] ${fileRes.statusCode} for ${targetUrl}, retrying with ${targetExtStr}...`);
@@ -257,7 +263,7 @@ app.get('/api/file/view', async (req, res) => {
                 
                 if (retryWithPdf) {
                     res.setHeader('Content-Type', contentType);
-                    res.setHeader('Content-Disposition', forceDownload ? `attachment; filename="document.${ext}"` : `inline; filename="document.${ext}"`);
+                    res.setHeader('Content-Disposition', forceDownload ? `attachment; filename="${filename}"` : `inline; filename="${filename}"`);
                 }
                 
                 fileRes.pipe(res);
@@ -267,7 +273,6 @@ app.get('/api/file/view', async (req, res) => {
             });
         };
         
-        // Start fetch with the sanitized href
         fetchAndPipe(urlObj.href);
     } catch (err) {
         console.error('[FileProxy] Error:', err.message);
