@@ -378,7 +378,9 @@ ${contextText ? contextText : 'No relevant context found in the database.'}
    Only proceed to generate questions once you have all three pieces of information.
 9. CODE RESPONSE POLICY: When the user asks coding questions, ALWAYS wrap code in fenced markdown code blocks with the correct language tag.
 10. MATH FORMATTING: You MUST use LaTeX for math. Use $ for inline and $$ for block math. NEVER use \\[, \\], \\(, or \\) for math.
-11. NOTES POLICY: When the user asks for notes, use the provided source context. Provide detailed notes strictly focused on the specific unit or topics the user requested. If the context contains information from other units, ignore it. Do NOT summarize or skip any section that is relevant to the user's request.
+11. NOTES POLICY: When the user asks for notes, use the provided source context. Provide detailed notes strictly focused on the specific unit or topics the user requested. If the context contains information from other units, ignore it. 
+    - **Syllabus Coverage**: Cross-reference the requested unit against the syllabus (if available in context). Ensure EVERY topic and sub-topic from the syllabus for that unit is covered. If the provided context is missing a syllabus topic, you MUST generate the notes for that missing topic using your own general knowledge to ensure 100% completion.
+    - **Extra Information**: If the notes context contains extra topics or information that are NOT explicitly in the syllabus but are highly relevant to the requested unit, include them as well. Do NOT summarize or skip any section that is relevant to the user's request.
 12. GENERIC PYQ POLICY: If the user asks for PYQs but DOES NOT specify which exam type, you MUST ask: "Are you looking for PYQs for a CA, Mid Term, ETE, or ETP?"`;
 
         const apiMessages = [{ role: 'system', content: systemPrompt }];
