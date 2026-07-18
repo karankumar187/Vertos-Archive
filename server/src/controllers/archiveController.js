@@ -70,19 +70,22 @@ exports.downloadDocument = async (req, res) => {
             const resource_type = match[1];
             const type = match[2];
             const publicIdWithExt = match[3];
-            
-            let publicId = publicIdWithExt;
-            let format = '';
-            
+
             if (resource_type === 'image' || resource_type === 'video') {
                 const extMatch = publicIdWithExt.match(/\.([a-z0-9]+)$/i);
-                if (extMatch) {
-                    format = extMatch[1];
-                    publicId = publicIdWithExt.slice(0, -extMatch[0].length);
-                }
+                const format = extMatch ? extMatch[1] : undefined;
+                const publicId = extMatch ? publicIdWithExt.slice(0, -extMatch[0].length) : publicIdWithExt;
+                return cloudinary.url(publicId, {
+                    sign_url: true,
+                    type,
+                    resource_type,
+                    ...(format ? { format } : {}),
+                    secure: true,
+                });
+            } else {
+                // raw: keep full public ID with extension, no format stripping
+                return cloudinary.utils.private_download_url(publicIdWithExt, '', { type, resource_type });
             }
-            
-            return cloudinary.utils.private_download_url(publicId, format, { type, resource_type });
         }
         return u;
     };
