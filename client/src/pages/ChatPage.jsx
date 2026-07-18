@@ -42,8 +42,9 @@ function GalleryModal({ doc, onClose }) {
   const allFiles = (doc.files && doc.files.length > 0) ? doc.files : [{ url: doc.fileUrl, type: doc.fileType }];
   const total = allFiles.length;
   const current = allFiles[index];
-  const isImage = current && (current.type || '').startsWith('image/');
-  const ext = current.type ? current.type.split('/').pop().split('+')[0] : '';
+  const urlExt = current.url ? current.url.split('.').pop().toLowerCase() : '';
+  const ext = current.type ? current.type.split('/').pop().split('+')[0] : urlExt;
+  const isImage = (current.type || '').startsWith('image/') || ['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(urlExt);
   const proxiedUrl = getViewableUrl(current.url, doc.title, ext);
   const downloadUrl = proxiedUrl.includes('/api/file/view')
     ? proxiedUrl.replace('/api/file/view?', '/api/file/view?download=1&')
@@ -72,37 +73,7 @@ function GalleryModal({ doc, onClose }) {
           </span>
           <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.12)', border: 'none', color: '#fff', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', fontSize: '1.1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
         </div>
-        {/* Images display inline; PDFs/docs need to open in a new tab (iframes blocked cross-domain) */}
-        {isImage ? (
-          <img src={proxiedUrl} alt={`Page ${index + 1}`} style={{ maxWidth: '85vw', maxHeight: '75vh', borderRadius: 12, objectFit: 'contain', boxShadow: '0 8px 40px rgba(0,0,0,0.5)' }} />
-        ) : (
-          <div style={{
-            width: 420, maxWidth: '85vw', background: 'rgba(255,255,255,0.06)', borderRadius: 16,
-            border: '1px solid rgba(200,134,26,0.25)', padding: '40px 32px',
-            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20, textAlign: 'center'
-          }}>
-            <div style={{ fontSize: 64 }}>📄</div>
-            <div>
-              <p style={{ color: '#e8d5b0', fontFamily: "'Playfair Display', serif", fontSize: '1.1rem', fontWeight: 700, margin: 0, marginBottom: 6 }}>{doc.title}</p>
-              <p style={{ color: 'rgba(232,213,176,0.55)', fontFamily: "'Inter', sans-serif", fontSize: '0.8rem', margin: 0 }}>
-                {ext ? ext.toUpperCase() : 'Document'} · Page {index + 1} of {total}
-              </p>
-            </div>
-            <p style={{ color: 'rgba(255,255,255,0.5)', fontFamily: "'Inter', sans-serif", fontSize: '0.82rem', margin: 0 }}>
-              PDF and document files open in a new tab for the best viewing experience.
-            </p>
-            <div style={{ display: 'flex', gap: 10 }}>
-              <a href={proxiedUrl} target="_blank" rel="noopener noreferrer"
-                style={{ padding: '10px 22px', background: 'linear-gradient(135deg, #c8861a, #d97706)', border: 'none', borderRadius: 9, color: '#fff', fontFamily: "'Inter', sans-serif", fontSize: '0.88rem', fontWeight: 600, cursor: 'pointer', textDecoration: 'none' }}>
-                👁 Open Document
-              </a>
-              <a href={downloadUrl} target="_blank" rel="noopener noreferrer"
-                style={{ padding: '10px 22px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(200,134,26,0.4)', borderRadius: 9, color: '#e8d5b0', fontFamily: "'Inter', sans-serif", fontSize: '0.88rem', fontWeight: 600, cursor: 'pointer', textDecoration: 'none' }}>
-                ⬇ Download
-              </a>
-            </div>
-          </div>
-        )}
+        <img src={proxiedUrl} alt={`Page ${index + 1}`} style={{ maxWidth: '85vw', maxHeight: '75vh', borderRadius: 12, objectFit: 'contain', boxShadow: '0 8px 40px rgba(0,0,0,0.5)' }} />
         {total > 1 && (
           <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
             <button onClick={() => setIndex(i => Math.max(i - 1, 0))} disabled={index === 0}
@@ -124,6 +95,14 @@ function GalleryModal({ doc, onClose }) {
     </div>
   );
 }
+
+const isDocImage = (doc) => {
+  const type = doc.fileType || (doc.files && doc.files.length > 0 && doc.files[0].type) || '';
+  if (type.startsWith('image/')) return true;
+  const url = doc.url || doc.fileUrl || (doc.files && doc.files.length > 0 && doc.files[0].url) || '';
+  const ext = url.split('.').pop().toLowerCase();
+  return ['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(ext);
+};
 
 /* ── Data ── */
 const CATEGORIES = [
@@ -339,14 +318,25 @@ const MessageBubble = React.memo(function MessageBubble({ msg, onRegenerate, use
                                     title={src.title}>{src.title}</span>
 
                                 {/* Open button */}
-                                <button onClick={() => setGalleryDoc(src)}
-                                    title="Open"
-                                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '20px', height: '20px', borderRadius: '4px', background: 'rgba(200,134,26,0.08)', border: '1px solid rgba(200,134,26,0.2)', cursor: 'pointer', flexShrink: 0, transition: 'all 0.15s' }}
-                                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(200,134,26,0.18)'; }}
-                                    onMouseLeave={e => { e.currentTarget.style.background = 'rgba(200,134,26,0.08)'; }}
-                                >
-                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#9a7845" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-                                </button>
+                                {isDocImage(src) ? (
+                                    <button onClick={() => setGalleryDoc(src)}
+                                        title="Open"
+                                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '20px', height: '20px', borderRadius: '4px', background: 'rgba(200,134,26,0.08)', border: '1px solid rgba(200,134,26,0.2)', cursor: 'pointer', flexShrink: 0, transition: 'all 0.15s' }}
+                                        onMouseEnter={e => { e.currentTarget.style.background = 'rgba(200,134,26,0.18)'; }}
+                                        onMouseLeave={e => { e.currentTarget.style.background = 'rgba(200,134,26,0.08)'; }}
+                                    >
+                                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#9a7845" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                                    </button>
+                                ) : (
+                                    <a href={getViewableUrl(src.url, src.title)} target="_blank" rel="noopener noreferrer"
+                                        title="Open"
+                                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '20px', height: '20px', borderRadius: '4px', background: 'rgba(200,134,26,0.08)', border: '1px solid rgba(200,134,26,0.2)', cursor: 'pointer', flexShrink: 0, transition: 'all 0.15s', textDecoration: 'none' }}
+                                        onMouseEnter={e => { e.currentTarget.style.background = 'rgba(200,134,26,0.18)'; }}
+                                        onMouseLeave={e => { e.currentTarget.style.background = 'rgba(200,134,26,0.08)'; }}
+                                    >
+                                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#9a7845" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                                    </a>
+                                )}
 
                                 {/* Download button */}
                                 <button onClick={() => handleDownloadSource(src)}

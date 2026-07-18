@@ -49,12 +49,23 @@ const handleDownload = async (doc) => {
 const API_BASE = (import.meta?.env?.VITE_API_URL) || 'http://localhost:5001/api';
 const FILE_PROXY_BASE = API_BASE.replace('/api', '');
 
-const getViewableUrl = (url, ext = '') => {
+const getViewableUrl = (url, title = '', ext = '') => {
   if (!url || url === '#') return '#';
   if (url.startsWith('https://res.cloudinary.com/')) {
-    return `${FILE_PROXY_BASE}/api/file/view?url=${encodeURIComponent(url)}&ext=${ext}`;
+    let params = `url=${encodeURIComponent(url)}`;
+    if (title) params += `&title=${encodeURIComponent(title)}`;
+    if (ext) params += `&ext=${ext}`;
+    return `${FILE_PROXY_BASE}/api/file/view?${params}`;
   }
   return url;
+};
+
+const isDocImage = (doc) => {
+  const type = doc.fileType || (doc.files && doc.files.length > 0 && doc.files[0].type) || '';
+  if (type.startsWith('image/')) return true;
+  const url = doc.fileUrl || (doc.files && doc.files.length > 0 && doc.files[0].url) || '';
+  const ext = url.split('.').pop().toLowerCase();
+  return ['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(ext);
 };
 
 function GalleryModal({ doc, onClose }) {
@@ -62,8 +73,9 @@ function GalleryModal({ doc, onClose }) {
   const allFiles = (doc.files && doc.files.length > 0) ? doc.files : [{ url: doc.fileUrl, type: doc.fileType }];
   const total = allFiles.length;
   const current = allFiles[index];
-  const isImage = current && (current.type || '').startsWith('image/');
-  const ext = current.type ? current.type.split('/').pop().split('+')[0] : '';
+  const urlExt = current.url ? current.url.split('.').pop().toLowerCase() : '';
+  const ext = current.type ? current.type.split('/').pop().split('+')[0] : urlExt;
+  const isImage = (current.type || '').startsWith('image/') || ['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(urlExt);
   const proxiedUrl = getViewableUrl(current.url, doc.title, ext);
   const downloadUrl = proxiedUrl.includes('/api/file/view')
     ? proxiedUrl.replace('/api/file/view?', '/api/file/view?download=1&')
@@ -496,17 +508,31 @@ export default function ArchiveTab() {
                                 <td style={{ padding: "13px 18px", color: "#6b4d1f", fontWeight: 500 }}>{doc.uploaderID?.name || "Anonymous"}</td>
                                 <td style={{ padding: "13px 18px", textAlign: "right" }}>
                                   <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                                    <button onClick={() => setGalleryDoc(doc)} style={{
-                                      display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer",
-                                      fontSize: "0.82rem", fontWeight: 600, color: "#c8861a", background: "transparent",
-                                      border: "1.5px solid #e9dcc8", padding: "7px 14px", borderRadius: 9,
-                                      transition: "all 0.18s"
-                                    }}
-                                    onMouseEnter={e => { e.currentTarget.style.background = "#fdf3e1"; e.currentTarget.style.borderColor = "#c8861a"; }}
-                                    onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "#e9dcc8"; }}>
-                                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15,3 21,3 21,9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-                                      View
-                                    </button>
+                                    {isDocImage(doc) ? (
+                                      <button onClick={() => setGalleryDoc(doc)} style={{
+                                        display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer",
+                                        fontSize: "0.82rem", fontWeight: 600, color: "#c8861a", background: "transparent",
+                                        border: "1.5px solid #e9dcc8", padding: "7px 14px", borderRadius: 9,
+                                        transition: "all 0.18s"
+                                      }}
+                                      onMouseEnter={e => { e.currentTarget.style.background = "#fdf3e1"; e.currentTarget.style.borderColor = "#c8861a"; }}
+                                      onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "#e9dcc8"; }}>
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15,3 21,3 21,9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                                        View
+                                      </button>
+                                    ) : (
+                                      <a href={getViewableUrl(doc.fileUrl, doc.title)} target="_blank" rel="noopener noreferrer" style={{
+                                        display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer", textDecoration: "none",
+                                        fontSize: "0.82rem", fontWeight: 600, color: "#c8861a", background: "transparent",
+                                        border: "1.5px solid #e9dcc8", padding: "7px 14px", borderRadius: 9,
+                                        transition: "all 0.18s"
+                                      }}
+                                      onMouseEnter={e => { e.currentTarget.style.background = "#fdf3e1"; e.currentTarget.style.borderColor = "#c8861a"; }}
+                                      onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "#e9dcc8"; }}>
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15,3 21,3 21,9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                                        View
+                                      </a>
+                                    )}
                                     <button
                                       onClick={() => handleDownload(doc)}
                                       style={{
@@ -566,17 +592,31 @@ export default function ArchiveTab() {
                         <td style={{ padding: "13px 18px", color: "#6b4d1f" }}>{doc.uploaderID?.name || "Anonymous"}</td>
                         <td style={{ padding: "13px 18px", textAlign: "right" }}>
                           <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                            <button onClick={() => setGalleryDoc(doc)} style={{
-                              display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer",
-                              fontSize: "0.82rem", fontWeight: 600, color: "#c8861a", background: "transparent",
-                              border: "1.5px solid #e9dcc8", padding: "7px 14px", borderRadius: 9,
-                              transition: "all 0.18s"
-                            }}
-                            onMouseEnter={e => { e.currentTarget.style.background = "#fdf3e1"; e.currentTarget.style.borderColor = "#c8861a"; }}
-                            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "#e9dcc8"; }}>
-                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15,3 21,3 21,9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-                              View
-                            </button>
+                            {isDocImage(doc) ? (
+                              <button onClick={() => setGalleryDoc(doc)} style={{
+                                display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer",
+                                fontSize: "0.82rem", fontWeight: 600, color: "#c8861a", background: "transparent",
+                                border: "1.5px solid #e9dcc8", padding: "7px 14px", borderRadius: 9,
+                                transition: "all 0.18s"
+                              }}
+                              onMouseEnter={e => { e.currentTarget.style.background = "#fdf3e1"; e.currentTarget.style.borderColor = "#c8861a"; }}
+                              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "#e9dcc8"; }}>
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15,3 21,3 21,9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                                View
+                              </button>
+                            ) : (
+                              <a href={getViewableUrl(doc.fileUrl, doc.title)} target="_blank" rel="noopener noreferrer" style={{
+                                display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer", textDecoration: "none",
+                                fontSize: "0.82rem", fontWeight: 600, color: "#c8861a", background: "transparent",
+                                border: "1.5px solid #e9dcc8", padding: "7px 14px", borderRadius: 9,
+                                transition: "all 0.18s"
+                              }}
+                              onMouseEnter={e => { e.currentTarget.style.background = "#fdf3e1"; e.currentTarget.style.borderColor = "#c8861a"; }}
+                              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "#e9dcc8"; }}>
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15,3 21,3 21,9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                                View
+                              </a>
+                            )}
                             <button
                               onClick={() => handleDownload(doc)}
                               style={{
@@ -635,21 +675,41 @@ export default function ArchiveTab() {
             ) : recentDocs.map(doc => {
               const cat = CATEGORIES.find(c => c.id === doc.category) || CATEGORIES[0];
               return (
-                <button key={doc._id} onClick={() => setGalleryDoc(doc)}
-                  style={{ display: "flex", alignItems: "center", gap: 12, border: "none", background: "transparent", cursor: "pointer", width: "100%", textAlign: "left", padding: "8px 0", borderBottom: "1px solid #f8f4f0", transition: "all 0.15s" }}
-                  onMouseEnter={e => { e.currentTarget.style.background = "#fdfaf5"; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}>
-                  <div style={{ width: 36, height: 36, borderRadius: 9, background: cat.bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                    <cat.icon />
-                  </div>
-                  <div style={{ minWidth: 0, flex: 1 }}>
-                    <div style={{ fontWeight: 600, fontSize: "0.83rem", color: "#1f1209", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{doc.title}</div>
-                    <div style={{ fontSize: "0.72rem", color: "#9a7845", marginTop: 1 }}>{doc.subject?.replace(/\s+/g, "").toUpperCase()} · {cat.label}</div>
-                  </div>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c8861a" strokeWidth="2.5" style={{ flexShrink: 0 }}>
-                    <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15,3 21,3 21,9"/><line x1="10" y1="14" x2="21" y2="3"/>
-                  </svg>
-                </button>
+                <React.Fragment key={doc._id}>
+                  {isDocImage(doc) ? (
+                    <button onClick={() => setGalleryDoc(doc)}
+                      style={{ display: "flex", alignItems: "center", gap: 12, border: "none", background: "transparent", cursor: "pointer", width: "100%", textAlign: "left", padding: "8px 0", borderBottom: "1px solid #f8f4f0", transition: "all 0.15s" }}
+                      onMouseEnter={e => { e.currentTarget.style.background = "#fdfaf5"; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}>
+                      <div style={{ width: 36, height: 36, borderRadius: 9, background: cat.bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <cat.icon />
+                      </div>
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div style={{ fontWeight: 600, fontSize: "0.83rem", color: "#1f1209", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{doc.title}</div>
+                        <div style={{ fontSize: "0.72rem", color: "#9a7845", marginTop: 1 }}>{doc.subject?.replace(/\s+/g, "").toUpperCase()} · {cat.label}</div>
+                      </div>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c8861a" strokeWidth="2.5" style={{ flexShrink: 0 }}>
+                        <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15,3 21,3 21,9"/><line x1="10" y1="14" x2="21" y2="3"/>
+                      </svg>
+                    </button>
+                  ) : (
+                    <a href={getViewableUrl(doc.fileUrl, doc.title)} target="_blank" rel="noopener noreferrer"
+                      style={{ display: "flex", alignItems: "center", gap: 12, textDecoration: "none", background: "transparent", width: "100%", padding: "8px 0", borderBottom: "1px solid #f8f4f0", transition: "all 0.15s" }}
+                      onMouseEnter={e => { e.currentTarget.style.background = "#fdfaf5"; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}>
+                      <div style={{ width: 36, height: 36, borderRadius: 9, background: cat.bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <cat.icon />
+                      </div>
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div style={{ fontWeight: 600, fontSize: "0.83rem", color: "#1f1209", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{doc.title}</div>
+                        <div style={{ fontSize: "0.72rem", color: "#9a7845", marginTop: 1 }}>{doc.subject?.replace(/\s+/g, "").toUpperCase()} · {cat.label}</div>
+                      </div>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c8861a" strokeWidth="2.5" style={{ flexShrink: 0 }}>
+                        <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15,3 21,3 21,9"/><line x1="10" y1="14" x2="21" y2="3"/>
+                      </svg>
+                    </a>
+                  )}
+                </React.Fragment>
               );
             })}
           </div>
