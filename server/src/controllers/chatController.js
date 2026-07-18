@@ -278,20 +278,21 @@ exports.sendMessage = async (req, res) => {
         }
 
         // ═══════════════════════════════════════════════════════════════════════
-        // STEP 4: JINA RERANKER (Top 30 → Top 5)
+        // STEP 4: JINA RERANKER
         // ═══════════════════════════════════════════════════════════════════════
-        console.log(`[ChatController] Step 4: Reranking ${searchResults.length} chunks with Jina AI...`);
+        const rerankLimit = (currentFilters.category === 'notes' || currentFilters.category === 'pyq') ? 25 : 10;
+        console.log(`[ChatController] Step 4: Reranking ${searchResults.length} chunks with Jina AI (Limit: ${rerankLimit})...`);
         let finalChunks = searchResults; // fallback if Jina fails
         let rerankerPassed = true;
 
         try {
-            const { results: reranked, passedThreshold } = await rerank(searchQuery, searchResults, 5);
+            const { results: reranked, passedThreshold } = await rerank(searchQuery, searchResults, rerankLimit);
             finalChunks = reranked;
             rerankerPassed = passedThreshold;
         } catch (jinaErr) {
             console.warn(`[ChatController] Jina reranker failed (non-fatal), using raw search results:`, jinaErr.message);
-            // Graceful fallback: use top 5 from hybrid search directly
-            finalChunks = searchResults.slice(0, 5);
+            // Graceful fallback: use top results from hybrid search directly
+            finalChunks = searchResults.slice(0, rerankLimit);
         }
 
         if (!rerankerPassed) {
