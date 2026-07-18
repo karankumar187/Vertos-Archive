@@ -235,6 +235,12 @@ exports.sendMessage = async (req, res) => {
         let contextText = "";
         const sourceData = [];
         if (searchResults && searchResults.length > 0) {
+            // Sort chunks chronologically by document and chunk index so the AI reads in logical order
+            searchResults.sort((a, b) => {
+                if (a.documentId !== b.documentId) return a.documentId.localeCompare(b.documentId);
+                return a.chunkIndex - b.chunkIndex;
+            });
+
             contextText = searchResults.map((result, i) => `[Source ${i + 1} - ${result.metadata.title}]:\n${result.text}`).join('\n\n');
             
             // Collect sources to save with the assistant message later

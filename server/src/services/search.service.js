@@ -90,6 +90,7 @@ exports.performHybridSearch = async (query, filters = {}, limit = 40) => {
 
             return {
                 chunkId: point.id,
+                chunkIndex: point.payload.chunkIndex || 0,
                 documentId: docId,
                 text: point.payload.text,
                 metadata: {
