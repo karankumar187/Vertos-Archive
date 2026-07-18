@@ -45,6 +45,9 @@ function GalleryModal({ doc, onClose }) {
   const isImage = current && (current.type || '').startsWith('image/');
   const ext = current.type ? current.type.split('/').pop().split('+')[0] : '';
   const proxiedUrl = getViewableUrl(current.url, doc.title, ext);
+  const downloadUrl = proxiedUrl.includes('/api/file/view')
+    ? proxiedUrl.replace('/api/file/view?', '/api/file/view?download=1&')
+    : proxiedUrl;
 
   useEffect(() => {
     const handleKey = (e) => {
@@ -69,10 +72,36 @@ function GalleryModal({ doc, onClose }) {
           </span>
           <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.12)', border: 'none', color: '#fff', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', fontSize: '1.1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
         </div>
+        {/* Images display inline; PDFs/docs need to open in a new tab (iframes blocked cross-domain) */}
         {isImage ? (
           <img src={proxiedUrl} alt={`Page ${index + 1}`} style={{ maxWidth: '85vw', maxHeight: '75vh', borderRadius: 12, objectFit: 'contain', boxShadow: '0 8px 40px rgba(0,0,0,0.5)' }} />
         ) : (
-          <iframe src={proxiedUrl} title={`Page ${index + 1}`} style={{ width: '80vw', height: '75vh', borderRadius: 12, border: 'none' }} />
+          <div style={{
+            width: 420, maxWidth: '85vw', background: 'rgba(255,255,255,0.06)', borderRadius: 16,
+            border: '1px solid rgba(200,134,26,0.25)', padding: '40px 32px',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20, textAlign: 'center'
+          }}>
+            <div style={{ fontSize: 64 }}>📄</div>
+            <div>
+              <p style={{ color: '#e8d5b0', fontFamily: "'Playfair Display', serif", fontSize: '1.1rem', fontWeight: 700, margin: 0, marginBottom: 6 }}>{doc.title}</p>
+              <p style={{ color: 'rgba(232,213,176,0.55)', fontFamily: "'Inter', sans-serif", fontSize: '0.8rem', margin: 0 }}>
+                {ext ? ext.toUpperCase() : 'Document'} · Page {index + 1} of {total}
+              </p>
+            </div>
+            <p style={{ color: 'rgba(255,255,255,0.5)', fontFamily: "'Inter', sans-serif", fontSize: '0.82rem', margin: 0 }}>
+              PDF and document files open in a new tab for the best viewing experience.
+            </p>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <a href={proxiedUrl} target="_blank" rel="noopener noreferrer"
+                style={{ padding: '10px 22px', background: 'linear-gradient(135deg, #c8861a, #d97706)', border: 'none', borderRadius: 9, color: '#fff', fontFamily: "'Inter', sans-serif", fontSize: '0.88rem', fontWeight: 600, cursor: 'pointer', textDecoration: 'none' }}>
+                👁 Open Document
+              </a>
+              <a href={downloadUrl} target="_blank" rel="noopener noreferrer"
+                style={{ padding: '10px 22px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(200,134,26,0.4)', borderRadius: 9, color: '#e8d5b0', fontFamily: "'Inter', sans-serif", fontSize: '0.88rem', fontWeight: 600, cursor: 'pointer', textDecoration: 'none' }}>
+                ⬇ Download
+              </a>
+            </div>
+          </div>
         )}
         {total > 1 && (
           <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
