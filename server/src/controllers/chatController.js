@@ -255,13 +255,13 @@ exports.sendMessage = async (req, res) => {
         }
         console.log(`[ChatController] Step 2: Performing hybrid search for "${searchQuery}"...`);
         
-        const searchLimit = (currentFilters.category === 'notes') ? 150 : 30;
+        const searchLimit = (currentFilters.category === 'notes') ? 60 : 30;
         let searchResults = await performHybridSearch(searchQuery, currentFilters, searchLimit);
 
         if ((!searchResults || searchResults.length === 0) && (currentFilters.category === 'notes' || currentFilters.category === 'pyq')) {
             console.log(`[ChatController] No ${currentFilters.category} found. Falling back to syllabus.`);
             currentFilters.category = 'syllabus';
-            searchResults = await performHybridSearch(searchQuery, currentFilters);
+            searchResults = await performHybridSearch(searchQuery, currentFilters, searchLimit);
         }
 
         // ═══════════════════════════════════════════════════════════════════════
@@ -280,7 +280,7 @@ exports.sendMessage = async (req, res) => {
         // ═══════════════════════════════════════════════════════════════════════
         // STEP 4: JINA RERANKER
         // ═══════════════════════════════════════════════════════════════════════
-        const rerankLimit = (currentFilters.category === 'notes' || currentFilters.category === 'pyq') ? 25 : 10;
+        const rerankLimit = (currentFilters.category === 'notes' || currentFilters.category === 'pyq') ? 15 : 7;
         console.log(`[ChatController] Step 4: Reranking ${searchResults.length} chunks with Jina AI (Limit: ${rerankLimit})...`);
         let finalChunks = searchResults; // fallback if Jina fails
         let rerankerPassed = true;
