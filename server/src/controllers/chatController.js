@@ -551,7 +551,7 @@ ${contextText ? contextText : 'No relevant context found in the database.'}
                 conversationId,
                 role: 'assistant',
                 content: fullAssistantResponse,
-                sources: uniqueSources
+                sources: sourceData
             });
             await finalAssistantMessage.save();
         }
