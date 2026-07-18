@@ -222,13 +222,21 @@ exports.sendMessage = async (req, res) => {
         console.log(`[ChatController] Step 1: Classifying query...`);
         let queryClass = 'rag'; // default to rag
         try {
-            const classifierResponse = await chatCompletion([
+            const classifierMessages = [
                 {
                     role: 'system',
-                    content: `You are a query classifier for a university academic assistant. Classify the user's message into exactly ONE of these categories:\n- "rag": The user is asking an academic question that requires searching university documents (notes, syllabus, PYQs, exams, coding questions, etc.)\n- "greeting": The user is greeting, saying hello/hi/bye, or asking about the assistant itself.\n- "off_topic": The user is asking something completely unrelated to university academics (e.g., cryptocurrency, sports, news, recipes, etc.)\n\nRespond with ONLY the category label and nothing else. No explanation.`
-                },
-                { role: 'user', content }
-            ], 10);
+                    content: `You are a query classifier for a university academic assistant. Classify the user's latest message into exactly ONE of these categories:\n- "rag": The user is asking an academic question, following up on a previous topic, requesting more questions, or requires searching university documents (notes, syllabus, PYQs, exams, etc.)\n- "greeting": The user is greeting, saying hello/hi/bye, or asking about the assistant itself.\n- "off_topic": The user is asking something completely unrelated to university academics (e.g., cryptocurrency, sports, news, recipes, etc.)\n\nRespond with ONLY the category label and nothing else. No explanation.`
+                }
+            ];
+            
+            // Add up to 3 previous messages for context
+            const recentHistory = history.slice(Math.max(0, history.length - 3));
+            for (const msg of recentHistory) {
+                classifierMessages.push({ role: msg.role, content: msg.content.substring(0, 200) });
+            }
+            classifierMessages.push({ role: 'user', content });
+
+            const classifierResponse = await chatCompletion(classifierMessages, 10);
             const cleaned = classifierResponse.trim().toLowerCase().replace(/[^a-z_]/g, '');
             if (['rag', 'greeting', 'off_topic'].includes(cleaned)) {
                 queryClass = cleaned;
