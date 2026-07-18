@@ -249,14 +249,19 @@ exports.sendMessage = async (req, res) => {
         // ═══════════════════════════════════════════════════════════════════════
         // STEP 2: HYBRID SEARCH (Top 30)
         // ═══════════════════════════════════════════════════════════════════════
-        console.log(`[ChatController] Step 2: Performing hybrid search...`);
+        let searchQuery = content;
+        if (conversation.activeCourse && !content.toLowerCase().includes(conversation.activeCourse.toLowerCase())) {
+            searchQuery = `${conversation.activeCourse} ${content}`;
+        }
+        console.log(`[ChatController] Step 2: Performing hybrid search for "${searchQuery}"...`);
+        
         const searchLimit = (currentFilters.category === 'notes') ? 150 : 30;
-        let searchResults = await performHybridSearch(content, currentFilters, searchLimit);
+        let searchResults = await performHybridSearch(searchQuery, currentFilters, searchLimit);
 
         if ((!searchResults || searchResults.length === 0) && (currentFilters.category === 'notes' || currentFilters.category === 'pyq')) {
             console.log(`[ChatController] No ${currentFilters.category} found. Falling back to syllabus.`);
             currentFilters.category = 'syllabus';
-            searchResults = await performHybridSearch(content, currentFilters);
+            searchResults = await performHybridSearch(searchQuery, currentFilters);
         }
 
         // ═══════════════════════════════════════════════════════════════════════
@@ -280,7 +285,7 @@ exports.sendMessage = async (req, res) => {
         let rerankerPassed = true;
 
         try {
-            const { results: reranked, passedThreshold } = await rerank(content, searchResults, 5);
+            const { results: reranked, passedThreshold } = await rerank(searchQuery, searchResults, 5);
             finalChunks = reranked;
             rerankerPassed = passedThreshold;
         } catch (jinaErr) {
