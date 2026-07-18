@@ -28,10 +28,18 @@ exports.performHybridSearch = async (query, filters = {}, limit = 40) => {
         const [queryEmbedding] = await generateEmbeddings([query]);
 
         // 2. Prepare filters
-        // Map our simple filter object to Qdrant filter syntax
+        // Strip out any undefined or empty values so they don't break Qdrant/Mongo
+        const activeFilters = { ...filters };
+        Object.keys(activeFilters).forEach(k => {
+            if (activeFilters[k] === undefined || activeFilters[k] === null || activeFilters[k] === '') {
+                delete activeFilters[k];
+            }
+        });
+
+        // Map our clean filter object to Qdrant filter syntax
         let qdrantFilter = null;
-        if (Object.keys(filters).length > 0) {
-            const conditions = Object.entries(filters).map(([key, value]) => ({
+        if (Object.keys(activeFilters).length > 0) {
+            const conditions = Object.entries(activeFilters).map(([key, value]) => ({
                 key: key,
                 match: { value: value }
             }));
@@ -47,16 +55,13 @@ exports.performHybridSearch = async (query, filters = {}, limit = 40) => {
         
         // Filter out weak vector matches to ensure search relevance.
         // Bypass threshold for syllabus and notes so we don't drop distant-but-relevant chunks.
-        const isSyllabus = filters.category === 'syllabus';
-        const isNotes = filters.category === 'notes';
+        const isSyllabus = activeFilters.category === 'syllabus';
+        const isNotes = activeFilters.category === 'notes';
         vectorResults = vectorResults.filter(point => isSyllabus || isNotes || point.score >= 0.25);
         
         // 4. Execute Keyword Search (MongoDB)
-        // Prepare MongoDB filter by removing any empty values
-        const mongoFilter = { ...filters };
-        Object.keys(mongoFilter).forEach(k => {
-            if (!mongoFilter[k]) delete mongoFilter[k];
-        });
+        // Use the same clean activeFilters for Mongo
+        const mongoFilter = { ...activeFilters };
 
         // Only do text search if query has words
         let keywordResults = [];
