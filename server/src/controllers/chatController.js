@@ -220,8 +220,9 @@ exports.sendMessage = async (req, res) => {
         }
 
         // 5. Perform Hybrid Search to get context
-        // Search across vector DB and MongoDB text index using the enriched filters
-        let searchResults = await performHybridSearch(content, currentFilters);
+        // For notes requests, fetch more chunks (80) to cover large documents thoroughly
+        const searchLimit = (currentFilters.category === 'notes') ? 80 : 40;
+        let searchResults = await performHybridSearch(content, currentFilters, searchLimit);
 
         // Fallback logic: If we strictly filtered by 'notes' or 'pyq' but got nothing, fallback to syllabus
         if ((!searchResults || searchResults.length === 0) && (currentFilters.category === 'notes' || currentFilters.category === 'pyq')) {
@@ -317,7 +318,14 @@ ${contextText ? contextText : "No relevant context found in the database."}
    - Use inline code (\`like this\`) for variable names, function names, and short code references within text.
    - Include comments inside the code to explain key logic.
 10. MATH FORMATTING: You MUST use LaTeX for math. Use $ for inline (e.g., $E = mc^2$) and $$ for block math. NEVER use \\[, \\], \\(, or \\) for math.
-11. NOTES POLICY: When the user asks for notes or study material, strictly fetch all details from the provided source notes. If notes are unavailable, generate comprehensive notes using the syllabus context. Do NOT just provide theory: for math and physics subjects, include relevant questions and step-by-step solutions; for coding subjects, include functional sample codes. Structure the notes beautifully.
+11. NOTES POLICY: When the user asks for notes or study material:
+   - FIRST PREFERENCE: Use the provided source notes context. The context contains chunks from the uploaded document — treat every chunk as valuable reference material.
+   - COVERAGE (CRITICAL): You MUST cover EVERY topic and sub-topic present in the provided context. DO NOT summarize or skip any section. If the context mentions a topic (e.g., Memory Management Schemes, RAID, Deadlock, Semaphores), you MUST include detailed notes for that exact topic.
+   - DEPTH: For each topic, explain all key concepts, definitions, types, algorithms, and examples as found in the source material. Do NOT give a 2-line generic summary when the source has pages of detail.
+   - STRUCTURE: Use clear headings (## for main topics, ### for sub-topics), bullet points for lists, numbered steps for algorithms, and code blocks for code examples.
+   - SUBJECT-SPECIFIC RULES: For math/physics subjects include worked numerical examples; for coding subjects include functional code snippets with comments; for theory subjects include definitions, diagrams (described in text), and examples.
+   - If notes are completely unavailable in the context, generate comprehensive notes using the syllabus context — but still cover every syllabus topic in detail.
+   - DO NOT stop early. DO NOT end with "Conclusion" after only covering 3 topics when the syllabus/notes have 15 topics.
 12. GENERIC PYQ POLICY: If the user asks for PYQs, past year questions, or practice questions, but DOES NOT specify which exam type (CA, Mid Term, ETE, or ETP), you MUST ask them: "Are you looking for PYQs for a CA, Mid Term, ETE, or ETP?" Do not generate a massive list of questions until they specify the exam type.`;
 
         const apiMessages = [

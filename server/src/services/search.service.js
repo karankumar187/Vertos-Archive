@@ -20,7 +20,7 @@ const getRrfScore = (rank) => {
  * @param {Object} filters - Optional filters (e.g. { category: 'notes', subject: 'dbms' })
  * @returns {Promise<Array>} - The top ranked text chunks with their metadata.
  */
-exports.performHybridSearch = async (query, filters = {}) => {
+exports.performHybridSearch = async (query, filters = {}, limit = 40) => {
     try {
         console.log(`[HybridSearch] Starting search for query: "${query}"`);
         
@@ -41,13 +41,15 @@ exports.performHybridSearch = async (query, filters = {}) => {
         }
 
         // 3. Execute Vector Search (Qdrant)
-        // Fetch more than we need (top 60) so we can rank them and capture large multi-page documents
-        let vectorResults = await searchQdrant(queryEmbedding, 60, qdrantFilter);
+        // Fetch more than we need so we can rank and capture large multi-page documents
+        const qdrantFetchLimit = Math.max(limit * 2, 80);
+        let vectorResults = await searchQdrant(queryEmbedding, qdrantFetchLimit, qdrantFilter);
         
         // Filter out weak vector matches to ensure search relevance.
-        // If it's a syllabus request, bypass the threshold so we don't drop units that have low semantic similarity to the word "syllabus".
+        // Bypass threshold for syllabus and notes so we don't drop distant-but-relevant chunks.
         const isSyllabus = filters.category === 'syllabus';
-        vectorResults = vectorResults.filter(point => isSyllabus || point.score >= 0.25);
+        const isNotes = filters.category === 'notes';
+        vectorResults = vectorResults.filter(point => isSyllabus || isNotes || point.score >= 0.25);
         
         // 4. Execute Keyword Search (MongoDB)
         // Prepare MongoDB filter by removing any empty values
@@ -120,7 +122,7 @@ exports.performHybridSearch = async (query, filters = {}) => {
             console.log(`[HybridSearch] Subject filter "${filters.subject}" applied: ${fusedResults.length} → ${strictResults.length} chunks.`);
         }
         
-        const finalResults = strictResults.slice(0, 40);
+        const finalResults = strictResults.slice(0, limit);
 
         console.log(`[HybridSearch] Returning ${finalResults.length} fused chunks.`);
         return finalResults;
