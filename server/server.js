@@ -178,28 +178,12 @@ app.get('/api/file/view', async (req, res) => {
         };
         const forceDownload = download === '1';
 
-        // ── For images: generate a signed CDN URL and REDIRECT the browser to it.
-        // Piping is unreliable for images due to streaming/redirect complexity.
-        // A signed res.cloudinary.com URL is directly accessible by the browser.
+        // ── For images: REDIRECT the browser directly to the Cloudinary URL.
+        // Images are public ('upload' type), so they don't need signatures. Piping them causes streaming issues.
         const isImageExt = ['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(ext);
         if (isImageExt && !forceDownload) {
-            const match = url.match(/\/(raw|image|video)\/(upload|authenticated)\/(?:s--[a-zA-Z0-9_-]+--\/)?(?:v\d+\/)?(.+?)$/);
-            if (match) {
-                const resource_type = match[1];
-                const type = match[2];
-                const publicIdWithExt = match[3];
-                const extMatch = publicIdWithExt.match(/\.([a-z0-9]+)$/i);
-                const format = extMatch ? extMatch[1] : undefined;
-                const publicId = extMatch ? publicIdWithExt.slice(0, -extMatch[0].length) : publicIdWithExt;
-                const signedUrl = cloudinary.url(publicId, {
-                    sign_url: true,
-                    type,
-                    resource_type,
-                    ...(format ? { format } : {}),
-                    secure: true,
-                });
-                return res.redirect(302, signedUrl);
-            }
+            console.log(`[FileProxy] Redirecting image to public CDN URL: ${url}`);
+            return res.redirect(302, url);
         }
 
         // ── For PDFs/docs/downloads: stream through backend proxy ──
