@@ -64,7 +64,7 @@ function GalleryModal({ doc, onClose }) {
   const current = allFiles[index];
   const isImage = current && (current.type || '').startsWith('image/');
   const ext = current.type ? current.type.split('/').pop().split('+')[0] : '';
-  const proxiedUrl = getViewableUrl(current.url, ext);
+  const proxiedUrl = getViewableUrl(current.url, doc.title, ext);
 
   useEffect(() => {
     const handleKey = (e) => {
