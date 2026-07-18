@@ -376,8 +376,7 @@ ${contextText ? contextText : 'No relevant context found in the database.'}
 9. CODE RESPONSE POLICY: When the user asks coding questions, ALWAYS wrap code in fenced markdown code blocks with the correct language tag.
 10. MATH FORMATTING: You MUST use LaTeX for math. Use $ for inline and $$ for block math. NEVER use \\[, \\], \\(, or \\) for math.
 11. NOTES POLICY: When the user asks for notes, use the provided source context. Cover EVERY topic and sub-topic present in the provided context. Do NOT summarize or skip any section.
-12. GENERIC PYQ POLICY: If the user asks for PYQs but DOES NOT specify which exam type, you MUST ask: "Are you looking for PYQs for a CA, Mid Term, ETE, or ETP?"
-13. CONFIDENCE SELF-CHECK (MANDATORY): At the very end of your response, on a completely new line, output ONLY the following JSON tag — nothing else on that line: <confidence:high> OR <confidence:low>. Output <confidence:high> if you are certain your answer is well-grounded in the provided context. Output <confidence:low> if the context was insufficient, contradictory, or you had to make up significant portions of the answer. This tag is parsed programmatically — do NOT explain it.`;
+12. GENERIC PYQ POLICY: If the user asks for PYQs but DOES NOT specify which exam type, you MUST ask: "Are you looking for PYQs for a CA, Mid Term, ETE, or ETP?"`;
 
         const apiMessages = [{ role: 'system', content: systemPrompt }];
         for (let i = 0; i < history.length - 1; i++) {
@@ -501,16 +500,10 @@ ${contextText ? contextText : 'No relevant context found in the database.'}
         // ═══════════════════════════════════════════════════════════════════════
         // STEP 6: ANSWER VERIFICATION & OPENAI FALLBACK
         // ═══════════════════════════════════════════════════════════════════════
-        // Check Qwen's self-reported confidence tag at the end of the response
-        const confidenceMatch = fullAssistantResponse.match(/<confidence:(high|low)>/i);
-        const qwenConfidence = confidenceMatch ? confidenceMatch[1].toLowerCase() : 'high';
-        // Remove the confidence tag from the response text before saving
-        const cleanedQwenResponse = fullAssistantResponse.replace(/<confidence:(high|low)>\s*$/i, '').trimEnd();
-
-        const needsFallback = qwenFailed || qwenConfidence === 'low';
+        const needsFallback = qwenFailed;
 
         if (needsFallback) {
-            console.log(`[ChatController] Step 6: Qwen confidence is "${qwenConfidence}" or failed. Falling back to GPT-4o-mini...`);
+            console.log(`[ChatController] Step 6: Qwen failed. Falling back to GPT-4o-mini...`);
 
             // If Qwen streamed something before failing confidence, clear it by notifying the client
             // (In practice the client will just append fallback tokens seamlessly)
@@ -550,15 +543,15 @@ ${contextText ? contextText : 'No relevant context found in the database.'}
                 await assistantMessage.save();
             }
         } else {
-            // Qwen succeeded — save cleaned response
-            console.log(`[ChatController] Qwen 3 confidence: HIGH. Saving response.`);
-            const assistantMessage = new Message({
+            // Qwen succeeded — save response
+            console.log(`[ChatController] Qwen 3 generated answer successfully. Saving response.`);
+            const finalAssistantMessage = new Message({
                 conversationId,
                 role: 'assistant',
-                content: cleanedQwenResponse,
-                sources: sourceData
+                content: fullAssistantResponse,
+                sources: uniqueSources
             });
-            await assistantMessage.save();
+            await finalAssistantMessage.save();
         }
 
         res.write(`data: [DONE]\n\n`);
