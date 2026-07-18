@@ -1,4 +1,4 @@
-const { generateEmbeddings } = require('./huggingface.service');
+const jinaService = require('./jina.service');
 const { searchQdrant } = require('./qdrant.service');
 const Document = require('../models/Document');
 
@@ -25,7 +25,7 @@ exports.performHybridSearch = async (query, filters = {}, limit = 40) => {
         console.log(`[HybridSearch] Starting search for query: "${query}"`);
         
         // 1. Get Query Embedding
-        const [queryEmbedding] = await generateEmbeddings([query]);
+        const [queryEmbedding] = await jinaService.generateEmbeddings([query]);
 
         // 2. Prepare filters
         // Map our simple filter object to Qdrant filter syntax

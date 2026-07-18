@@ -61,3 +61,47 @@ exports.rerank = async (query, chunks, topN = 5) => {
 
     return { results: rerankedChunks, passedThreshold };
 };
+
+const JINA_EMBEDDING_URL = 'https://api.jina.ai/v1/embeddings';
+const JINA_EMBEDDING_MODEL = 'jina-embeddings-v3';
+
+/**
+ * Generates embeddings using Jina AI's embedding API.
+ * jina-embeddings-v3 natively generates 1024-dimensional vectors, 
+ * perfectly matching our Qdrant schema that was originally built for BGE-M3.
+ *
+ * @param {string[]} texts - Array of text strings to embed.
+ * @returns {Promise<number[][]>} - Array of embedding vectors.
+ */
+exports.generateEmbeddings = async (texts) => {
+    if (!process.env.JINA_API_KEY) {
+        throw new Error('JINA_API_KEY is not defined in environment variables.');
+    }
+
+    try {
+        const response = await axios.post(
+            JINA_EMBEDDING_URL,
+            {
+                model: JINA_EMBEDDING_MODEL,
+                input: texts,
+            },
+            {
+                headers: {
+                    'Authorization': `Bearer ${process.env.JINA_API_KEY}`,
+                    'Content-Type': 'application/json',
+                },
+            }
+        );
+
+        const data = response.data.data;
+        if (!data || data.length === 0) {
+            throw new Error('Jina returned an empty embedding array.');
+        }
+
+        const embeddings = data.map(item => item.embedding);
+        return embeddings;
+    } catch (error) {
+        console.error('[Jina] Error generating embeddings:', error.response?.data || error.message);
+        throw new Error(`Failed to generate embeddings: ${error.message}`);
+    }
+};

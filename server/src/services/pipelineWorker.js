@@ -112,8 +112,8 @@ exports.processDocument = async (documentId) => {
 
             // Generate Embeddings & Push to Qdrant
             try {
-                console.log(`[Pipeline] Generating embeddings for ${chunks.length} chunks via HuggingFace (BGE-M3)...`);
-                const { generateEmbeddings } = require('./huggingface.service');
+                console.log(`[Pipeline] Generating embeddings for ${chunks.length} chunks via Jina AI...`);
+                const { generateEmbeddings } = require('./jina.service');
                 
                 // Contextualize chunks with metadata so each chunk is semantically linked to the document topic
                 const contextualizedChunks = chunks.map(chunk => {
