@@ -71,10 +71,17 @@ exports.sendMessage = async (req, res) => {
     const isNotesRequestEarly = /\b(notes|study\s*material|lecture\s*notes|explain|explanation)\b/i.test(content);
     const isGenericPyqRequestEarly = /\b(pyq|pyqs|previous year|past year|practice questions?|mid term|ete|etp|end term)\b/i.test(content);
 
+    const isCaRequestEarly      = /\b(ca\b|class[\s-]?assessment|class[\s-]?test|unit[\s-]?test|ca[\s-]?\d|ca\d)\b/i.test(content);
+    const isExamRequestEarly    = /\b(mid[\s-]?term|midterm|mock[\s-]?test|end[\s-]?term|ete|end[\s-]?sem|endsem|etp|end[\s-]?term[\s-]?practical)\b/i.test(content);
+
     if (isSyllabusRequest) {
         currentFilters.category = 'syllabus';
     } else if (isNotesRequestEarly) {
         currentFilters.category = 'notes';
+    } else if (isCaRequestEarly || isExamRequestEarly) {
+        // For question generation, search across ALL categories (notes + syllabus + pyq)
+        // so the LLM can draw from the richest possible context
+        delete currentFilters.category;
     } else if (isGenericPyqRequestEarly) {
         currentFilters.category = 'pyq';
     }
@@ -255,7 +262,7 @@ exports.sendMessage = async (req, res) => {
         }
         console.log(`[ChatController] Step 2: Performing hybrid search for "${searchQuery}"...`);
         
-        const searchLimit = (currentFilters.category === 'notes') ? 60 : 30;
+        const searchLimit = (currentFilters.category === 'notes' || !currentFilters.category) ? 60 : 30;
         let searchResults = await performHybridSearch(searchQuery, currentFilters, searchLimit);
 
         if ((!searchResults || searchResults.length === 0) && (currentFilters.category === 'notes' || currentFilters.category === 'pyq')) {
