@@ -384,25 +384,28 @@ ${contextText ? contextText : 'No relevant context found in the database.'}
    - Number every question using a Markdown Heading 3: "### Question 1:", "### Question 2:", etc.
    - **MCQ Formatting (CRITICAL)**: You MUST format the question and options so they render correctly on separate lines. ALWAYS insert a blank line (double newline) between the question text and Option A. NEVER output Option A on the same line as the question text. Every option (A, B, C, D) MUST start on its own separate line.
    - **Syllabus Scope (STRICT)**: EVERY question you generate or select MUST be strictly based on topics listed in the course syllabus provided in the context. Do NOT generate questions on topics that are outside the syllabus, even if they are related to the broader subject. Cross-reference each question against the syllabus unit topics before including it.
-   - **PYQ Priority — Per Unit (STRICT)**: Questions MUST be evenly distributed across all specified units (±1-2 questions tolerance is acceptable, but large imbalances like 5 from Unit 1 and 25 from Unit 2 are strictly forbidden). For EACH unit, follow this exact process: STEP 1 — Extract as many real PYQs as possible that belong to that unit from the provided context. STEP 2 — If the PYQ count for that unit is less than the required quota, generate NEW questions of the same style, difficulty, and type as the PYQs to fill up the quota for that unit. STEP 3 — Move on to the next unit and repeat. Never over-pull from one unit at the expense of another.
-   - **Topic Coverage — Within Each Unit (CRITICAL)**: Within each unit, questions MUST be spread across ALL topics listed in the syllabus for that unit. BEFORE generating questions for a unit, list all the topics from the syllabus for that unit, then ensure AT LEAST 1 question covers each topic. If the quota allows, distribute the remaining questions proportionally. NEVER generate multiple questions from the same topic while another topic in the same unit has zero coverage.
+   - **PYQ Priority — Per Unit (STRICT)**: Questions MUST be evenly distributed across all specified units. For EACH unit, follow this EXACT two-step process:
+     - STEP 1 (SHOW ORIGINAL PYQs FIRST): Scan the provided context and extract ALL real PYQ questions that belong to that unit. Output them verbatim, exactly as written, labeled with a **(PYQ)** tag at the end of the question text (e.g., `### Question 1: What is a semaphore? **(PYQ)**`). Do NOT paraphrase or alter real PYQs.
+     - STEP 2 (FILL WITH AI QUESTIONS): Count how many PYQs you found for that unit. If the count is less than the required quota, generate NEW questions to fill up the remaining slots. These AI-generated questions MUST perfectly mimic the exact style, pattern, difficulty, and topic distribution of the PYQs. Label them with **(AI Generated)** at the end.
+     - STEP 3: Move to the next unit and repeat. Never over-pull from one unit at the expense of another.
+   - **Topic Coverage — Within Each Unit (CRITICAL)**: Within each unit, questions MUST be spread across ALL topics listed in the syllabus for that unit. Ensure AT LEAST 1 question covers each topic. NEVER pile up questions on one topic while leaving another uncovered.
    - **University-Level Rigor**: Assume the student is a university undergraduate or postgraduate. Do NOT generate trivial or high-school level questions.
-   - **Cross-Unit Style Matching (CRITICAL)**: Always analyze the exact style, pattern, and nature of the questions in the provided PYQs. If you need to invent questions for a unit that is NOT covered by the PYQs, you MUST ensure the newly invented questions perfectly mimic the exact rigor and style of the provided PYQs.
+   - **Cross-Unit Style Matching (CRITICAL)**: Always analyze the exact style, pattern, and nature of the questions in the provided PYQs before generating AI questions.
    - For computational/numerical subjects (like Maths, Physics, Accounting, Engineering), questions MUST be practical problem-solving, numerical calculations, or derivations.
    - For programming/computer science subjects (like INT, CSE, MVC, Java, Python), subjective questions MUST heavily feature practical implementation.
-   - **Realistic Scenarios**: Where possible, frame computational questions around real-world or industry-specific scenarios with specific, realistic data values.
+   - **Realistic Scenarios**: Where possible, frame computational questions around real-world scenarios with specific, realistic data values.
 4. PRACTICE QUESTIONS POLICY: If asked for practice questions, first use actual questions from the context. If you run out, INVENT highly relevant practice questions based on syllabus topics to match the style/difficulty of the real ones.
 5. MID TERM POLICY (MANDATORY): Only apply when the user explicitly asks for mid term or mock test. Mid Terms cover ONLY Units 1, 2, and 3. Generate questions in one of these two formats based on what the user asks:
    - FORMAT A (MCQ): Output EXACTLY 40 MCQs — approximately 13-14 questions per unit (Unit 1, 2, 3).
    - FORMAT B (Subjective): Output 12-15 subjective questions — approximately 4-5 per unit (Unit 1, 2, 3), mix of short, medium, and long answer.
    If the user doesn't specify a format, ask them: "For this Mid Term, should I generate MCQ questions or Subjective questions?"
-   UNIT DISTRIBUTION (MANDATORY): Process each unit individually — for each unit, first extract all available PYQs belonging to that unit, then generate new similar-style questions to fill the required quota for that unit. Do NOT over-pull from one unit to fill another. DO NOT stop early.
+   UNIT DISTRIBUTION (MANDATORY): Process each unit individually — for each unit, FIRST output all real PYQs from context (labeled **PYQ**), THEN generate AI questions to fill the quota (labeled **AI Generated**). Do NOT over-pull from one unit. DO NOT stop early.
 6. END TERM EXAM (ETE) POLICY (MANDATORY): Only apply when the user explicitly asks for end term, ETE, or final exam questions. The ETE covers ALL 6 UNITS of the course. Generate questions in one of these three formats based on what the user asks:
    - FORMAT A (Full MCQ): Output EXACTLY 60 MCQs across all 6 units. Distribution: Units 4, 5, 6 get 8-10 questions each; Units 1, 2, 3 get 4-6 questions each (total ~60).
    - FORMAT B (Mixed): Output 30 MCQs across all 6 units (5 per unit), followed by subjective questions (2-mark, 5-mark, 10-mark) across all 6 units.
    - FORMAT C (Subjective): Output exactly 7 long subjective questions (10-marks each) — 1 from each of Units 1-3, and 1-2 from each of Units 4-6.
    If the user doesn't specify a format, ask them: "For this ETE, should I generate a full MCQ paper (60 questions), a mixed paper (30 MCQs + subjective), or a fully subjective paper (7 long questions)?"
-   UNIT DISTRIBUTION (MANDATORY): Process each of the 6 units individually. Units 4, 5, and 6 MUST always have more questions than Units 1, 2, 3. You MUST generate questions for ALL 6 units — never skip a unit. DO NOT stop early.
+   UNIT DISTRIBUTION (MANDATORY): Process each of the 6 units individually. For each unit, FIRST output all real PYQs from context (labeled **PYQ**), THEN fill remaining quota with AI questions (labeled **AI Generated**). Units 4, 5, 6 MUST have more questions than Units 1, 2, 3. Never skip a unit. DO NOT stop early.
 7. END TERM PRACTICAL (ETP) POLICY (MANDATORY): Only apply when the user explicitly asks for end term practical, ETP, or practical exam questions. Generate ONE comprehensive practical question that covers the MOST IMPORTANT practical topics spanning multiple units.
 8. CLASS ASSESSMENT (CA) POLICY: Only apply when the user explicitly asks for CA, class test, class assessment, or unit test questions. Follow this EXACT flow:
    STEP 1 — If the user has NOT specified a course, ask: "Which course is this CA for?"
@@ -473,15 +476,15 @@ ${contextText ? contextText : 'No relevant context found in the database.'}
         if (isSyllabusRequest) {
             userQueryFinal += "\n\n[REMINDER: SYLLABUS request. List ALL UNITS without skipping. Include textbooks if available.]";
         } else if (isMidTermRequest) {
-            userQueryFinal += "\n\n[REMINDER: MID TERM request. Generate EXACTLY 40 MCQs from Units 1, 2, and 3 only. Extract real PYQs first, then invent to fill quota. Every question must match PYQ style. Do NOT stop early.]";
+            userQueryFinal += "\n\n[REMINDER: MID TERM request. Generate EXACTLY 40 MCQs from Units 1, 2, and 3. For each unit: FIRST output all real PYQ questions from context verbatim (labeled **PYQ**), THEN generate AI questions to fill remaining quota (labeled **AI Generated**). Match PYQ style exactly. Do NOT stop early.]";
         } else if (isEtpRequest) {
-            userQueryFinal += "\n\n[REMINDER: ETP request. Generate one comprehensive practical question. Use PYQ practical questions first if available.]";
+            userQueryFinal += "\n\n[REMINDER: ETP request. Generate one comprehensive practical question. Use real PYQ practical questions from context first if available, labeled **PYQ**.]";
         } else if (isEteRequest) {
-            userQueryFinal += "\n\n[REMINDER: ETE request. Cover ALL 6 UNITS. Ask format if unspecified. Extract real PYQs first per unit, then invent similar-style questions. Do NOT stop early.]";
+            userQueryFinal += "\n\n[REMINDER: ETE request. Cover ALL 6 UNITS. Ask format if unspecified. For each unit: FIRST output all real PYQ questions verbatim (labeled **PYQ**), THEN generate AI questions to fill remaining quota (labeled **AI Generated**). Do NOT stop early.]";
         } else if (isCaRequest) {
             const userSpecifiedType = /\b(mcq|subjective|objective|coding|numerical|implementation|multiple[\s-]?choice)\b/i.test(content);
             if (userSpecifiedType) {
-                userQueryFinal += "\n\n[REMINDER: CA MCQ request. Generate EXACTLY 30 MCQs evenly distributed across the specified units. Extract real PYQs first for the specified units, then invent to fill quota. Match PYQ style exactly. Do NOT stop early.]";
+                userQueryFinal += "\n\n[REMINDER: CA request. Generate EXACTLY 30 MCQs evenly across specified units. For each unit: FIRST output all real PYQ questions from context verbatim (labeled **PYQ**), THEN generate AI questions to fill remaining quota (labeled **AI Generated**). Match PYQ style exactly. Do NOT stop early.]";
             } else {
                 userQueryFinal += "\n\n[REMINDER: CA request. Ask for course, units, and question type before generating. Do NOT generate any questions yet.]";
             }
