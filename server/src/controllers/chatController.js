@@ -454,7 +454,7 @@ ${contextText ? contextText : "No relevant context found in the database."}
         const stream = await openaiClient.chat.completions.create({
             model: "gpt-4o-mini",
             messages: apiMessages,
-            max_tokens: 8000,
+            max_tokens: 16000,
             stream: true,
         });
 
