@@ -223,6 +223,13 @@ exports.sendMessage = async (req, res) => {
         // Search across vector DB and MongoDB text index using the enriched filters
         let searchResults = await performHybridSearch(content, currentFilters);
 
+        // Fallback logic: If we strictly filtered by 'notes' or 'pyq' but got nothing, fallback to syllabus
+        if ((!searchResults || searchResults.length === 0) && (currentFilters.category === 'notes' || currentFilters.category === 'pyq')) {
+            console.log(`[ChatController] No ${currentFilters.category} found for ${currentFilters.subject}. Falling back to syllabus.`);
+            currentFilters.category = 'syllabus';
+            searchResults = await performHybridSearch(content, currentFilters);
+        }
+
         // Build context string from search results
         let contextText = "";
         const sourceData = [];
