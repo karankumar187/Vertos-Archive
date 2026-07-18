@@ -321,7 +321,11 @@ exports.sendMessage = async (req, res) => {
         // ═══════════════════════════════════════════════════════════════════════
         // STEP 4: JINA RERANKER
         // ═══════════════════════════════════════════════════════════════════════
-        const rerankLimit = (currentFilters.category === 'notes' || currentFilters.category === 'pyq' || isQuestionGenRequest) ? 15 : 7;
+        let rerankLimit = 7;
+        if (isQuestionGenRequest) rerankLimit = 50; // Exams require massive context to cover all units
+        else if (currentFilters.category === 'notes') rerankLimit = 40; // Notes require comprehensive coverage
+        else if (currentFilters.category === 'pyq') rerankLimit = 20;
+
         console.log(`[ChatController] Step 4: Reranking ${searchResults.length} chunks with Jina AI (Limit: ${rerankLimit})...`);
         let finalChunks = searchResults; // fallback if Jina fails
         let rerankerPassed = true;
