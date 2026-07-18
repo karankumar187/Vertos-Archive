@@ -22,7 +22,7 @@ exports.initQdrant = async () => {
             console.log(`[Qdrant] Collection '${COLLECTION_NAME}' not found. Creating...`);
             await client.createCollection(COLLECTION_NAME, {
                 vectors: {
-                    size: 1536, // size for OpenAI text-embedding-3-small
+                    size: 1024, // size for BAAI/bge-m3
                     distance: 'Cosine',
                 },
             });
