@@ -49,16 +49,104 @@ const handleDownload = async (doc) => {
 const API_BASE = (import.meta?.env?.VITE_API_URL) || 'http://localhost:5001/api';
 const FILE_PROXY_BASE = API_BASE.replace('/api', '');
 
-const getViewableUrl = (url, title = '', ext = '') => {
+const getViewableUrl = (url, ext = '') => {
   if (!url || url === '#') return '#';
   if (url.startsWith('https://res.cloudinary.com/')) {
-    let params = `url=${encodeURIComponent(url)}`;
-    if (title) params += `&title=${encodeURIComponent(title)}`;
-    if (ext) params += `&ext=${ext}`;
-    return `${FILE_PROXY_BASE}/api/file/view?${params}`;
+    return `${FILE_PROXY_BASE}/api/file/view?url=${encodeURIComponent(url)}&ext=${ext}`;
   }
   return url;
 };
+
+function GalleryModal({ doc, onClose }) {
+  const [index, setIndex] = useState(0);
+  const allFiles = (doc.files && doc.files.length > 0) ? doc.files : [{ url: doc.fileUrl, type: doc.fileType }];
+  const total = allFiles.length;
+  const current = allFiles[index];
+  const isImage = current && (current.type || '').startsWith('image/');
+  const ext = current.type ? current.type.split('/').pop().split('+')[0] : '';
+  const proxiedUrl = getViewableUrl(current.url, doc.title, ext);
+  const downloadUrl = proxiedUrl.includes('/api/file/view')
+    ? proxiedUrl.replace('/api/file/view?', '/api/file/view?download=1&')
+    : proxiedUrl;
+
+  useEffect(() => {
+    const handleKey = (e) => {
+      if (e.key === 'ArrowRight') setIndex(i => Math.min(i + 1, total - 1));
+      if (e.key === 'ArrowLeft') setIndex(i => Math.max(i - 1, 0));
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [total, onClose]);
+
+  return (
+    <div onClick={onClose} style={{
+      position: 'fixed', inset: 0, zIndex: 9999,
+      background: 'rgba(0,0,0,0.88)', display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center'
+    }}>
+      <div onClick={e => e.stopPropagation()} style={{ position: 'relative', maxWidth: '90vw', maxHeight: '90vh', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', justifyContent: 'space-between' }}>
+          <span style={{ color: '#e8d5b0', fontFamily: "'Inter', sans-serif", fontSize: '0.9rem', fontWeight: 600 }}>
+            {doc.title} &mdash; Page {index + 1} / {total}
+          </span>
+          <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.12)', border: 'none', color: '#fff', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', fontSize: '1.1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+        </div>
+        {/* Image shows inline; PDFs/docs open in new tab */}
+        {isImage ? (
+          <img src={proxiedUrl} alt={`Page ${index + 1}`} style={{ maxWidth: '85vw', maxHeight: '75vh', borderRadius: 12, objectFit: 'contain', boxShadow: '0 8px 40px rgba(0,0,0,0.5)' }} />
+        ) : (
+          <div style={{
+            width: 420, maxWidth: '85vw', background: 'rgba(255,255,255,0.06)', borderRadius: 16,
+            border: '1px solid rgba(200,134,26,0.25)', padding: '40px 32px',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20, textAlign: 'center'
+          }}>
+            <div style={{ fontSize: 64 }}>📄</div>
+            <div>
+              <p style={{ color: '#e8d5b0', fontFamily: "'Playfair Display', serif", fontSize: '1.1rem', fontWeight: 700, margin: 0, marginBottom: 6 }}>{doc.title}</p>
+              <p style={{ color: 'rgba(232,213,176,0.55)', fontFamily: "'Inter', sans-serif", fontSize: '0.8rem', margin: 0 }}>
+                {ext ? ext.toUpperCase() : 'Document'} · Page {index + 1} of {total}
+              </p>
+            </div>
+            <p style={{ color: 'rgba(255,255,255,0.5)', fontFamily: "'Inter', sans-serif", fontSize: '0.82rem', margin: 0 }}>
+              PDF and document files open in a new tab for the best viewing experience.
+            </p>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <a href={proxiedUrl} target="_blank" rel="noopener noreferrer"
+                style={{ padding: '10px 22px', background: 'linear-gradient(135deg, #c8861a, #d97706)', border: 'none', borderRadius: 9, color: '#fff', fontFamily: "'Inter', sans-serif", fontSize: '0.88rem', fontWeight: 600, cursor: 'pointer', textDecoration: 'none', transition: 'all 0.2s' }}>
+                👁 Open Document
+              </a>
+              <a href={downloadUrl} target="_blank" rel="noopener noreferrer"
+                style={{ padding: '10px 22px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(200,134,26,0.4)', borderRadius: 9, color: '#e8d5b0', fontFamily: "'Inter', sans-serif", fontSize: '0.88rem', fontWeight: 600, cursor: 'pointer', textDecoration: 'none', transition: 'all 0.2s' }}>
+                ⬇ Download
+              </a>
+            </div>
+          </div>
+        )}
+        {/* Navigation */}
+        {total > 1 && (
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+            <button onClick={() => setIndex(i => Math.max(i - 1, 0))} disabled={index === 0}
+              style={{ background: index === 0 ? 'rgba(255,255,255,0.1)' : 'rgba(200,134,26,0.8)', border: 'none', color: '#fff', borderRadius: 8, padding: '8px 20px', cursor: index === 0 ? 'not-allowed' : 'pointer', fontWeight: 600, fontFamily: "'Inter', sans-serif", transition: 'all 0.15s' }}>
+              ← Prev
+            </button>
+            <div style={{ display: 'flex', gap: 6 }}>
+              {allFiles.map((_, i) => (
+                <button key={i} onClick={() => setIndex(i)} style={{ width: 10, height: 10, borderRadius: '50%', border: 'none', background: i === index ? '#c8861a' : 'rgba(255,255,255,0.35)', cursor: 'pointer', padding: 0, transition: 'all 0.15s' }} />
+              ))}
+            </div>
+            <button onClick={() => setIndex(i => Math.min(i + 1, total - 1))} disabled={index === total - 1}
+              style={{ background: index === total - 1 ? 'rgba(255,255,255,0.1)' : 'rgba(200,134,26,0.8)', border: 'none', color: '#fff', borderRadius: 8, padding: '8px 20px', cursor: index === total - 1 ? 'not-allowed' : 'pointer', fontWeight: 600, fontFamily: "'Inter', sans-serif", transition: 'all 0.15s' }}>
+              Next →
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 
 /* ── Category metadata ─────────────────────────────────── */
 const CATEGORIES = [
@@ -133,6 +221,24 @@ const FileIcon = ({ category }) => {
   );
 };
 
+/* ── Stats pill ─────────────────────────────────────── */
+const StatPill = ({ icon, label, value }) => (
+  <div style={{
+    display: "flex", alignItems: "center", gap: 10,
+    background: "#fff", borderRadius: 12, padding: "14px 20px",
+    border: "1px solid #f0e6d2", boxShadow: "0 2px 8px rgba(160,110,40,0.06)"
+  }}>
+    <div style={{
+      width: 40, height: 40, borderRadius: 10, background: "linear-gradient(135deg,#fdf3e1,#fce4b3)",
+      display: "flex", alignItems: "center", justifyContent: "center"
+    }}>{icon}</div>
+    <div>
+      <div style={{ fontSize: "1.35rem", fontWeight: 800, color: "#1f1209", lineHeight: 1 }}>{value}</div>
+      <div style={{ fontSize: "0.75rem", color: "#9a7845", fontWeight: 500, marginTop: 2 }}>{label}</div>
+    </div>
+  </div>
+);
+
 /* ── Main Component ────────────────────────────────────── */
 export default function ArchiveTab() {
   const [documents, setDocuments] = useState([]);
@@ -141,7 +247,9 @@ export default function ArchiveTab() {
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [expandedCourse, setExpandedCourse] = useState(null);
   const [viewMode, setViewMode] = useState("folders"); // "folders" | "list"
+  const [galleryDoc, setGalleryDoc] = useState(null); // doc to show in gallery modal
   const searchRef = useRef(null);
+  const closeGallery = useCallback(() => setGalleryDoc(null), []);
 
   const PUBLIC_CATEGORIES = ["notes", "pyq", "syllabus"];
 
@@ -206,6 +314,7 @@ export default function ArchiveTab() {
 
   return (
     <>
+      {galleryDoc && <GalleryModal doc={galleryDoc} onClose={closeGallery} />}
       <div style={{ display: "flex", gap: 28, alignItems: "flex-start" }}>
 
       {/* ── LEFT MAIN PANEL ── */}
@@ -387,8 +496,8 @@ export default function ArchiveTab() {
                                 <td style={{ padding: "13px 18px", color: "#6b4d1f", fontWeight: 500 }}>{doc.uploaderID?.name || "Anonymous"}</td>
                                 <td style={{ padding: "13px 18px", textAlign: "right" }}>
                                   <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                                    <a href={getViewableUrl(doc.fileUrl, doc.title)} target="_blank" rel="noopener noreferrer" style={{
-                                      display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer", textDecoration: "none",
+                                    <button onClick={() => setGalleryDoc(doc)} style={{
+                                      display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer",
                                       fontSize: "0.82rem", fontWeight: 600, color: "#c8861a", background: "transparent",
                                       border: "1.5px solid #e9dcc8", padding: "7px 14px", borderRadius: 9,
                                       transition: "all 0.18s"
@@ -397,7 +506,7 @@ export default function ArchiveTab() {
                                     onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "#e9dcc8"; }}>
                                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15,3 21,3 21,9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                                       View
-                                    </a>
+                                    </button>
                                     <button
                                       onClick={() => handleDownload(doc)}
                                       style={{
@@ -457,8 +566,8 @@ export default function ArchiveTab() {
                         <td style={{ padding: "13px 18px", color: "#6b4d1f" }}>{doc.uploaderID?.name || "Anonymous"}</td>
                         <td style={{ padding: "13px 18px", textAlign: "right" }}>
                           <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                            <a href={getViewableUrl(doc.fileUrl, doc.title)} target="_blank" rel="noopener noreferrer" style={{
-                              display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer", textDecoration: "none",
+                            <button onClick={() => setGalleryDoc(doc)} style={{
+                              display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer",
                               fontSize: "0.82rem", fontWeight: 600, color: "#c8861a", background: "transparent",
                               border: "1.5px solid #e9dcc8", padding: "7px 14px", borderRadius: 9,
                               transition: "all 0.18s"
@@ -467,7 +576,7 @@ export default function ArchiveTab() {
                             onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "#e9dcc8"; }}>
                               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15,3 21,3 21,9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                               View
-                            </a>
+                            </button>
                             <button
                               onClick={() => handleDownload(doc)}
                               style={{
@@ -526,8 +635,8 @@ export default function ArchiveTab() {
             ) : recentDocs.map(doc => {
               const cat = CATEGORIES.find(c => c.id === doc.category) || CATEGORIES[0];
               return (
-                <a key={doc._id} href={getViewableUrl(doc.fileUrl, doc.title)} target="_blank" rel="noopener noreferrer"
-                  style={{ display: "flex", alignItems: "center", gap: 12, textDecoration: "none", background: "transparent", width: "100%", padding: "8px 0", borderBottom: "1px solid #f8f4f0", transition: "all 0.15s" }}
+                <button key={doc._id} onClick={() => setGalleryDoc(doc)}
+                  style={{ display: "flex", alignItems: "center", gap: 12, border: "none", background: "transparent", cursor: "pointer", width: "100%", textAlign: "left", padding: "8px 0", borderBottom: "1px solid #f8f4f0", transition: "all 0.15s" }}
                   onMouseEnter={e => { e.currentTarget.style.background = "#fdfaf5"; }}
                   onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}>
                   <div style={{ width: 36, height: 36, borderRadius: 9, background: cat.bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
@@ -540,7 +649,7 @@ export default function ArchiveTab() {
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c8861a" strokeWidth="2.5" style={{ flexShrink: 0 }}>
                     <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15,3 21,3 21,9"/><line x1="10" y1="14" x2="21" y2="3"/>
                   </svg>
-                </a>
+                </button>
               );
             })}
           </div>

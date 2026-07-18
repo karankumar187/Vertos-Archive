@@ -36,7 +36,94 @@ const getDownloadUrl = (url, title = '', ext = '') => {
   return url;
 };
 
+/* ── Image Gallery Modal ─────────────────────────────────── */
+function GalleryModal({ doc, onClose }) {
+  const [index, setIndex] = useState(0);
+  const allFiles = (doc.files && doc.files.length > 0) ? doc.files : [{ url: doc.fileUrl, type: doc.fileType }];
+  const total = allFiles.length;
+  const current = allFiles[index];
+  const isImage = current && (current.type || '').startsWith('image/');
+  const ext = current.type ? current.type.split('/').pop().split('+')[0] : '';
+  const proxiedUrl = getViewableUrl(current.url, doc.title, ext);
+  const downloadUrl = proxiedUrl.includes('/api/file/view')
+    ? proxiedUrl.replace('/api/file/view?', '/api/file/view?download=1&')
+    : proxiedUrl;
 
+  useEffect(() => {
+    const handleKey = (e) => {
+      if (e.key === 'ArrowRight') setIndex(i => Math.min(i + 1, total - 1));
+      if (e.key === 'ArrowLeft') setIndex(i => Math.max(i - 1, 0));
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [total, onClose]);
+
+  return (
+    <div onClick={onClose} style={{
+      position: 'fixed', inset: 0, zIndex: 9999,
+      background: 'rgba(0,0,0,0.88)', display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center'
+    }}>
+      <div onClick={e => e.stopPropagation()} style={{ position: 'relative', maxWidth: '90vw', maxHeight: '90vh', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', justifyContent: 'space-between' }}>
+          <span style={{ color: '#e8d5b0', fontFamily: "'Inter', sans-serif", fontSize: '0.9rem', fontWeight: 600 }}>
+            {doc.title} &mdash; Page {index + 1} / {total}
+          </span>
+          <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.12)', border: 'none', color: '#fff', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', fontSize: '1.1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+        </div>
+        {/* Images display inline; PDFs/docs need to open in a new tab (iframes blocked cross-domain) */}
+        {isImage ? (
+          <img src={proxiedUrl} alt={`Page ${index + 1}`} style={{ maxWidth: '85vw', maxHeight: '75vh', borderRadius: 12, objectFit: 'contain', boxShadow: '0 8px 40px rgba(0,0,0,0.5)' }} />
+        ) : (
+          <div style={{
+            width: 420, maxWidth: '85vw', background: 'rgba(255,255,255,0.06)', borderRadius: 16,
+            border: '1px solid rgba(200,134,26,0.25)', padding: '40px 32px',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20, textAlign: 'center'
+          }}>
+            <div style={{ fontSize: 64 }}>📄</div>
+            <div>
+              <p style={{ color: '#e8d5b0', fontFamily: "'Playfair Display', serif", fontSize: '1.1rem', fontWeight: 700, margin: 0, marginBottom: 6 }}>{doc.title}</p>
+              <p style={{ color: 'rgba(232,213,176,0.55)', fontFamily: "'Inter', sans-serif", fontSize: '0.8rem', margin: 0 }}>
+                {ext ? ext.toUpperCase() : 'Document'} · Page {index + 1} of {total}
+              </p>
+            </div>
+            <p style={{ color: 'rgba(255,255,255,0.5)', fontFamily: "'Inter', sans-serif", fontSize: '0.82rem', margin: 0 }}>
+              PDF and document files open in a new tab for the best viewing experience.
+            </p>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <a href={proxiedUrl} target="_blank" rel="noopener noreferrer"
+                style={{ padding: '10px 22px', background: 'linear-gradient(135deg, #c8861a, #d97706)', border: 'none', borderRadius: 9, color: '#fff', fontFamily: "'Inter', sans-serif", fontSize: '0.88rem', fontWeight: 600, cursor: 'pointer', textDecoration: 'none' }}>
+                👁 Open Document
+              </a>
+              <a href={downloadUrl} target="_blank" rel="noopener noreferrer"
+                style={{ padding: '10px 22px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(200,134,26,0.4)', borderRadius: 9, color: '#e8d5b0', fontFamily: "'Inter', sans-serif", fontSize: '0.88rem', fontWeight: 600, cursor: 'pointer', textDecoration: 'none' }}>
+                ⬇ Download
+              </a>
+            </div>
+          </div>
+        )}
+        {total > 1 && (
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+            <button onClick={() => setIndex(i => Math.max(i - 1, 0))} disabled={index === 0}
+              style={{ background: index === 0 ? 'rgba(255,255,255,0.1)' : 'rgba(200,134,26,0.8)', border: 'none', color: '#fff', borderRadius: 8, padding: '8px 20px', cursor: index === 0 ? 'not-allowed' : 'pointer', fontWeight: 600, fontFamily: "'Inter', sans-serif", transition: 'all 0.15s' }}>
+              ← Prev
+            </button>
+            <div style={{ display: 'flex', gap: 6 }}>
+              {allFiles.map((_, i) => (
+                <button key={i} onClick={() => setIndex(i)} style={{ width: 10, height: 10, borderRadius: '50%', border: 'none', background: i === index ? '#c8861a' : 'rgba(255,255,255,0.35)', cursor: 'pointer', padding: 0, transition: 'all 0.15s' }} />
+              ))}
+            </div>
+            <button onClick={() => setIndex(i => Math.min(i + 1, total - 1))} disabled={index === total - 1}
+              style={{ background: index === total - 1 ? 'rgba(255,255,255,0.1)' : 'rgba(200,134,26,0.8)', border: 'none', color: '#fff', borderRadius: 8, padding: '8px 20px', cursor: index === total - 1 ? 'not-allowed' : 'pointer', fontWeight: 600, fontFamily: "'Inter', sans-serif", transition: 'all 0.15s' }}>
+              Next →
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 /* ── Data ── */
 const CATEGORIES = [
@@ -129,11 +216,12 @@ const handleDownloadSource = async (doc) => {
 const MessageBubble = React.memo(function MessageBubble({ msg, onRegenerate, user }) {
   const isUser = msg.role === "user";
   const [showSources, setShowSources] = useState(false);
+  const [galleryDoc, setGalleryDoc] = useState(null);
   const uniqueSources = msg.sources ? [...new Map(msg.sources.map(s => [s.documentId, s])).values()] : [];
   
   return (
     <>
-
+      {galleryDoc && <GalleryModal doc={galleryDoc} onClose={() => setGalleryDoc(null)} />}
       <div className="msg-bubble-container" style={{
       display: "flex",
       gap: "16px",
@@ -251,14 +339,14 @@ const MessageBubble = React.memo(function MessageBubble({ msg, onRegenerate, use
                                     title={src.title}>{src.title}</span>
 
                                 {/* Open button */}
-                                <a href={getViewableUrl(src.url, src.title)} target="_blank" rel="noopener noreferrer"
+                                <button onClick={() => setGalleryDoc(src)}
                                     title="Open"
-                                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '20px', height: '20px', borderRadius: '4px', background: 'rgba(200,134,26,0.08)', border: '1px solid rgba(200,134,26,0.2)', cursor: 'pointer', flexShrink: 0, transition: 'all 0.15s', textDecoration: 'none' }}
+                                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '20px', height: '20px', borderRadius: '4px', background: 'rgba(200,134,26,0.08)', border: '1px solid rgba(200,134,26,0.2)', cursor: 'pointer', flexShrink: 0, transition: 'all 0.15s' }}
                                     onMouseEnter={e => { e.currentTarget.style.background = 'rgba(200,134,26,0.18)'; }}
                                     onMouseLeave={e => { e.currentTarget.style.background = 'rgba(200,134,26,0.08)'; }}
                                 >
                                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#9a7845" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-                                </a>
+                                </button>
 
                                 {/* Download button */}
                                 <button onClick={() => handleDownloadSource(src)}
