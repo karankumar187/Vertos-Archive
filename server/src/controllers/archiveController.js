@@ -71,23 +71,27 @@ exports.downloadDocument = async (req, res) => {
             const type = match[2];
             const publicIdWithExt = match[3];
 
-            if (resource_type === 'image' || resource_type === 'video') {
-                const extMatch = publicIdWithExt.match(/\.([a-z0-9]+)$/i);
-                const format = extMatch ? extMatch[1] : undefined;
-                const publicId = extMatch ? publicIdWithExt.slice(0, -extMatch[0].length) : publicIdWithExt;
-                return cloudinary.url(publicId, {
-                    sign_url: true,
-                    type,
-                    resource_type,
-                    ...(format ? { format } : {}),
-                    secure: true,
-                });
-            } else {
-                // raw: keep full public ID with extension, no format stripping
-                return cloudinary.utils.private_download_url(publicIdWithExt, '', { type, resource_type });
+            // Only sign 'authenticated' delivery type resources
+            // Public 'upload' type resources can be fetched directly
+            if (type === 'authenticated') {
+                if (resource_type === 'image' || resource_type === 'video') {
+                    const extMatch = publicIdWithExt.match(/\.([a-z0-9]+)$/i);
+                    const format = extMatch ? extMatch[1] : undefined;
+                    const publicId = extMatch ? publicIdWithExt.slice(0, -extMatch[0].length) : publicIdWithExt;
+                    return cloudinary.url(publicId, {
+                        sign_url: true,
+                        type,
+                        resource_type,
+                        ...(format ? { format } : {}),
+                        secure: true,
+                    });
+                } else {
+                    // raw authenticated: keep full public ID with extension
+                    return cloudinary.utils.private_download_url(publicIdWithExt, '', { type, resource_type });
+                }
             }
         }
-        return u;
+        return u; // Use original URL for public resources
     };
 
     const safeUrl = new URL(getSafeTargetUrl(fileUrl)).href;
