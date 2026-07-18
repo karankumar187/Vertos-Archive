@@ -539,7 +539,7 @@ ${contextText ? contextText : 'No relevant context found in the database.'}
                 // Save whatever Qwen produced as a last resort
                 const assistantMessage = new Message({
                     conversationId, role: 'assistant',
-                    content: cleanedQwenResponse || 'Sorry, I encountered an error generating a response.',
+                    content: fullAssistantResponse || 'Sorry, I encountered an error generating a response.',
                     sources: sourceData
                 });
                 await assistantMessage.save();
