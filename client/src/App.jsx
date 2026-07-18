@@ -61,6 +61,18 @@ function ProtectedRoute({ children }) {
   return children;
 }
 
+/** Redirects to / if user is already authenticated */
+function PublicOnlyRoute({ children }) {
+  const { user, loading } = useAuth();
+  if (loading) return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "60vh" }}>
+      <div style={{ fontFamily: "'Inter', sans-serif", color: "#8b5e0a", fontSize: "1rem" }}>Loading…</div>
+    </div>
+  );
+  if (user) return <Navigate to="/" replace />;
+  return children;
+}
+
 function App() {
   return (
     <BrowserRouter>
@@ -68,8 +80,8 @@ function App() {
         <Routes>
           {/* Public */}
           <Route path="/" element={<Layout><Hero /></Layout>} />
-          <Route path="/login" element={<Layout><LoginPage /></Layout>} />
-          <Route path="/register" element={<Layout><RegisterPage /></Layout>} />
+          <Route path="/login" element={<PublicOnlyRoute><Layout><LoginPage /></Layout></PublicOnlyRoute>} />
+          <Route path="/register" element={<PublicOnlyRoute><Layout><RegisterPage /></Layout></PublicOnlyRoute>} />
           <Route path="/community" element={<Layout><CommunityPage /></Layout>} />
           <Route path="/about" element={<Layout><AboutPage /></Layout>} />
 
