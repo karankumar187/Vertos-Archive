@@ -376,6 +376,7 @@ ${contextText ? contextText : 'No relevant context found in the database.'}
    STEP 2 — If the user has NOT specified which units, ask: "Which units does this CA cover?"
    STEP 3 — If the user has NOT specified the type, ask: "For this CA, should I generate MCQ questions or Subjective questions?"
    Only proceed to generate questions once you have all three pieces of information.
+   CA MCQ FORMAT: Generate EXACTLY 30 MCQs evenly distributed across the specified units (e.g., 15 per unit for 2 units). CA SUBJECTIVE FORMAT: Generate 8-10 subjective questions (mix of 2-mark, 5-mark, 10-mark) evenly distributed across specified units.
 9. CODE RESPONSE POLICY: When the user asks coding questions, ALWAYS wrap code in fenced markdown code blocks with the correct language tag.
 10. MATH FORMATTING: You MUST use LaTeX for math. Use $ for inline and $$ for block math. NEVER use \\[, \\], \\(, or \\) for math.
 11. NOTES POLICY: When the user asks for notes, use the provided source context. Provide detailed notes strictly focused on the specific unit or topics the user requested. If the context contains information from other units, ignore it. 
@@ -401,9 +402,12 @@ ${contextText ? contextText : 'No relevant context found in the database.'}
                 if (history[i].role === 'assistant') { lastAssistantMsg = history[i].content; break; }
             }
             const isPyqFollowUp = lastAssistantMsg && /\bare you looking for pyqs\b/i.test(lastAssistantMsg);
-            if (isPyqFollowUp || (lastAssistantMsg && /\b(mcq|subjective|format|multiple-choice|unit|units|type)\b/i.test(lastAssistantMsg))) {
+            // Detect CA/exam follow-ups: short messages referring to units/formats OR asking to continue/add more
+            const isExamFollowUp = lastAssistantMsg && /\b(mcq|subjective|format|multiple-choice|unit|units|type|question|questions|### Question)\b/i.test(lastAssistantMsg);
+            const isContinuationRequest = /\b(unit|as well|more|also|now|add|next|continue|from)\b/i.test(content) && content.length < 60;
+            if (isPyqFollowUp || isExamFollowUp || isContinuationRequest) {
                 if (!isPyqFollowUp) {
-                    if (/\b(CA|Class Assessment)\b/i.test(lastAssistantMsg)) isCaRequest = true;
+                    if (/\b(CA|Class Assessment|ca\s*mcq|ca\s*question)\b/i.test(lastAssistantMsg)) isCaRequest = true;
                     if (/\b(ETE|End Term|Final Exam)\b/i.test(lastAssistantMsg)) isEteRequest = true;
                     if (/\b(Mid Term|Mock Test)\b/i.test(lastAssistantMsg)) isMidTermRequest = true;
                 }
@@ -444,7 +448,7 @@ ${contextText ? contextText : 'No relevant context found in the database.'}
         } else if (isCaRequest) {
             const userSpecifiedType = /\b(mcq|subjective|objective|coding|numerical|implementation|multiple[\s-]?choice)\b/i.test(content);
             if (userSpecifiedType) {
-                userQueryFinal += "\n\n[REMINDER: CA request with specified type. Extract real PYQs first for the specified units, then invent to fill quota. Match PYQ style exactly. Do NOT stop early.]";
+                userQueryFinal += "\n\n[REMINDER: CA MCQ request. Generate EXACTLY 30 MCQs evenly distributed across the specified units. Extract real PYQs first for the specified units, then invent to fill quota. Match PYQ style exactly. Do NOT stop early.]";
             } else {
                 userQueryFinal += "\n\n[REMINDER: CA request. Ask for course, units, and question type before generating. Do NOT generate any questions yet.]";
             }
