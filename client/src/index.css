@@ -216,6 +216,27 @@ body {
   font-size: inherit;
 }
 
+/* ── Markdown Table Styles ───────────────── */
+.markdown-body table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1rem;
+}
+.markdown-body th,
+.markdown-body td {
+  border: 1px solid #e2d7c5;
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+}
+.markdown-body th {
+  background-color: #f5eedf;
+  font-weight: 600;
+  color: #5c3f05;
+}
+.markdown-body tr:nth-child(even) {
+  background-color: #faf6ef;
+}
+
 @media (min-width: 769px) {
   .mobile-only {
     display: none !important;
