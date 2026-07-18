@@ -146,7 +146,7 @@ app.use('/api/archive', archiveRoutes);
 
 // File proxy: fetches a Cloudinary file and streams it with correct headers for browser viewing/download
 app.get('/api/file/view', async (req, res) => {
-    const { url, download } = req.query;
+    const { url, download, title } = req.query;
     if (!url) return res.status(400).send('Missing url parameter');
     
     // Only allow Cloudinary URLs
@@ -157,9 +157,16 @@ app.get('/api/file/view', async (req, res) => {
     try {
         const https = require('https');
         const urlObj = new URL(url);
-        const filename = urlObj.pathname.split('/').pop() || 'document';
-        const urlExt = filename.split('.').pop().toLowerCase();
+        const originalFilename = urlObj.pathname.split('/').pop() || 'document';
+        const urlExt = originalFilename.split('.').pop().toLowerCase();
         const ext = req.query.ext || urlExt;
+        
+        let filenameBase = originalFilename.split('.').slice(0, -1).join('.');
+        if (title) {
+            // Sanitize title for filename
+            filenameBase = title.replace(/[^a-zA-Z0-9 -_]/g, '').trim() || filenameBase;
+        }
+        const filename = `${filenameBase}.${ext}`;
         
         const mimeMap = {
             pdf: 'application/pdf',
@@ -185,17 +192,18 @@ app.get('/api/file/view', async (req, res) => {
                 return;
             }
             
-            // Helper to get authenticated URL for raw files (which are often blocked on free Cloudinary CDN)
+            // Helper to get authenticated URL for files (raw, image, video)
             const getSafeTargetUrl = (u) => {
-                if (!u.includes('/raw/')) return u;
-                const match = u.match(/\/raw\/(upload|authenticated)\/(?:s--[a-zA-Z0-9_-]+--\/)?(?:v\d+\/)?(.+?)$/);
+                const match = u.match(/\/(raw|image|video)\/(upload|authenticated)\/(?:s--[a-zA-Z0-9_-]+--\/)?(?:v\d+\/)?(.+?)$/);
                 if (match) {
                     const cloudinary = require('./src/config/cloudinary').cloudinary;
-                    const type = match[1];
-                    const publicId = match[2];
-                    const extMatch = publicId.match(/\.([a-z0-9]+)$/i);
+                    const resource_type = match[1];
+                    const type = match[2];
+                    const publicIdWithExt = match[3];
+                    const extMatch = publicIdWithExt.match(/\.([a-z0-9]+)$/i);
                     const format = extMatch ? extMatch[1] : '';
-                    return cloudinary.utils.private_download_url(publicId, format, { type, resource_type: "raw" });
+                    const publicId = extMatch ? publicIdWithExt.slice(0, -extMatch[0].length) : publicIdWithExt;
+                    return cloudinary.utils.private_download_url(publicId, format, { type, resource_type });
                 }
                 return u;
             };

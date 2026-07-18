@@ -8,6 +8,19 @@ const CATEGORIES = [
   { label: "University Info",value: "university" },
 ];
 
+const API_BASE = (import.meta?.env?.VITE_API_URL) || 'http://localhost:5001/api';
+const FILE_PROXY_BASE = API_BASE.replace('/api', '');
+
+const getViewableUrl = (url, title = '', ext = '') => {
+  if (!url || url === '#') return '#';
+  if (url.startsWith('https://res.cloudinary.com/')) {
+    let proxyUrl = `${FILE_PROXY_BASE}/api/file/view?url=${encodeURIComponent(url)}&ext=${ext}`;
+    if (title) proxyUrl += `&title=${encodeURIComponent(title)}`;
+    return proxyUrl;
+  }
+  return url;
+};
+
 function ReviewModal({ doc, mode, onClose, onSuccess }) {
     const [form, setForm] = useState({
         title: doc.title || '',
@@ -79,7 +92,7 @@ function ReviewModal({ doc, mode, onClose, onSuccess }) {
 
                 {/* Preview File Link & Extracted Text */}
                 <div style={{ marginBottom: '20px' }}>
-                    <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', fontSize: '0.85rem', color: '#c8861a', fontWeight: 600, textDecoration: 'none', padding: '8px 14px', background: '#fdf8f1', borderRadius: '8px', border: '1px solid #e9dcc8', marginBottom: '12px' }}>
+                    <a href={getViewableUrl(doc.fileUrl, doc.title)} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', fontSize: '0.85rem', color: '#c8861a', fontWeight: 600, textDecoration: 'none', padding: '8px 14px', background: '#fdf8f1', borderRadius: '8px', border: '1px solid #e9dcc8', marginBottom: '12px' }}>
                         📄 View Uploaded File
                     </a>
                     {doc.extractedText && (
@@ -265,7 +278,7 @@ export default function AdminDocuments() {
             {pendingDocs.map(doc => (
               <tr key={doc._id} style={{ borderBottom: "1px solid #f9f5f0", transition: "background 0.2s" }} onMouseEnter={e => e.currentTarget.style.background = "#fdf8f1"} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
                 <td style={{ padding: "16px 24px", fontSize: "0.9rem", color: "#1f1209", fontWeight: 500, maxWidth: "250px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer" style={{ color: "#c8861a", textDecoration: "none" }}>{doc.title}</a>
+                  <a href={getViewableUrl(doc.fileUrl, doc.title)} target="_blank" rel="noopener noreferrer" style={{ color: "#c8861a", textDecoration: "none" }}>{doc.title}</a>
                 </td>
                 <td style={{ padding: "16px 24px", fontSize: "0.85rem", color: "#6b4d1f" }}>{doc.uploaderId?.name || 'Unknown'}</td>
                 <td style={{ padding: "16px 24px", fontSize: "0.85rem", color: "#6b4d1f" }}>{doc.subject}</td>
@@ -273,7 +286,7 @@ export default function AdminDocuments() {
                 <td style={{ padding: "16px 24px", fontSize: "0.85rem", color: "#6b4d1f" }}>{new Date(doc.uploadedAt).toLocaleDateString()}</td>
                 <td style={{ padding: "16px 24px", textAlign: "right" }}>
                   <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', alignItems: 'center' }}>
-                    <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "32px", height: "32px", borderRadius: "8px", background: "#f0fdf4", color: "#16a34a", textDecoration: "none" }} title="View Document">
+                    <a href={getViewableUrl(doc.fileUrl, doc.title)} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "32px", height: "32px", borderRadius: "8px", background: "#f0fdf4", color: "#16a34a", textDecoration: "none" }} title="View Document">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                     </a>
                     {doc.extractedText && (
@@ -360,7 +373,7 @@ export default function AdminDocuments() {
                           <td style={{ padding: "12px 24px", fontSize: "0.85rem", color: "#6b4d1f" }}>{new Date(doc.createdAt).toLocaleDateString()}</td>
                           <td style={{ padding: "12px 24px", textAlign: "right" }}>
                             <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', alignItems: 'center' }}>
-                              <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "30px", height: "30px", borderRadius: "8px", background: "#fff", border: "1px solid #e9dcc8", color: "#16a34a", textDecoration: "none" }} title="View Document">
+                              <a href={getViewableUrl(doc.fileUrl, doc.title)} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "30px", height: "30px", borderRadius: "8px", background: "#fff", border: "1px solid #e9dcc8", color: "#16a34a", textDecoration: "none" }} title="View Document">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                               </a>
                               {doc.extractedText && (

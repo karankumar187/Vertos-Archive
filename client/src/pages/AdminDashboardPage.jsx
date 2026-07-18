@@ -8,6 +8,19 @@ const CATEGORIES = [
   { label: "University Info",value: "university" },
 ];
 
+const API_BASE = (import.meta?.env?.VITE_API_URL) || 'http://localhost:5001/api';
+const FILE_PROXY_BASE = API_BASE.replace('/api', '');
+
+const getViewableUrl = (url, title = '', ext = '') => {
+  if (!url || url === '#') return '#';
+  if (url.startsWith('https://res.cloudinary.com/')) {
+    let proxyUrl = `${FILE_PROXY_BASE}/api/file/view?url=${encodeURIComponent(url)}&ext=${ext}`;
+    if (title) proxyUrl += `&title=${encodeURIComponent(title)}`;
+    return proxyUrl;
+  }
+  return url;
+};
+
 function ReviewModal({ doc, mode, onClose, onSuccess }) {
     const [form, setForm] = useState({
         title: doc.title || '',
@@ -87,8 +100,8 @@ function ReviewModal({ doc, mode, onClose, onSuccess }) {
                             style={{ fontFamily: "'Inter', sans-serif", fontSize: '0.78rem', color: '#8b6535', fontWeight: 600, background: 'transparent', border: 'none', cursor: 'pointer', padding: '3px 6px' }}>
                             {showExtractedText ? 'Hide Data' : 'View Data'}
                         </button>
-                        <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer"
-                            style={{ fontFamily: "'Inter', sans-serif", fontSize: '0.78rem', color: '#c8861a', fontWeight: 600, textDecoration: 'none', flexShrink: 0, border: '1px solid #e8c96a', borderRadius: '6px', padding: '3px 10px' }}>
+                        <a href={getViewableUrl(doc.fileUrl, doc.title)} target="_blank" rel="noopener noreferrer"
+                           style={{ fontFamily: "'Inter', sans-serif", fontSize: '0.78rem', color: '#c8861a', fontWeight: 600, textDecoration: 'none', flexShrink: 0, border: '1px solid #e8c96a', borderRadius: '6px', padding: '3px 10px' }}>
                             Preview ↗
                         </a>
                     </div>
@@ -313,7 +326,7 @@ export default function AdminDashboardPage() {
 
     return (
         <div style={{ maxWidth: "1200px", margin: "40px auto", padding: "0 24px", width: "100%" }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '32px', gap: '16px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: "32px", gap: '16px', flexWrap: 'wrap' }}>
                 <div>
                     <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: "2.2rem", color: "#1f1209", marginBottom: "8px" }}>
                         Admin <span style={{ color: "#c8861a" }}>Dashboard</span>
@@ -382,7 +395,7 @@ export default function AdminDashboardPage() {
                                     <td style={{ padding: "16px 20px", maxWidth: "280px" }}>
                                         <p style={{ fontWeight: 600, color: "#1f1209", marginBottom: "6px", wordBreak: "break-word" }}>{doc.title}</p>
                                         <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                                            <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer"
+                                            <a href={getViewableUrl(doc.fileUrl, doc.title)} target="_blank" rel="noopener noreferrer"
                                                 style={{ color: "#c8861a", textDecoration: "none", fontSize: "0.78rem", fontWeight: 500, border: "1px solid #e8c96a", borderRadius: "5px", padding: "2px 8px" }}>
                                                 Preview ↗
                                             </a>
@@ -552,7 +565,7 @@ export default function AdminDashboardPage() {
                                                                     onMouseLeave={e => e.currentTarget.style.background = '#fdfaf5'}>
                                                                     View Data
                                                                 </button>
-                                                                <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer" 
+                                                                <a href={getViewableUrl(doc.fileUrl, doc.title)} target="_blank" rel="noopener noreferrer" 
                                                                     style={{ padding: '6px 12px', background: '#fdfaf5', border: '1px solid #e8c96a', borderRadius: '6px', color: '#c8861a', fontWeight: 600, cursor: 'pointer', fontSize: '0.75rem', textDecoration: 'none', transition: 'all 0.2s' }}
                                                                     onMouseEnter={e => e.currentTarget.style.background = '#fcf0c2'}
                                                                     onMouseLeave={e => e.currentTarget.style.background = '#fdfaf5'}>

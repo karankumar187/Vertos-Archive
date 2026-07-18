@@ -5,5 +5,6 @@ const { protect } = require('../middleware/auth');
 
 router.get('/', protect, archiveController.getArchive);
 router.get('/download/:id', protect, archiveController.downloadDocument);
+router.get('/files/:id', protect, archiveController.getDocumentFiles);
 
 module.exports = router;

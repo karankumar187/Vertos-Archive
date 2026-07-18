@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -7,9 +7,94 @@ import rehypeKatex from "rehype-katex";
 import "katex/dist/katex.min.css";
 import vertoAiAvatar from "../assets/verto-ai.jpg";
 import campusSketch from "../assets/campus-sketch.png";
-import { chatAPI } from "../services/api";
+import { chatAPI, archiveAPI } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import CodeBlock from "../components/CodeBlock";
+
+const API_BASE = (import.meta?.env?.VITE_API_URL) || 'http://localhost:5001/api';
+const FILE_PROXY_BASE = API_BASE.replace('/api', '');
+
+// Returns a proxied URL so all file types open correctly in the browser
+const getViewableUrl = (url, title = '', ext = '') => {
+  if (!url || url === '#') return '#';
+  if (url.startsWith('https://res.cloudinary.com/')) {
+    let proxyUrl = `${FILE_PROXY_BASE}/api/file/view?url=${encodeURIComponent(url)}&ext=${ext}`;
+    if (title) proxyUrl += `&title=${encodeURIComponent(title)}`;
+    return proxyUrl;
+  }
+  return url;
+};
+
+// Returns a proxied download URL that forces Content-Disposition: attachment
+const getDownloadUrl = (url, title = '', ext = '') => {
+  if (!url || url === '#') return '#';
+  if (url.startsWith('https://res.cloudinary.com/')) {
+    let proxyUrl = `${FILE_PROXY_BASE}/api/file/view?download=1&url=${encodeURIComponent(url)}&ext=${ext}`;
+    if (title) proxyUrl += `&title=${encodeURIComponent(title)}`;
+    return proxyUrl;
+  }
+  return url;
+};
+
+/* ── Image Gallery Modal ─────────────────────────────────── */
+function GalleryModal({ doc, onClose }) {
+  const [index, setIndex] = useState(0);
+  const allFiles = (doc.files && doc.files.length > 0) ? doc.files : [{ url: doc.fileUrl, type: doc.fileType }];
+  const total = allFiles.length;
+  const current = allFiles[index];
+  const isImage = current && (current.type || '').startsWith('image/');
+  const ext = current.type ? current.type.split('/').pop().split('+')[0] : '';
+  const proxiedUrl = getViewableUrl(current.url, doc.title, ext);
+
+  useEffect(() => {
+    const handleKey = (e) => {
+      if (e.key === 'ArrowRight') setIndex(i => Math.min(i + 1, total - 1));
+      if (e.key === 'ArrowLeft') setIndex(i => Math.max(i - 1, 0));
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [total, onClose]);
+
+  return (
+    <div onClick={onClose} style={{
+      position: 'fixed', inset: 0, zIndex: 9999,
+      background: 'rgba(0,0,0,0.88)', display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center'
+    }}>
+      <div onClick={e => e.stopPropagation()} style={{ position: 'relative', maxWidth: '90vw', maxHeight: '90vh', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', justifyContent: 'space-between' }}>
+          <span style={{ color: '#e8d5b0', fontFamily: "'Inter', sans-serif", fontSize: '0.9rem', fontWeight: 600 }}>
+            {doc.title} &mdash; Page {index + 1} / {total}
+          </span>
+          <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.12)', border: 'none', color: '#fff', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', fontSize: '1.1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+        </div>
+        {isImage ? (
+          <img src={proxiedUrl} alt={`Page ${index + 1}`} style={{ maxWidth: '85vw', maxHeight: '75vh', borderRadius: 12, objectFit: 'contain', boxShadow: '0 8px 40px rgba(0,0,0,0.5)' }} />
+        ) : (
+          <iframe src={proxiedUrl} title={`Page ${index + 1}`} style={{ width: '80vw', height: '75vh', borderRadius: 12, border: 'none' }} />
+        )}
+        {total > 1 && (
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+            <button onClick={() => setIndex(i => Math.max(i - 1, 0))} disabled={index === 0}
+              style={{ background: index === 0 ? 'rgba(255,255,255,0.1)' : 'rgba(200,134,26,0.8)', border: 'none', color: '#fff', borderRadius: 8, padding: '8px 20px', cursor: index === 0 ? 'not-allowed' : 'pointer', fontWeight: 600, fontFamily: "'Inter', sans-serif", transition: 'all 0.15s' }}>
+              ← Prev
+            </button>
+            <div style={{ display: 'flex', gap: 6 }}>
+              {allFiles.map((_, i) => (
+                <button key={i} onClick={() => setIndex(i)} style={{ width: 10, height: 10, borderRadius: '50%', border: 'none', background: i === index ? '#c8861a' : 'rgba(255,255,255,0.35)', cursor: 'pointer', padding: 0, transition: 'all 0.15s' }} />
+              ))}
+            </div>
+            <button onClick={() => setIndex(i => Math.min(i + 1, total - 1))} disabled={index === total - 1}
+              style={{ background: index === total - 1 ? 'rgba(255,255,255,0.1)' : 'rgba(200,134,26,0.8)', border: 'none', color: '#fff', borderRadius: 8, padding: '8px 20px', cursor: index === total - 1 ? 'not-allowed' : 'pointer', fontWeight: 600, fontFamily: "'Inter', sans-serif", transition: 'all 0.15s' }}>
+              Next →
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 /* ── Data ── */
 const CATEGORIES = [
@@ -50,34 +135,65 @@ const preprocessMath = (text) => {
     return res;
 };
 
-const API_BASE = (import.meta?.env?.VITE_API_URL) || 'http://localhost:5001/api';
-const FILE_PROXY_BASE = API_BASE.replace('/api', '');
+// Proxy helpers moved up
 
-// Returns a proxied URL so all file types open correctly in the browser
-const getViewableUrl = (url, ext = '') => {
-  if (!url || url === '#') return '#';
-  if (url.startsWith('https://res.cloudinary.com/')) {
-    return `${FILE_PROXY_BASE}/api/file/view?url=${encodeURIComponent(url)}&ext=${ext}`;
+/* ── Programmatic download via backend proxy — supports multi-file documents ── */
+const handleDownloadSource = async (doc) => {
+  try {
+    const totalFiles = (doc.files && doc.files.length) || 1;
+    if (totalFiles <= 1) {
+      // Single file — download normally
+      const res = await archiveAPI.downloadDocument(doc.documentId);
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      const ext = doc.fileType ? '.' + doc.fileType.split('/').pop().split('+')[0] : '.pdf';
+      link.setAttribute('download', `${doc.title}${ext}`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } else {
+      // Multi-file — download each page sequentially with a short delay
+      for (let i = 0; i < totalFiles; i++) {
+        await new Promise(resolve => setTimeout(resolve, i === 0 ? 0 : 600));
+        try {
+          const res = await archiveAPI.downloadDocument(doc.documentId, i);
+          const url = window.URL.createObjectURL(new Blob([res.data]));
+          const link = document.createElement('a');
+          link.href = url;
+          const fileType = (doc.files[i] && doc.files[i].type) || doc.fileType || 'image/jpeg';
+          const ext = '.' + fileType.split('/').pop().split('+')[0];
+          link.setAttribute('download', `${doc.title} - Page ${i + 1}${ext}`);
+          document.body.appendChild(link);
+          link.click();
+          link.parentNode.removeChild(link);
+          window.URL.revokeObjectURL(url);
+        } catch (pageErr) {
+          console.error(`Download failed for page ${i + 1}:`, pageErr);
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Download failed:', err);
+    // Fallback: use getDownloadUrl
+    const fileExt = doc.fileType === 'application/pdf' ? 'pdf' : doc.fileType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ? 'docx' : 'txt';
+    const primaryRawUrl = doc.fileUrl || (doc.files && doc.files.length > 0 ? doc.files[0] : '#');
+    const fallbackUrl = primaryRawUrl !== '#' ? getDownloadUrl(primaryRawUrl, doc.title, fileExt) : null;
+    if (fallbackUrl) window.open(fallbackUrl, '_blank');
   }
-  return url;
-};
-
-// Returns a proxied download URL that forces Content-Disposition: attachment
-const getDownloadUrl = (url, ext = '') => {
-  if (!url || url === '#') return '#';
-  if (url.startsWith('https://res.cloudinary.com/')) {
-    return `${FILE_PROXY_BASE}/api/file/view?url=${encodeURIComponent(url)}&ext=${ext}&download=1`;
-  }
-  return url;
 };
 
 const MessageBubble = React.memo(function MessageBubble({ msg, onRegenerate, user }) {
   const isUser = msg.role === "user";
   const [showSources, setShowSources] = useState(false);
+  const [galleryDoc, setGalleryDoc] = useState(null);
   const uniqueSources = msg.sources ? [...new Map(msg.sources.map(s => [s.documentId, s])).values()] : [];
   
   return (
-    <div className="msg-bubble-container" style={{
+    <>
+      {galleryDoc && <GalleryModal doc={galleryDoc} onClose={() => setGalleryDoc(null)} />}
+      <div className="msg-bubble-container" style={{
       display: "flex",
       gap: "16px",
       alignSelf: isUser ? "flex-end" : "flex-start",
@@ -172,8 +288,8 @@ const MessageBubble = React.memo(function MessageBubble({ msg, onRegenerate, use
                         const fileExt = src.fileType === 'application/pdf' ? 'pdf' : src.fileType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ? 'docx' : 'txt';
                         const isDoc = fileExt === 'pdf' || fileExt === 'docx';
                         const primaryRawUrl = src.fileUrl || (src.files && src.files.length > 0 ? src.files[0] : '#');
-                        const primaryUrl = getViewableUrl(primaryRawUrl, fileExt);
-                        const downloadUrl = primaryRawUrl !== '#' ? getDownloadUrl(primaryRawUrl, fileExt) : null;
+                        const primaryUrl = getViewableUrl(primaryRawUrl, src.title, fileExt);
+                        const downloadUrl = primaryRawUrl !== '#' ? getDownloadUrl(primaryRawUrl, src.title, fileExt) : null;
 
                         return (
                             <div key={i} style={{
@@ -194,26 +310,24 @@ const MessageBubble = React.memo(function MessageBubble({ msg, onRegenerate, use
                                     title={src.title}>{src.title}</span>
 
                                 {/* Open button */}
-                                <a href={primaryUrl} target="_blank" rel="noopener noreferrer"
+                                <button onClick={() => setGalleryDoc(src)}
                                     title="Open"
-                                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '20px', height: '20px', borderRadius: '4px', background: 'rgba(200,134,26,0.08)', border: '1px solid rgba(200,134,26,0.2)', textDecoration: 'none', flexShrink: 0, transition: 'all 0.15s' }}
+                                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '20px', height: '20px', borderRadius: '4px', background: 'rgba(200,134,26,0.08)', border: '1px solid rgba(200,134,26,0.2)', cursor: 'pointer', flexShrink: 0, transition: 'all 0.15s' }}
                                     onMouseEnter={e => { e.currentTarget.style.background = 'rgba(200,134,26,0.18)'; }}
                                     onMouseLeave={e => { e.currentTarget.style.background = 'rgba(200,134,26,0.08)'; }}
                                 >
                                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#9a7845" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-                                </a>
+                                </button>
 
                                 {/* Download button */}
-                                {downloadUrl && (
-                                    <a href={downloadUrl} target="_blank" rel="noopener noreferrer"
-                                        title="Download"
-                                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '20px', height: '20px', borderRadius: '4px', background: 'rgba(200,134,26,0.08)', border: '1px solid rgba(200,134,26,0.2)', textDecoration: 'none', flexShrink: 0, transition: 'all 0.15s' }}
-                                        onMouseEnter={e => { e.currentTarget.style.background = 'rgba(200,134,26,0.18)'; }}
-                                        onMouseLeave={e => { e.currentTarget.style.background = 'rgba(200,134,26,0.08)'; }}
-                                    >
-                                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#9a7845" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 3v13m0 0l-4-4m4 4l4-4M4 20h16" /></svg>
-                                    </a>
-                                )}
+                                <button onClick={() => handleDownloadSource(src)}
+                                    title="Download"
+                                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '20px', height: '20px', borderRadius: '4px', background: 'rgba(200,134,26,0.08)', border: '1px solid rgba(200,134,26,0.2)', cursor: 'pointer', flexShrink: 0, transition: 'all 0.15s' }}
+                                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(200,134,26,0.18)'; }}
+                                    onMouseLeave={e => { e.currentTarget.style.background = 'rgba(200,134,26,0.08)'; }}
+                                >
+                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#9a7845" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 3v13m0 0l-4-4m4 4l4-4M4 20h16" /></svg>
+                                </button>
                             </div>
                         );
                     })}
@@ -270,6 +384,7 @@ const MessageBubble = React.memo(function MessageBubble({ msg, onRegenerate, use
         )
       )}
     </div>
+    </>
   );
 });
 

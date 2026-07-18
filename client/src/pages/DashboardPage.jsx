@@ -10,6 +10,19 @@ const quickActions = [
   { to: "/leaderboard", icon: "🏆", label: "Leaderboard", desc: "Top contributors this month" },
 ];
 
+const API_BASE = (import.meta?.env?.VITE_API_URL) || 'http://localhost:5001/api';
+const FILE_PROXY_BASE = API_BASE.replace('/api', '');
+
+const getViewableUrl = (url, title = '', ext = '') => {
+  if (!url || url === '#') return '#';
+  if (url.startsWith('https://res.cloudinary.com/')) {
+    let proxyUrl = `${FILE_PROXY_BASE}/api/file/view?url=${encodeURIComponent(url)}&ext=${ext}`;
+    if (title) proxyUrl += `&title=${encodeURIComponent(title)}`;
+    return proxyUrl;
+  }
+  return url;
+};
+
 function StatCard({ value, label, icon }) {
   return (
     <div style={{
@@ -223,8 +236,8 @@ export default function DashboardPage() {
                         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                           <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.7rem", color: "#c8861a", background: "#fef3dc", padding: "3px 8px", borderRadius: "4px" }}>New</span>
                           {doc.fileUrl && (
-                            <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer" style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.7rem", color: "#fff", background: "#c8861a", padding: "3px 8px", borderRadius: "4px", textDecoration: "none", fontWeight: 600, transition: "background 0.2s" }} onMouseEnter={e => e.currentTarget.style.background = "#a86d10"} onMouseLeave={e => e.currentTarget.style.background = "#c8861a"}>
-                              Open ↗
+                            <a href={getViewableUrl(doc.fileUrl, doc.title)} target="_blank" rel="noopener noreferrer" style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.7rem", color: "#fff", background: "#c8861a", padding: "3px 8px", borderRadius: "4px", textDecoration: "none", fontWeight: 600, transition: "background 0.2s" }} onMouseEnter={e => e.currentTarget.style.background = "#a86d10"} onMouseLeave={e => e.currentTarget.style.background = "#c8861a"}>
+                              Preview
                             </a>
                           )}
                         </div>

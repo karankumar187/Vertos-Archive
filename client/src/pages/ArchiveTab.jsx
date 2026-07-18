@@ -1,26 +1,124 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { archiveAPI } from "../services/api";
 import { cacheGet, cacheSet } from "../utils/localCache";
 
-/* ── Programmatic download via backend proxy (fixes cross-origin download naming) ── */
+/* ── Programmatic download via backend proxy — supports multi-file documents ── */
 const handleDownload = async (doc) => {
   try {
-    const res = await archiveAPI.downloadDocument(doc._id);
-    const url = window.URL.createObjectURL(new Blob([res.data]));
-    const link = document.createElement('a');
-    link.href = url;
-    const ext = doc.fileType ? '.' + doc.fileType.split('/').pop().split('+')[0] : '.pdf';
-    link.setAttribute('download', `${doc.title}${ext}`);
-    document.body.appendChild(link);
-    link.click();
-    link.parentNode.removeChild(link);
-    window.URL.revokeObjectURL(url);
+    const totalFiles = (doc.files && doc.files.length) || 1;
+    if (totalFiles <= 1) {
+      // Single file — download normally
+      const res = await archiveAPI.downloadDocument(doc._id);
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      const ext = doc.fileType ? '.' + doc.fileType.split('/').pop().split('+')[0] : '.pdf';
+      link.setAttribute('download', `${doc.title}${ext}`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } else {
+      // Multi-file — download each page sequentially with a short delay
+      for (let i = 0; i < totalFiles; i++) {
+        await new Promise(resolve => setTimeout(resolve, i === 0 ? 0 : 600));
+        try {
+          const res = await archiveAPI.downloadDocument(doc._id, i);
+          const url = window.URL.createObjectURL(new Blob([res.data]));
+          const link = document.createElement('a');
+          link.href = url;
+          const fileType = (doc.files[i] && doc.files[i].type) || doc.fileType || 'image/jpeg';
+          const ext = '.' + fileType.split('/').pop().split('+')[0];
+          link.setAttribute('download', `${doc.title} - Page ${i + 1}${ext}`);
+          document.body.appendChild(link);
+          link.click();
+          link.parentNode.removeChild(link);
+          window.URL.revokeObjectURL(url);
+        } catch (pageErr) {
+          console.error(`Download failed for page ${i + 1}:`, pageErr);
+        }
+      }
+    }
   } catch (err) {
     console.error('Download failed:', err);
-    // Fallback: open in new tab
-    window.open(doc.fileUrl, '_blank');
+    window.open(getViewableUrl(doc.fileUrl, doc.title), '_blank');
   }
 };
+
+/* ── Image Gallery Modal ─────────────────────────────────── */
+const API_BASE = (import.meta?.env?.VITE_API_URL) || 'http://localhost:5001/api';
+const FILE_PROXY_BASE = API_BASE.replace('/api', '');
+
+const getViewableUrl = (url, ext = '') => {
+  if (!url || url === '#') return '#';
+  if (url.startsWith('https://res.cloudinary.com/')) {
+    return `${FILE_PROXY_BASE}/api/file/view?url=${encodeURIComponent(url)}&ext=${ext}`;
+  }
+  return url;
+};
+
+function GalleryModal({ doc, onClose }) {
+  const [index, setIndex] = useState(0);
+  const allFiles = (doc.files && doc.files.length > 0) ? doc.files : [{ url: doc.fileUrl, type: doc.fileType }];
+  const total = allFiles.length;
+  const current = allFiles[index];
+  const isImage = current && (current.type || '').startsWith('image/');
+  const ext = current.type ? current.type.split('/').pop().split('+')[0] : '';
+  const proxiedUrl = getViewableUrl(current.url, ext);
+
+  useEffect(() => {
+    const handleKey = (e) => {
+      if (e.key === 'ArrowRight') setIndex(i => Math.min(i + 1, total - 1));
+      if (e.key === 'ArrowLeft') setIndex(i => Math.max(i - 1, 0));
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [total, onClose]);
+
+  return (
+    <div onClick={onClose} style={{
+      position: 'fixed', inset: 0, zIndex: 9999,
+      background: 'rgba(0,0,0,0.88)', display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center'
+    }}>
+      <div onClick={e => e.stopPropagation()} style={{ position: 'relative', maxWidth: '90vw', maxHeight: '90vh', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', justifyContent: 'space-between' }}>
+          <span style={{ color: '#e8d5b0', fontFamily: "'Inter', sans-serif", fontSize: '0.9rem', fontWeight: 600 }}>
+            {doc.title} &mdash; Page {index + 1} / {total}
+          </span>
+          <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.12)', border: 'none', color: '#fff', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', fontSize: '1.1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+        </div>
+        {/* Image / PDF frame */}
+        {isImage ? (
+          <img src={proxiedUrl} alt={`Page ${index + 1}`} style={{ maxWidth: '85vw', maxHeight: '75vh', borderRadius: 12, objectFit: 'contain', boxShadow: '0 8px 40px rgba(0,0,0,0.5)' }} />
+        ) : (
+          <iframe src={proxiedUrl} title={`Page ${index + 1}`} style={{ width: '80vw', height: '75vh', borderRadius: 12, border: 'none' }} />
+        )}
+        {/* Navigation */}
+        {total > 1 && (
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+            <button onClick={() => setIndex(i => Math.max(i - 1, 0))} disabled={index === 0}
+              style={{ background: index === 0 ? 'rgba(255,255,255,0.1)' : 'rgba(200,134,26,0.8)', border: 'none', color: '#fff', borderRadius: 8, padding: '8px 20px', cursor: index === 0 ? 'not-allowed' : 'pointer', fontWeight: 600, fontFamily: "'Inter', sans-serif", transition: 'all 0.15s' }}>
+              ← Prev
+            </button>
+            <div style={{ display: 'flex', gap: 6 }}>
+              {allFiles.map((_, i) => (
+                <button key={i} onClick={() => setIndex(i)} style={{ width: 10, height: 10, borderRadius: '50%', border: 'none', background: i === index ? '#c8861a' : 'rgba(255,255,255,0.35)', cursor: 'pointer', padding: 0, transition: 'all 0.15s' }} />
+              ))}
+            </div>
+            <button onClick={() => setIndex(i => Math.min(i + 1, total - 1))} disabled={index === total - 1}
+              style={{ background: index === total - 1 ? 'rgba(255,255,255,0.1)' : 'rgba(200,134,26,0.8)', border: 'none', color: '#fff', borderRadius: 8, padding: '8px 20px', cursor: index === total - 1 ? 'not-allowed' : 'pointer', fontWeight: 600, fontFamily: "'Inter', sans-serif", transition: 'all 0.15s' }}>
+              Next →
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 
 /* ── Category metadata ─────────────────────────────────── */
 const CATEGORIES = [
@@ -121,7 +219,9 @@ export default function ArchiveTab() {
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [expandedCourse, setExpandedCourse] = useState(null);
   const [viewMode, setViewMode] = useState("folders"); // "folders" | "list"
+  const [galleryDoc, setGalleryDoc] = useState(null); // doc to show in gallery modal
   const searchRef = useRef(null);
+  const closeGallery = useCallback(() => setGalleryDoc(null), []);
 
   const PUBLIC_CATEGORIES = ["notes", "pyq", "syllabus"];
 
@@ -185,7 +285,9 @@ export default function ArchiveTab() {
   };
 
   return (
-    <div style={{ display: "flex", gap: 28, alignItems: "flex-start" }}>
+    <>
+      {galleryDoc && <GalleryModal doc={galleryDoc} onClose={closeGallery} />}
+      <div style={{ display: "flex", gap: 28, alignItems: "flex-start" }}>
 
       {/* ── LEFT MAIN PANEL ── */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 28, minWidth: 0 }}>
@@ -366,17 +468,17 @@ export default function ArchiveTab() {
                                 <td style={{ padding: "13px 18px", color: "#6b4d1f", fontWeight: 500 }}>{doc.uploaderID?.name || "Anonymous"}</td>
                                 <td style={{ padding: "13px 18px", textAlign: "right" }}>
                                   <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                                    <a href={doc.fileUrl} target="_blank" rel="noreferrer" style={{
-                                      display: "inline-flex", alignItems: "center", gap: 6,
-                                      fontSize: "0.82rem", fontWeight: 600, color: "#c8861a",
+                                    <button onClick={() => setGalleryDoc(doc)} style={{
+                                      display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer",
+                                      fontSize: "0.82rem", fontWeight: 600, color: "#c8861a", background: "transparent",
                                       border: "1.5px solid #e9dcc8", padding: "7px 14px", borderRadius: 9,
-                                      textDecoration: "none", transition: "all 0.18s"
+                                      transition: "all 0.18s"
                                     }}
                                     onMouseEnter={e => { e.currentTarget.style.background = "#fdf3e1"; e.currentTarget.style.borderColor = "#c8861a"; }}
                                     onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "#e9dcc8"; }}>
                                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15,3 21,3 21,9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                                       View
-                                    </a>
+                                    </button>
                                     <button
                                       onClick={() => handleDownload(doc)}
                                       style={{
@@ -436,17 +538,17 @@ export default function ArchiveTab() {
                         <td style={{ padding: "13px 18px", color: "#6b4d1f" }}>{doc.uploaderID?.name || "Anonymous"}</td>
                         <td style={{ padding: "13px 18px", textAlign: "right" }}>
                           <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                            <a href={doc.fileUrl} target="_blank" rel="noreferrer" style={{
-                              display: "inline-flex", alignItems: "center", gap: 6,
-                              fontSize: "0.82rem", fontWeight: 600, color: "#c8861a",
+                            <button onClick={() => setGalleryDoc(doc)} style={{
+                              display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer",
+                              fontSize: "0.82rem", fontWeight: 600, color: "#c8861a", background: "transparent",
                               border: "1.5px solid #e9dcc8", padding: "7px 14px", borderRadius: 9,
-                              textDecoration: "none", transition: "all 0.18s"
+                              transition: "all 0.18s"
                             }}
                             onMouseEnter={e => { e.currentTarget.style.background = "#fdf3e1"; e.currentTarget.style.borderColor = "#c8861a"; }}
                             onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "#e9dcc8"; }}>
                               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15,3 21,3 21,9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                               View
-                            </a>
+                            </button>
                             <button
                               onClick={() => handleDownload(doc)}
                               style={{
@@ -505,8 +607,10 @@ export default function ArchiveTab() {
             ) : recentDocs.map(doc => {
               const cat = CATEGORIES.find(c => c.id === doc.category) || CATEGORIES[0];
               return (
-                <a key={doc._id} href={doc.fileUrl} target="_blank" rel="noreferrer"
-                  style={{ display: "flex", alignItems: "center", gap: 12, textDecoration: "none", padding: "8px 0", borderBottom: "1px solid #f8f4f0" }}>
+                <button key={doc._id} onClick={() => setGalleryDoc(doc)}
+                  style={{ display: "flex", alignItems: "center", gap: 12, border: "none", background: "transparent", cursor: "pointer", width: "100%", textAlign: "left", padding: "8px 0", borderBottom: "1px solid #f8f4f0", transition: "all 0.15s" }}
+                  onMouseEnter={e => { e.currentTarget.style.background = "#fdfaf5"; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}>
                   <div style={{ width: 36, height: 36, borderRadius: 9, background: cat.bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                     <cat.icon />
                   </div>
@@ -517,7 +621,7 @@ export default function ArchiveTab() {
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c8861a" strokeWidth="2.5" style={{ flexShrink: 0 }}>
                     <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15,3 21,3 21,9"/><line x1="10" y1="14" x2="21" y2="3"/>
                   </svg>
-                </a>
+                </button>
               );
             })}
           </div>
@@ -549,5 +653,6 @@ export default function ArchiveTab() {
 
       <style>{`@keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }`}</style>
     </div>
+    </>
   );
 }
