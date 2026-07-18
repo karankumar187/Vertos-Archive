@@ -17,26 +17,26 @@ export default function Hero() {
   const [selected, setSelected]         = useState(null); // selected category
   const navigate                        = useNavigate();
   const [suggestions, setSuggestions]   = useState([
-    "What are important DBMS topics?",
-    "Show previous year ETP papers",
-    "Hostel rules and regulations",
-    "What scholarships are available?",
-    "Upcoming events at LPU",
-    "How to join a student club?",
+    "Generate CA MCQs for CSE357 Unit 1",
+    "Provide Mid Term subjective questions for INT219",
+    "Give me ETE previous year questions for MVC",
+    "Create ETP practice questions for all units",
+    "Give me detailed notes for Unit 3",
+    "Show me the full syllabus for CSE357",
   ]);
 
   useEffect(() => {
-    const fetchSuggestions = async () => {
-      try {
-        const res = await analyticsAPI.getHomepageData();
-        if (res.data?.success && res.data.data?.suggestedQuestions?.length > 0) {
-          setSuggestions(res.data.data.suggestedQuestions);
-        }
-      } catch (err) {
-        console.error("Failed to fetch homepage suggestions:", err);
-      }
-    };
-    fetchSuggestions();
+    // const fetchSuggestions = async () => {
+    //   try {
+    //     const res = await analyticsAPI.getHomepageData();
+    //     if (res.data?.success && res.data.data?.suggestedQuestions?.length > 0) {
+    //       setSuggestions(res.data.data.suggestedQuestions);
+    //     }
+    //   } catch (err) {
+    //     console.error("Failed to fetch homepage suggestions:", err);
+    //   }
+    // };
+    // fetchSuggestions();
   }, []);
 
   const handleAsk = () => {
@@ -268,7 +268,7 @@ export default function Hero() {
           })}
         </div>
 
-        {/* ── Popular Searches ── */}
+        {/* ── Sample Prompts ── */}
         <div className="anim-up d5" style={{ width: "100%", maxWidth: "900px" }}>
           <div style={{
             display: "flex", alignItems: "center", gap: "10px",
@@ -280,7 +280,7 @@ export default function Hero() {
               fontSize: "11px", fontWeight: 600,
               letterSpacing: "0.18em", textTransform: "uppercase",
               color: "#8b6535",
-            }}>Popular Searches</span>
+            }}>Sample Prompts</span>
             <div style={{ flex: 1, height: "1px", background: "linear-gradient(to right, #d4a96a55, transparent)" }}/>
           </div>
 

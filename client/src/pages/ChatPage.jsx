@@ -27,10 +27,10 @@ const WELCOME = {
 };
 
 const SUGGESTIONS = [
-  "What are important DBMS topics for finals?",
-  "Show previous year ETP papers",
-  "How do I apply for hostel?",
-  "Tell me about the library facilities",
+  "Generate CA MCQs for Unit 1",
+  "Provide Mid Term subjective questions for INT219",
+  "Give me ETE previous year questions for MVC",
+  "Give me detailed notes for Unit 3",
 ];
 
 const preprocessMath = (text) => {
