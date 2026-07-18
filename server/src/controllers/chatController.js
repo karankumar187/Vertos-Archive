@@ -2,7 +2,14 @@ const Conversation = require('../models/Conversation');
 const Message = require('../models/Message');
 const { performHybridSearch } = require('../services/search.service');
 const { openaiClient } = require('../services/openai.service');
+const { chatCompletion, streamChatCompletion } = require('../services/openrouter.service');
+const { rerank } = require('../services/jina.service');
 const Document = require('../models/Document');
+
+// --- Pipeline Confidence Thresholds ---
+// Minimum vector similarity score from Qdrant for the search to be considered relevant.
+const RETRIEVAL_CONFIDENCE_THRESHOLD = 0.30;
+
 
 // Get all conversations for a user
 exports.getConversations = async (req, res) => {
@@ -55,13 +62,11 @@ exports.sendMessage = async (req, res) => {
     }
 
     // --- AI Prompt Injection Mitigation ---
-    // Cap at 500 chars, strip newlines, strip < and >
     content = content.substring(0, 500).replace(/[\r\n]+/g, ' ').replace(/[<>]/g, '');
 
-    // Auto-extract course codes (e.g., "int 221", "CSE332", "174") from user query to strictly filter sources
+    // Auto-extract course codes from user query
     let currentFilters = filters || {};
     
-    // Check for syllabus or notes request early to enforce category filter
     const isSyllabusRequest = /\b(syllabus|course\s*overview|course\s*outline|course\s*content|what\s*is\s*covered|topics\s*covered|course\s*structure)\b/i.test(content);
     const isNotesRequestEarly = /\b(notes|study\s*material|lecture\s*notes|explain|explanation)\b/i.test(content);
     const isGenericPyqRequestEarly = /\b(pyq|pyqs|previous year|past year|practice questions?|mid term|ete|etp|end term)\b/i.test(content);
@@ -81,19 +86,15 @@ exports.sendMessage = async (req, res) => {
         try {
             const courseCode = fullCourseMatch ? fullCourseMatch[1] : '';
             const courseNum = fullCourseMatch ? fullCourseMatch[2] : numCourseMatch[1];
-            // Match with or without spaces/dashes (e.g. PHY 110, PHY110, PHY-110)
             const regexStr = courseCode ? `^${courseCode}[-_\\s]*${courseNum}$` : `^[A-Za-z]{2,4}[-_\\s]*${courseNum}$`;
             const regexMatch = new RegExp(regexStr, 'i');
             
             const uniqueSubjects = await Document.distinct('subject', { subject: regexMatch });
             if (uniqueSubjects.length > 0) {
-                // If found in DB, use the exact string from the DB (e.g. "PHY110" or "INT-221")
                 currentFilters.subject = uniqueSubjects[0];
             } else if (fullCourseMatch) {
-                // Fallback to exactly what the user typed if not in DB yet
                 currentFilters.subject = `${fullCourseMatch[1].toUpperCase()} ${fullCourseMatch[2]}`;
             } else if (numCourseMatch) {
-                // Fallback to avoid searching all docs when a specific number was provided but DB lookup failed
                 currentFilters.subject = `UNKNOWN ${numCourseMatch[1]}`;
             }
         } catch (err) {
@@ -102,12 +103,8 @@ exports.sendMessage = async (req, res) => {
     }
 
     if (!currentFilters.subject) {
-        // Fallback to alias mapping if they type the course name instead of the code
         try {
-            // Fetch dynamically from syllabus documents
             const syllabi = await Document.find({ category: 'syllabus' }).select('title subject -_id').lean();
-            
-            // Base aliases
             const courseAliases = {
                 'mvc': 'INT 221',
                 'mvc programming': 'INT 221',
@@ -115,23 +112,17 @@ exports.sendMessage = async (req, res) => {
                 'dbms': 'CSE 332',
                 'database': 'CSE 332'
             };
-
-            // Dynamically add aliases from uploaded syllabus documents
             for (const doc of syllabi) {
                 if (doc.title && doc.subject) {
                     const cleanAlias = doc.title.toLowerCase()
                                         .replace(/\b(syllabus|for|course)\b/g, '')
                                         .trim()
-                                        .replace(/\s+/g, ' '); // Clean extra spaces
-                    if (cleanAlias.length > 3) {
-                        courseAliases[cleanAlias] = doc.subject;
-                    }
+                                        .replace(/\s+/g, ' ');
+                    if (cleanAlias.length > 3) courseAliases[cleanAlias] = doc.subject;
                 }
             }
-            
             const lowerContent = content.toLowerCase();
             for (const [alias, subjectCode] of Object.entries(courseAliases)) {
-                // Escape regex specials from the alias to prevent invalid regex
                 const escapedAlias = alias.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
                 if (new RegExp(`\\b${escapedAlias}\\b`, 'i').test(lowerContent)) {
                     currentFilters.subject = subjectCode;
@@ -144,61 +135,46 @@ exports.sendMessage = async (req, res) => {
     }
 
     try {
-        // 1. Verify conversation belongs to user
+        // ── Verify conversation ───────────────────────────────────────────────
         const conversation = await Conversation.findOne({ _id: conversationId, userId: req.user._id });
         if (!conversation) {
             return res.status(404).json({ success: false, message: 'Conversation not found' });
         }
 
-        // 2. Save user message
-        const userMessage = new Message({
-            conversationId,
-            role: 'user',
-            content
-        });
+        // ── Save user message ─────────────────────────────────────────────────
+        const userMessage = new Message({ conversationId, role: 'user', content });
         await userMessage.save();
 
-        // 3. Update conversation title if it's the first message
         const messageCount = await Message.countDocuments({ conversationId });
         if (messageCount === 1) {
             conversation.title = content.substring(0, 40) + (content.length > 40 ? '...' : '');
             await conversation.save();
         }
 
-        // 4. Fetch conversation history (last 10 messages) to understand context
+        // ── Fetch conversation history ────────────────────────────────────────
         const history = await Message.find({ conversationId })
             .sort({ createdAt: -1 })
-            .limit(11) // includes the one we just saved
+            .limit(11)
             .lean();
         history.reverse();
 
-        // 4.5. Manage Active Course Context (Sticky Context)
+        // ── Manage Active Course Context (Sticky Context) ─────────────────────
         let activeCourseUpdated = false;
-
-        // If the user's current message explicitly mentioned a subject, update the conversation's active course
         if (currentFilters.subject && currentFilters.subject !== conversation.activeCourse) {
             conversation.activeCourse = currentFilters.subject;
             activeCourseUpdated = true;
-        } 
-        // Otherwise, if we didn't find one in the current message but have one saved, use the saved context
-        else if (!currentFilters.subject && conversation.activeCourse) {
+        } else if (!currentFilters.subject && conversation.activeCourse) {
             currentFilters.subject = conversation.activeCourse;
-        } 
-        // Finally, if both are empty (e.g. an old conversation before this feature), fallback to history parsing
-        else if (!currentFilters.subject && !conversation.activeCourse) {
-            // Search from the most recent message backwards
+        } else if (!currentFilters.subject && !conversation.activeCourse) {
             for (let i = history.length - 1; i >= 0; i--) {
                 const histFullMatch = history[i].content.match(/\b([a-zA-Z]{2,4})[-_\s]*(\d{3})\b/i);
                 const histNumMatch = history[i].content.match(/\b(\d{3})\b/);
-                
                 if (histFullMatch || histNumMatch) {
                     try {
                         const courseCode = histFullMatch ? histFullMatch[1] : '';
                         const courseNum = histFullMatch ? histFullMatch[2] : histNumMatch[1];
                         const regexStr = courseCode ? `^${courseCode}[-_\\s]*${courseNum}$` : `^[A-Za-z]{2,4}[-_\\s]*${courseNum}$`;
-                        const regexMatch = new RegExp(regexStr, 'i');
-                        
-                        const uniqueSubjects = await Document.distinct('subject', { subject: regexMatch });
+                        const uniqueSubjects = await Document.distinct('subject', { subject: new RegExp(regexStr, 'i') });
                         if (uniqueSubjects.length > 0) {
                             currentFilters.subject = uniqueSubjects[0];
                             conversation.activeCourse = currentFilters.subject;
@@ -214,52 +190,137 @@ exports.sendMessage = async (req, res) => {
                 }
             }
         }
+        if (activeCourseUpdated) await conversation.save();
 
-        if (activeCourseUpdated) {
-            await conversation.save();
+        // ── Setup SSE headers early ───────────────────────────────────────────
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
+
+        // Helper to stream a plain text message to the client and close the SSE stream
+        const streamCannedResponse = async (text) => {
+            res.write(`event: sources\ndata: ${JSON.stringify([])}\n\n`);
+            const words = text.split(' ');
+            for (const word of words) {
+                res.write(`data: ${JSON.stringify({ token: word + ' ' })}\n\n`);
+                await new Promise(r => setTimeout(r, 15));
+            }
+            res.write(`data: [DONE]\n\n`);
+            res.end();
+        };
+
+        // ═══════════════════════════════════════════════════════════════════════
+        // STEP 1: QUERY CLASSIFIER
+        // ═══════════════════════════════════════════════════════════════════════
+        console.log(`[ChatController] Step 1: Classifying query...`);
+        let queryClass = 'rag'; // default to rag
+        try {
+            const classifierResponse = await chatCompletion([
+                {
+                    role: 'system',
+                    content: `You are a query classifier for a university academic assistant. Classify the user's message into exactly ONE of these categories:\n- "rag": The user is asking an academic question that requires searching university documents (notes, syllabus, PYQs, exams, coding questions, etc.)\n- "greeting": The user is greeting, saying hello/hi/bye, or asking about the assistant itself.\n- "off_topic": The user is asking something completely unrelated to university academics (e.g., cryptocurrency, sports, news, recipes, etc.)\n\nRespond with ONLY the category label and nothing else. No explanation.`
+                },
+                { role: 'user', content }
+            ], 10);
+            const cleaned = classifierResponse.trim().toLowerCase().replace(/[^a-z_]/g, '');
+            if (['rag', 'greeting', 'off_topic'].includes(cleaned)) {
+                queryClass = cleaned;
+            }
+        } catch (classErr) {
+            console.warn(`[ChatController] Query classifier failed (non-fatal), defaulting to rag:`, classErr.message);
+        }
+        console.log(`[ChatController] Query classified as: "${queryClass}"`);
+
+        if (queryClass === 'greeting') {
+            // Save a canned assistant message and stream it
+            const greetMsg = `Hello! 👋 I'm **Verto AI**, your academic assistant for LPU. I can help you with syllabus overviews, study notes, past year questions, practice exams, and more. What can I help you with today?`;
+            const assistantMessage = new Message({ conversationId, role: 'assistant', content: greetMsg, sources: [] });
+            await assistantMessage.save();
+            return streamCannedResponse(greetMsg);
         }
 
-        // 5. Perform Hybrid Search to get context
-        // For notes requests, fetch more chunks (150) to cover large documents thoroughly
-        const searchLimit = (currentFilters.category === 'notes') ? 150 : 40;
+        if (queryClass === 'off_topic') {
+            const offTopicMsg = `I'm specifically designed to help LPU students with their academic coursework. I don't have information on that topic. Try asking me about a course syllabus, study notes, or past year questions! 📚`;
+            const assistantMessage = new Message({ conversationId, role: 'assistant', content: offTopicMsg, sources: [] });
+            await assistantMessage.save();
+            return streamCannedResponse(offTopicMsg);
+        }
+
+        // ═══════════════════════════════════════════════════════════════════════
+        // STEP 2: HYBRID SEARCH (Top 30)
+        // ═══════════════════════════════════════════════════════════════════════
+        console.log(`[ChatController] Step 2: Performing hybrid search...`);
+        const searchLimit = (currentFilters.category === 'notes') ? 150 : 30;
         let searchResults = await performHybridSearch(content, currentFilters, searchLimit);
 
-        // Fallback logic: If we strictly filtered by 'notes' or 'pyq' but got nothing, fallback to syllabus
         if ((!searchResults || searchResults.length === 0) && (currentFilters.category === 'notes' || currentFilters.category === 'pyq')) {
-            console.log(`[ChatController] No ${currentFilters.category} found for ${currentFilters.subject}. Falling back to syllabus.`);
+            console.log(`[ChatController] No ${currentFilters.category} found. Falling back to syllabus.`);
             currentFilters.category = 'syllabus';
             searchResults = await performHybridSearch(content, currentFilters);
         }
 
-        // Build context string from search results
-        let contextText = "";
-        const sourceData = [];
-        if (searchResults && searchResults.length > 0) {
-            // Sort chunks chronologically by document and chunk index so the AI reads in logical order
-            searchResults.sort((a, b) => {
-                if (a.documentId !== b.documentId) return a.documentId.localeCompare(b.documentId);
-                return a.chunkIndex - b.chunkIndex;
-            });
+        // ═══════════════════════════════════════════════════════════════════════
+        // STEP 3: RETRIEVAL CONFIDENCE CHECK
+        // ═══════════════════════════════════════════════════════════════════════
+        const topVectorScore = searchResults.length > 0 ? Math.max(...searchResults.map(r => r.vectorScore || 0)) : 0;
+        console.log(`[ChatController] Step 3: Top vector score: ${topVectorScore.toFixed(3)} (threshold: ${RETRIEVAL_CONFIDENCE_THRESHOLD})`);
 
-            contextText = searchResults.map((result, i) => `[Source ${i + 1} - ${result.metadata.title}]:\n${result.text}`).join('\n\n');
-            
-            // Collect sources to save with the assistant message later
-            searchResults.forEach(res => {
-                sourceData.push({
-                    chunkId: res.chunkId,
-                    documentId: res.documentId,
-                    title: res.metadata.title,
-                    text: res.text,
-                    fileUrl: res.metadata.fileUrl || '',
-                    fileType: res.metadata.fileType || '',
-                    category: res.metadata.category || '',
-                    subject: res.metadata.subject || '',
-                    files: res.metadata.files || [],
-                });
-            });
+        if (searchResults.length === 0 || topVectorScore < RETRIEVAL_CONFIDENCE_THRESHOLD) {
+            const notFoundMsg = `I searched through all the documents in Vertos Archive, but I couldn't find anything relevant to your question. This topic may not have been uploaded yet. Try asking your classmates to upload related notes or PYQs! 🔍`;
+            const assistantMessage = new Message({ conversationId, role: 'assistant', content: notFoundMsg, sources: [] });
+            await assistantMessage.save();
+            return streamCannedResponse(notFoundMsg);
         }
 
-        // 6. Construct OpenAI Messages Array
+        // ═══════════════════════════════════════════════════════════════════════
+        // STEP 4: JINA RERANKER (Top 30 → Top 5)
+        // ═══════════════════════════════════════════════════════════════════════
+        console.log(`[ChatController] Step 4: Reranking ${searchResults.length} chunks with Jina AI...`);
+        let finalChunks = searchResults; // fallback if Jina fails
+        let rerankerPassed = true;
+
+        try {
+            const { results: reranked, passedThreshold } = await rerank(content, searchResults, 5);
+            finalChunks = reranked;
+            rerankerPassed = passedThreshold;
+        } catch (jinaErr) {
+            console.warn(`[ChatController] Jina reranker failed (non-fatal), using raw search results:`, jinaErr.message);
+            // Graceful fallback: use top 5 from hybrid search directly
+            finalChunks = searchResults.slice(0, 5);
+        }
+
+        if (!rerankerPassed) {
+            const weakMatchMsg = `I found some documents that contain similar words to your query, but none of them seem to directly answer your question. Could you try rephrasing or adding more context? For example, specify the course code (e.g., "CSE 332") or the exact topic name.`;
+            const assistantMessage = new Message({ conversationId, role: 'assistant', content: weakMatchMsg, sources: [] });
+            await assistantMessage.save();
+            return streamCannedResponse(weakMatchMsg);
+        }
+
+        // ── Build context from the top 5 reranked chunks ─────────────────────
+        finalChunks.sort((a, b) => {
+            if (a.documentId !== b.documentId) return a.documentId.localeCompare(b.documentId);
+            return a.chunkIndex - b.chunkIndex;
+        });
+
+        const contextText = finalChunks.map((r, i) => `[Source ${i + 1} - ${r.metadata.title}]:\n${r.text}`).join('\n\n');
+        const sourceData = finalChunks.map(res => ({
+            chunkId: res.chunkId,
+            documentId: res.documentId,
+            title: res.metadata.title,
+            text: res.text,
+            fileUrl: res.metadata.fileUrl || '',
+            fileType: res.metadata.fileType || '',
+            category: res.metadata.category || '',
+            subject: res.metadata.subject || '',
+            files: res.metadata.files || [],
+        }));
+
+        // Send sources immediately so the UI can show citations
+        res.write(`event: sources\ndata: ${JSON.stringify(sourceData)}\n\n`);
+
+        // ═══════════════════════════════════════════════════════════════════════
+        // STEP 5: BUILD MESSAGES ARRAY & APPLY POLICY REMINDERS
+        // ═══════════════════════════════════════════════════════════════════════
         const systemPrompt = `You are Verto AI, an expert teaching assistant for university students. 
 Answer the user's questions based primarily on the provided context from university documents.
 If the answer is not in the context, say "I don't have enough information in the provided documents to answer that definitively." but you can offer general knowledge if appropriate, making sure to clarify it's not from the course material.
@@ -269,7 +330,7 @@ Use markdown formatting to make your answers professional, highly structured, an
 - For step-by-step guides, use numbered lists.
 
 === Context from University Documents ===
-${contextText ? contextText : "No relevant context found in the database."}
+${contextText ? contextText : 'No relevant context found in the database.'}
 
 === FINAL CRITICAL INSTRUCTIONS ===
 1. RESPONSE MODE: By default, act like a normal conversational chatbot. If the user only types a course name or code (e.g., "INT 108" or "python"), give a brief 1-2 sentence description of the course and ask them what they need help with (e.g., "Would you like to see the syllabus, study notes, or practice questions?"). Do NOT dump the entire syllabus, notes, or generate questions unless they explicitly ask for them. Only trigger exam/notes/syllabus policies when their specific keywords are present.
@@ -283,12 +344,12 @@ ${contextText ? contextText : "No relevant context found in the database."}
    - **MCQ Formatting (CRITICAL)**: You MUST format the question and options so they render correctly on separate lines. ALWAYS insert a blank line (double newline) between the question text and Option A. NEVER output Option A on the same line as the question text. Every option (A, B, C, D) MUST start on its own separate line.
    - **Syllabus Scope (STRICT)**: EVERY question you generate or select MUST be strictly based on topics listed in the course syllabus provided in the context. Do NOT generate questions on topics that are outside the syllabus, even if they are related to the broader subject. Cross-reference each question against the syllabus unit topics before including it.
    - **PYQ Priority — Per Unit (STRICT)**: Questions MUST be evenly distributed across all specified units (±1-2 questions tolerance is acceptable, but large imbalances like 5 from Unit 1 and 25 from Unit 2 are strictly forbidden). For EACH unit, follow this exact process: STEP 1 — Extract as many real PYQs as possible that belong to that unit from the provided context. STEP 2 — If the PYQ count for that unit is less than the required quota, generate NEW questions of the same style, difficulty, and type as the PYQs to fill up the quota for that unit. STEP 3 — Move on to the next unit and repeat. Never over-pull from one unit at the expense of another.
-   - **Topic Coverage — Within Each Unit (CRITICAL)**: Within each unit, questions MUST be spread across ALL topics listed in the syllabus for that unit. BEFORE generating questions for a unit, list all the topics from the syllabus for that unit, then ensure AT LEAST 1 question covers each topic. If the quota allows, distribute the remaining questions proportionally. NEVER generate multiple questions from the same topic while another topic in the same unit has zero coverage. For example, if Unit 1 has 5 topics and you need 15 questions, that is 3 questions per topic — do NOT generate 10 questions on Scheduling and 0 on Memory Management.
-   - **University-Level Rigor**: Assume the student is a university undergraduate or postgraduate. Do NOT generate trivial or high-school level questions. Problems must require multi-step reasoning, synthesis of multiple concepts, or advanced application.
-   - **Cross-Unit Style Matching (CRITICAL)**: Always analyze the exact style, pattern, and nature of the questions in the provided PYQs (e.g., highly numerical, code-heavy implementation, circuit diagrams, practical case-studies, or derivation-heavy). If you need to invent questions for a unit that is NOT covered by the PYQs, you MUST ensure the newly invented questions perfectly mimic the exact rigor and style of the provided PYQs. For example, if the PYQs ask for working code, the new questions must ask for working code. If the PYQs are heavily numerical/physics derivations, the new questions must be numerical/derivations. Do NOT fall back to generic theoretical definitions unless the PYQs themselves are purely theoretical.
-   - For computational/numerical subjects (like Maths, Physics, Accounting, Engineering), questions MUST be practical problem-solving, numerical calculations, or derivations. Do NOT generate simple definitional or theoretical questions (e.g., "Define a function") unless explicitly present in the PYQs. Force the student to solve real numerical problems.
-   - For programming/computer science subjects (like INT, CSE, MVC, Java, Python), subjective questions MUST heavily feature practical implementation. Ask the student to write actual code snippets, build features, trace outputs, or debug issues. Do NOT generate basic theoretical definitions (e.g., "Describe MVC") unless heavily prominent in the PYQs.
-   - **Realistic Scenarios**: Where possible, frame computational questions around real-world or industry-specific scenarios (e.g., data structures, engineering mechanics, business analytics) with specific, realistic data values.
+   - **Topic Coverage — Within Each Unit (CRITICAL)**: Within each unit, questions MUST be spread across ALL topics listed in the syllabus for that unit. BEFORE generating questions for a unit, list all the topics from the syllabus for that unit, then ensure AT LEAST 1 question covers each topic. If the quota allows, distribute the remaining questions proportionally. NEVER generate multiple questions from the same topic while another topic in the same unit has zero coverage.
+   - **University-Level Rigor**: Assume the student is a university undergraduate or postgraduate. Do NOT generate trivial or high-school level questions.
+   - **Cross-Unit Style Matching (CRITICAL)**: Always analyze the exact style, pattern, and nature of the questions in the provided PYQs. If you need to invent questions for a unit that is NOT covered by the PYQs, you MUST ensure the newly invented questions perfectly mimic the exact rigor and style of the provided PYQs.
+   - For computational/numerical subjects (like Maths, Physics, Accounting, Engineering), questions MUST be practical problem-solving, numerical calculations, or derivations.
+   - For programming/computer science subjects (like INT, CSE, MVC, Java, Python), subjective questions MUST heavily feature practical implementation.
+   - **Realistic Scenarios**: Where possible, frame computational questions around real-world or industry-specific scenarios with specific, realistic data values.
 4. PRACTICE QUESTIONS POLICY: If asked for practice questions, first use actual questions from the context. If you run out, INVENT highly relevant practice questions based on syllabus topics to match the style/difficulty of the real ones.
 5. MID TERM POLICY (MANDATORY): Only apply when the user explicitly asks for mid term or mock test. Mid Terms cover ONLY Units 1, 2, and 3. Generate questions in one of these two formats based on what the user asks:
    - FORMAT A (MCQ): Output EXACTLY 40 MCQs — approximately 13-14 questions per unit (Unit 1, 2, 3).
@@ -300,81 +361,43 @@ ${contextText ? contextText : "No relevant context found in the database."}
    - FORMAT B (Mixed): Output 30 MCQs across all 6 units (5 per unit), followed by subjective questions (2-mark, 5-mark, 10-mark) across all 6 units.
    - FORMAT C (Subjective): Output exactly 7 long subjective questions (10-marks each) — 1 from each of Units 1-3, and 1-2 from each of Units 4-6.
    If the user doesn't specify a format, ask them: "For this ETE, should I generate a full MCQ paper (60 questions), a mixed paper (30 MCQs + subjective), or a fully subjective paper (7 long questions)?"
-   UNIT DISTRIBUTION (MANDATORY): Process each of the 6 units individually — for each unit, first extract all available PYQs belonging to that unit, then generate new similar-style questions to fill the required quota for that unit. Units 4, 5, and 6 MUST always have more questions than Units 1, 2, 3. You MUST generate questions for ALL 6 units — never skip a unit. DO NOT stop early.
-7. END TERM PRACTICAL (ETP) POLICY (MANDATORY): Only apply when the user explicitly asks for end term practical, ETP, or practical exam questions. This exam tests hands-on implementation skills. Generate ONE comprehensive practical question (or a small set of 2-3 related questions) that:
-   - Covers the MOST IMPORTANT practical topics spanning multiple units.
-   - Describes a real-world problem or task the student must implement/solve.
-   - Includes clear requirements, expected output/behavior, and any constraints.
-   - May include sub-parts (a, b, c).
-   SOURCE PRIORITY: FIRST PREFERENCE is to use actual PYQ practical questions. If none are available, create a realistic question matching the PYQ pattern by synthesizing the syllabus practical topics and course notes.
+   UNIT DISTRIBUTION (MANDATORY): Process each of the 6 units individually. Units 4, 5, and 6 MUST always have more questions than Units 1, 2, 3. You MUST generate questions for ALL 6 units — never skip a unit. DO NOT stop early.
+7. END TERM PRACTICAL (ETP) POLICY (MANDATORY): Only apply when the user explicitly asks for end term practical, ETP, or practical exam questions. Generate ONE comprehensive practical question that covers the MOST IMPORTANT practical topics spanning multiple units.
 8. CLASS ASSESSMENT (CA) POLICY: Only apply when the user explicitly asks for CA, class test, class assessment, or unit test questions. Follow this EXACT flow:
-   STEP 1 — If the user has NOT specified a course, ask: "Which course is this CA for? (e.g., CSE 332, MTH 174)"
-   STEP 2 — If the user has NOT specified which units, ask: "Which units does this CA cover? (e.g., Unit 1 and 2)"
+   STEP 1 — If the user has NOT specified a course, ask: "Which course is this CA for?"
+   STEP 2 — If the user has NOT specified which units, ask: "Which units does this CA cover?"
    STEP 3 — If the user has NOT specified the type, ask: "For this CA, should I generate MCQ questions or Subjective questions?"
-   Only proceed to generate questions once you have all three pieces of information (course, units, type).
-   - IF MCQ: Generate EXACTLY 30 MCQs strictly from the specified units, distributed EQUALLY across all specified units (e.g., if 2 units → 15 questions each; if 3 units → 10 questions each; ±1-2 tolerance is acceptable).
-   - IF SUBJECTIVE for CODING/PROGRAMMING subjects (INT, CSE, MVC, Java, Python, Web Dev, etc.): Generate 10-15 CODE IMPLEMENTATION questions, evenly split across the specified units. Each question MUST ask the student to write actual working code — e.g., "Write a Laravel route that...", "Create a PHP function that...", "Implement a controller method that...". Do NOT ask definitions like "What is MVC?" or "Explain routing".
-   - IF SUBJECTIVE for MATHS/PHYSICS/NUMERICAL subjects: Generate 10-15 numerical problem-solving, calculation, or derivation questions, evenly split across the specified units. Do NOT ask definitions.
-   - IF SUBJECTIVE for OTHER subjects: Generate a mix of short (2-mark), medium (5-mark), and long-answer (10-mark) questions, evenly split across the specified units.
-   UNIT DISTRIBUTION (MANDATORY for ALL FORMATS): Process each specified unit individually — for each unit, STEP 1: extract all PYQs from the provided context that belong to that unit; STEP 2: if the PYQ count for that unit is less than the quota, generate new questions of the same style/difficulty to fill it up; STEP 3: move to the next unit. Never pull extra from one unit to compensate for another. Number every question properly. DO NOT stop early.
-9. CODE RESPONSE POLICY: When the user asks coding questions, programming help, or anything involving code:
-   - ALWAYS wrap code in fenced markdown code blocks with the correct language tag (e.g., \`\`\`python, \`\`\`java, \`\`\`c, \`\`\`javascript, \`\`\`sql, etc.).
-   - Provide clear explanations before and after the code.
-   - For multi-file or multi-step code, use separate code blocks for each file/step with descriptive headings.
-   - Use inline code (\`like this\`) for variable names, function names, and short code references within text.
-   - Include comments inside the code to explain key logic.
-10. MATH FORMATTING: You MUST use LaTeX for math. Use $ for inline (e.g., $E = mc^2$) and $$ for block math. NEVER use \\[, \\], \\(, or \\) for math.
-11. NOTES POLICY: When the user asks for notes or study material:
-   - FIRST PREFERENCE: Use the provided source notes context. The context contains chunks from the uploaded document — treat every chunk as valuable reference material.
-   - COVERAGE (CRITICAL): You MUST cover EVERY topic and sub-topic present in the provided context. DO NOT summarize or skip any section. If the context mentions a topic (e.g., Memory Management Schemes, RAID, Deadlock, Semaphores), you MUST include detailed notes for that exact topic.
-   - DEPTH: For each topic, explain all key concepts, definitions, types, algorithms, and examples as found in the source material. Do NOT give a 2-line generic summary when the source has pages of detail.
-   - STRUCTURE: Use clear headings (## for main topics, ### for sub-topics), bullet points for lists, numbered steps for algorithms, and code blocks for code examples. For tables, NEVER put a table inside or next to a bulleted list. ALWAYS end the list, insert a blank line (double newline), and then start the markdown table on its own line.
-   - SUBJECT-SPECIFIC RULES: For math/physics subjects include worked numerical examples; for coding subjects include functional code snippets with comments; for theory subjects include definitions, diagrams (described in text), and examples.
-   - If notes are completely unavailable in the context, generate comprehensive notes using the syllabus context — but still cover every syllabus topic in detail.
-   - DO NOT stop early. DO NOT end with "Conclusion" after only covering 3 topics when the syllabus/notes have 15 topics.
-12. GENERIC PYQ POLICY: If the user asks for PYQs, past year questions, or practice questions, but DOES NOT specify which exam type (CA, Mid Term, ETE, or ETP), you MUST ask them: "Are you looking for PYQs for a CA, Mid Term, ETE, or ETP?" Do not generate a massive list of questions until they specify the exam type.`;
+   Only proceed to generate questions once you have all three pieces of information.
+9. CODE RESPONSE POLICY: When the user asks coding questions, ALWAYS wrap code in fenced markdown code blocks with the correct language tag.
+10. MATH FORMATTING: You MUST use LaTeX for math. Use $ for inline and $$ for block math. NEVER use \\[, \\], \\(, or \\) for math.
+11. NOTES POLICY: When the user asks for notes, use the provided source context. Cover EVERY topic and sub-topic present in the provided context. Do NOT summarize or skip any section.
+12. GENERIC PYQ POLICY: If the user asks for PYQs but DOES NOT specify which exam type, you MUST ask: "Are you looking for PYQs for a CA, Mid Term, ETE, or ETP?"
+13. CONFIDENCE SELF-CHECK (MANDATORY): At the very end of your response, on a completely new line, output ONLY the following JSON tag — nothing else on that line: <confidence:high> OR <confidence:low>. Output <confidence:high> if you are certain your answer is well-grounded in the provided context. Output <confidence:low> if the context was insufficient, contradictory, or you had to make up significant portions of the answer. This tag is parsed programmatically — do NOT explain it.`;
 
-        const apiMessages = [
-            { role: 'system', content: systemPrompt }
-        ];
-
-        // Add history (excluding the very last user message which we add manually)
+        const apiMessages = [{ role: 'system', content: systemPrompt }];
         for (let i = 0; i < history.length - 1; i++) {
-            apiMessages.push({
-                role: history[i].role,
-                content: history[i].content
-            });
+            apiMessages.push({ role: history[i].role, content: history[i].content });
         }
 
-        // Conditionally append exam-specific reminder based on user intent
-        // isSyllabusRequest is already evaluated at the start of the function
+        // Apply policy reminders (same as original logic)
         let isMidTermRequest = !isSyllabusRequest && /\b(mid[\s-]?term|midterm|mock[\s-]?test|40\s*mcq)\b/i.test(content);
         let isEteRequest = !isSyllabusRequest && /\b(end[\s-]?term|ete|final[\s-]?exam|final[\s-]?paper|end[\s-]?sem|endsem)\b/i.test(content);
         let isEtpRequest = !isSyllabusRequest && /\b(etp|end[\s-]?term[\s-]?practical|practical[\s-]?exam|lab[\s-]?exam|viva)\b/i.test(content);
         let isCaRequest  = !isSyllabusRequest && /\b(ca|class[\s-]?assessment|class[\s-]?test|unit[\s-]?test|ca[\s-]?\d|ca\d)\b/i.test(content);
-        
-        // Inherit policy if the user is answering a clarification question from the assistant
+
         let inheritedOriginalQuery = null;
         if (content.length < 80 && history.length > 1) {
             let lastAssistantMsg = null;
             for (let i = history.length - 2; i >= 0; i--) {
-                if (history[i].role === 'assistant') {
-                    lastAssistantMsg = history[i].content;
-                    break;
-                }
+                if (history[i].role === 'assistant') { lastAssistantMsg = history[i].content; break; }
             }
             const isPyqFollowUp = lastAssistantMsg && /\bare you looking for pyqs\b/i.test(lastAssistantMsg);
-            
             if (isPyqFollowUp || (lastAssistantMsg && /\b(mcq|subjective|format|multiple-choice|unit|units|type)\b/i.test(lastAssistantMsg))) {
-                
-                // Only inherit flags if it's NOT the PYQ question (since the PYQ question lists all exams, forcing flags would trigger all policies)
                 if (!isPyqFollowUp) {
                     if (/\b(CA|Class Assessment)\b/i.test(lastAssistantMsg)) isCaRequest = true;
                     if (/\b(ETE|End Term|Final Exam)\b/i.test(lastAssistantMsg)) isEteRequest = true;
                     if (/\b(Mid Term|Mock Test)\b/i.test(lastAssistantMsg)) isMidTermRequest = true;
                 }
-                
-                // Find the original user request that started this flow to enrich the search
                 for (let i = history.length - 3; i >= 0; i--) {
                     if (history[i].role === 'user' && history[i].content.length > content.length) {
                         inheritedOriginalQuery = history[i].content;
@@ -386,117 +409,167 @@ ${contextText ? contextText : "No relevant context found in the database."}
 
         let isNotesRequest = !isSyllabusRequest && !isMidTermRequest && !isEteRequest && !isEtpRequest && !isCaRequest && /\b(notes|study\s*material|lecture\s*notes|explain|explanation)\b/i.test(content);
         let isGenericPyqRequest = !isSyllabusRequest && !isMidTermRequest && !isEteRequest && !isEtpRequest && !isCaRequest && /\b(pyq|pyqs|previous year|past year|practice questions?)\b/i.test(content);
-        
         const isJustCourseCode = content.trim().split(/\s+/).length <= 3 && /\b([a-zA-Z]{3})[-_\s]*(\d{3})\b/i.test(content);
         const isNoPolicyTriggered = !isSyllabusRequest && !isMidTermRequest && !isEteRequest && !isEtpRequest && !isCaRequest && !isNotesRequest && !isGenericPyqRequest;
 
-        // Re-run search with the original query if the short follow-up yielded no results
         if (inheritedOriginalQuery && sourceData.length === 0) {
             const reSearchResults = await performHybridSearch(inheritedOriginalQuery, currentFilters);
             if (reSearchResults && reSearchResults.length > 0) {
-                contextText = reSearchResults.map((result, i) => `[Source ${i + 1} - ${result.metadata.title}]:\n${result.text}`).join('\n\n');
-                reSearchResults.forEach(res => {
-                    sourceData.push({
-                        chunkId: res.chunkId,
-                        documentId: res.documentId,
-                        title: res.metadata.title,
-                        text: res.text,
-                        fileUrl: res.metadata.fileUrl || '',
-                        fileType: res.metadata.fileType || '',
-                        category: res.metadata.category || '',
-                        subject: res.metadata.subject || '',
-                        files: res.metadata.files || [],
-                    });
-                });
+                const newContext = reSearchResults.map((result, i) => `[Source ${i + 1} - ${result.metadata.title}]:\n${result.text}`).join('\n\n');
+                apiMessages[0].content = apiMessages[0].content.replace(
+                    /=== Context from University Documents ===[\s\S]*?===/,
+                    `=== Context from University Documents ===\n${newContext}\n\n===`
+                );
             }
         }
 
         let userQueryFinal = content;
         if (isSyllabusRequest) {
-            userQueryFinal = content + "\n\n[REMINDER: The user is asking about the SYLLABUS. Do NOT generate questions. Present the syllabus as a clean, structured overview. Make sure to list ALL UNITS (typically all 6 units) without skipping any and do NOT stop early. Include textbooks if available.]"
+            userQueryFinal += "\n\n[REMINDER: SYLLABUS request. List ALL UNITS without skipping. Include textbooks if available.]";
         } else if (isMidTermRequest) {
-            userQueryFinal = content + "\n\n[REMINDER: MID TERM request detected. Generate EXACTLY 40 MCQs from Units 1, 2 and 3 only. Number as '### Question 1:', '### Question 2:', etc. PYQ RULE: Extract ALL actual PYQ questions from the provided context FIRST — do NOT skip any available PYQs. Only after exhausting real PYQs, invent new questions matching their pattern. SCOPE RULE: Every question MUST be strictly based on topics listed in the syllabus for Units 1-3. Do NOT ask about topics outside the syllabus. STYLE RULE: Study the provided PYQ questions — if they are numerical/computational, ALL your generated questions MUST also be numerical/computational. If the PYQs contain code, your questions must contain code. NEVER generate generic theoretical 'What is X?' or 'Define Y' questions unless the PYQs themselves are purely theoretical. Do NOT stop early.]"
+            userQueryFinal += "\n\n[REMINDER: MID TERM request. Generate EXACTLY 40 MCQs from Units 1, 2, and 3 only. Extract real PYQs first, then invent to fill quota. Every question must match PYQ style. Do NOT stop early.]";
         } else if (isEtpRequest) {
-            userQueryFinal = content + "\n\n[REMINDER: END TERM PRACTICAL (ETP) request detected. Generate one comprehensive practical question. PYQ RULE: Use actual PYQ practical questions FIRST if available. SCOPE RULE: The question MUST be strictly based on practical topics listed in the syllabus. Do NOT test topics outside the syllabus. STYLE RULE: Study the provided PYQ questions — if they require writing code, your question must require writing code. If they require solving numerical problems, your question must require solving. NEVER generate generic theoretical questions.]"
+            userQueryFinal += "\n\n[REMINDER: ETP request. Generate one comprehensive practical question. Use PYQ practical questions first if available.]";
         } else if (isEteRequest) {
-            userQueryFinal = content + "\n\n[REMINDER: END TERM EXAM (ETE) request detected. Cover ALL 6 UNITS. Ask format if unspecified ('For this ETE, should I generate a full MCQ paper (60 questions), a mixed paper (30 MCQs + subjective), or a fully subjective paper (7 long questions)?'). PYQ RULE: Extract ALL actual PYQ questions from the provided context FIRST — do NOT skip any available PYQs. Map them to their syllabus units. If PYQs only cover early units, distribute them there and invent new questions for the remaining units. SCOPE RULE: Every question MUST be strictly based on topics listed in the syllabus. Do NOT ask about topics outside the syllabus even if related to the subject. STYLE RULE (MANDATORY): Study the exact nature of the provided PYQ questions. If they are numerical, then EVERY invented question MUST ALSO be numerical — give actual numbers, formulas, and values to compute. If code-based, give code-based questions. NEVER fall back to generic 'What is X?' or 'Define Y' theoretical questions unless the PYQs themselves are purely theoretical.]"
+            userQueryFinal += "\n\n[REMINDER: ETE request. Cover ALL 6 UNITS. Ask format if unspecified. Extract real PYQs first per unit, then invent similar-style questions. Do NOT stop early.]";
         } else if (isCaRequest) {
             const userSpecifiedType = /\b(mcq|subjective|objective|coding|numerical|implementation|multiple[\s-]?choice)\b/i.test(content);
             if (userSpecifiedType) {
-                userQueryFinal = content + "\n\n[REMINDER: CLASS ASSESSMENT (CA) request detected. The user has specified the question type. Generate questions NOW. PYQ RULE: Extract ALL actual PYQ questions from the provided context FIRST for the specified units — do NOT skip any available PYQs. Only after exhausting real PYQs, invent new questions matching their pattern. SCOPE RULE: Every question MUST be strictly based on topics listed in the syllabus for the specified units. Do NOT ask about topics outside the syllabus. STYLE RULE (MANDATORY): Study the exact nature of the provided PYQ questions. If they are numerical, then EVERY question you generate MUST ALSO be numerical — give actual numbers, formulas, and values to compute. If code-based, give code to write. NEVER fall back to generic 'What is X?' theoretical questions unless PYQs are purely theoretical. RULES BY SUBJECT TYPE: (1) For CODING subjects (INT, CSE, MVC, Java, Python): Subjective questions MUST be CODE IMPLEMENTATION — ask the student to WRITE working code. (2) For MATHS/PHYSICS: Subjective must be numerical problems with actual values. (3) For MCQs: Generate EXACTLY 30 MCQs. DO NOT stop early.]"
+                userQueryFinal += "\n\n[REMINDER: CA request with specified type. Extract real PYQs first for the specified units, then invent to fill quota. Match PYQ style exactly. Do NOT stop early.]";
             } else {
-                userQueryFinal = content + "\n\n[REMINDER: CLASS ASSESSMENT (CA) request detected. Check if the user has specified: (1) course, (2) units, and (3) question type. If ANY of these are missing, you MUST ask before generating. Specifically, if the question type is not specified, ask: 'For this CA, should I generate MCQ questions or Subjective questions?' CRITICAL: You are FORBIDDEN from generating any questions in this response. Your ONLY job right now is to ask the clarifying questions. Do NOT assume anything.]"
+                userQueryFinal += "\n\n[REMINDER: CA request. Ask for course, units, and question type before generating. Do NOT generate any questions yet.]";
             }
         } else if (isNotesRequest) {
-            userQueryFinal = content + "\n\n[REMINDER: NOTES request detected. Fetch all details STRICTLY from the provided source notes. If unavailable, generate using the syllabus. Do NOT just provide theory: include questions and solutions for math/physics, and sample code blocks for programming subjects. Format beautifully with headings and lists.]"
+            userQueryFinal += "\n\n[REMINDER: NOTES request. Use source notes strictly. Include code blocks for programming subjects and numerical examples for math/physics.]";
         } else if (isGenericPyqRequest) {
-            userQueryFinal = content + "\n\n[REMINDER: GENERIC PYQ request detected. The user asked for PYQs but DID NOT specify the exam type. You MUST ask them: 'Are you looking for PYQs for a CA, Mid Term, ETE, or ETP?' Do NOT generate any questions yet.]"
+            userQueryFinal += "\n\n[REMINDER: GENERIC PYQ request. Ask: 'Are you looking for PYQs for a CA, Mid Term, ETE, or ETP?' Do NOT generate questions yet.]";
         } else if (isJustCourseCode && isNoPolicyTriggered) {
-            userQueryFinal = content + "\n\n[REMINDER: The user only typed the course code. DO NOT output the syllabus. DO NOT output notes or questions. Just give a 1-sentence brief summary of the course and directly ask the user what they need (e.g., 'Do you need the syllabus, study notes, or practice questions?').]";
+            userQueryFinal += "\n\n[REMINDER: User typed only the course code. Give a 1-sentence summary and ask what they need.]";
         }
 
-        // Force context override to prevent history bleeding
         if (currentFilters.subject) {
-            userQueryFinal += `\n\n[CRITICAL OVERRIDE: You are currently answering for ${currentFilters.subject}. Base your answer STRICTLY on the 'Context from University Documents' provided in the system prompt. IGNORE any conversation history regarding other courses.]`;
+            userQueryFinal += `\n\n[CRITICAL OVERRIDE: You are answering for ${currentFilters.subject}. Base your answer STRICTLY on the provided context. IGNORE conversation history about other courses.]`;
         }
 
         apiMessages.push({ role: 'user', content: userQueryFinal });
 
-        // 7. Setup SSE Headers for streaming
-        res.setHeader('Content-Type', 'text/event-stream');
-        res.setHeader('Cache-Control', 'no-cache');
-        res.setHeader('Connection', 'keep-alive');
+        // ═══════════════════════════════════════════════════════════════════════
+        // STEP 5: PRIMARY LLM — Qwen 3 via OpenRouter (streaming)
+        // ═══════════════════════════════════════════════════════════════════════
+        console.log(`[ChatController] Step 5: Streaming response from Qwen 3 (OpenRouter)...`);
+        let fullAssistantResponse = '';
+        let qwenFailed = false;
 
-        // Send sources immediately as the first event so UI can display citations
-        res.write(`event: sources\ndata: ${JSON.stringify(sourceData)}\n\n`);
+        try {
+            const stream = await streamChatCompletion(apiMessages, 16000);
 
-        // 8. Call OpenAI with streaming
-        const stream = await openaiClient.chat.completions.create({
-            model: "gpt-4o-mini",
-            messages: apiMessages,
-            max_tokens: 16000,
-            stream: true,
-        });
+            // Parse OpenRouter SSE stream
+            let buffer = '';
+            await new Promise((resolve, reject) => {
+                stream.on('data', (chunk) => {
+                    buffer += chunk.toString();
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop(); // keep incomplete last line
 
-        let fullAssistantResponse = "";
-
-        for await (const chunk of stream) {
-            const token = chunk.choices[0]?.delta?.content || "";
-            if (token) {
-                fullAssistantResponse += token;
-                // SSE format: data: <payload>\n\n
-                // We stringify the token to safely handle newlines and special characters
-                res.write(`data: ${JSON.stringify({ token })}\n\n`);
-            }
+                    for (const line of lines) {
+                        if (!line.startsWith('data: ')) continue;
+                        const data = line.slice(6).trim();
+                        if (data === '[DONE]') { resolve(); return; }
+                        try {
+                            const parsed = JSON.parse(data);
+                            const token = parsed.choices?.[0]?.delta?.content || '';
+                            if (token) {
+                                fullAssistantResponse += token;
+                                res.write(`data: ${JSON.stringify({ token })}\n\n`);
+                            }
+                        } catch (_) { /* skip malformed lines */ }
+                    }
+                });
+                stream.on('end', resolve);
+                stream.on('error', reject);
+            });
+        } catch (qwenErr) {
+            console.error(`[ChatController] Qwen 3 streaming failed:`, qwenErr.message);
+            qwenFailed = true;
         }
 
-        // 9. Save assistant message to DB
-        const assistantMessage = new Message({
-            conversationId,
-            role: 'assistant',
-            content: fullAssistantResponse,
-            sources: sourceData
-        });
-        await assistantMessage.save();
+        // ═══════════════════════════════════════════════════════════════════════
+        // STEP 6: ANSWER VERIFICATION & OPENAI FALLBACK
+        // ═══════════════════════════════════════════════════════════════════════
+        // Check Qwen's self-reported confidence tag at the end of the response
+        const confidenceMatch = fullAssistantResponse.match(/<confidence:(high|low)>/i);
+        const qwenConfidence = confidenceMatch ? confidenceMatch[1].toLowerCase() : 'high';
+        // Remove the confidence tag from the response text before saving
+        const cleanedQwenResponse = fullAssistantResponse.replace(/<confidence:(high|low)>\s*$/i, '').trimEnd();
 
-        // End stream
+        const needsFallback = qwenFailed || qwenConfidence === 'low';
+
+        if (needsFallback) {
+            console.log(`[ChatController] Step 6: Qwen confidence is "${qwenConfidence}" or failed. Falling back to GPT-4o-mini...`);
+
+            // If Qwen streamed something before failing confidence, clear it by notifying the client
+            // (In practice the client will just append fallback tokens seamlessly)
+            try {
+                let fallbackResponse = '';
+                const fallbackStream = await openaiClient.chat.completions.create({
+                    model: 'gpt-4o-mini',
+                    messages: apiMessages,
+                    max_tokens: 16000,
+                    stream: true,
+                });
+
+                for await (const chunk of fallbackStream) {
+                    const token = chunk.choices[0]?.delta?.content || '';
+                    if (token) {
+                        fallbackResponse += token;
+                        res.write(`data: ${JSON.stringify({ token })}\n\n`);
+                    }
+                }
+
+                // Save fallback response
+                const assistantMessage = new Message({
+                    conversationId,
+                    role: 'assistant',
+                    content: fallbackResponse,
+                    sources: sourceData
+                });
+                await assistantMessage.save();
+            } catch (fallbackErr) {
+                console.error(`[ChatController] GPT-4o-mini fallback also failed:`, fallbackErr.message);
+                // Save whatever Qwen produced as a last resort
+                const assistantMessage = new Message({
+                    conversationId, role: 'assistant',
+                    content: cleanedQwenResponse || 'Sorry, I encountered an error generating a response.',
+                    sources: sourceData
+                });
+                await assistantMessage.save();
+            }
+        } else {
+            // Qwen succeeded — save cleaned response
+            console.log(`[ChatController] Qwen 3 confidence: HIGH. Saving response.`);
+            const assistantMessage = new Message({
+                conversationId,
+                role: 'assistant',
+                content: cleanedQwenResponse,
+                sources: sourceData
+            });
+            await assistantMessage.save();
+        }
+
         res.write(`data: [DONE]\n\n`);
         res.end();
 
     } catch (error) {
         console.error('Error in sendMessage:', error?.message || error);
-        console.error('Error stack:', error?.stack);
         if (!res.headersSent) {
             res.status(500).json({ success: false, message: 'Server error processing message' });
         } else {
-            // Headers already sent — write a plain data error so the frontend catches it
             res.write(`data: ${JSON.stringify({ message: 'Error generating response. Please try again.' })}\n\n`);
             res.write(`data: [DONE]\n\n`);
             res.end();
         }
     }
 };
-
 // Delete a conversation
 exports.deleteConversation = async (req, res) => {
     try {

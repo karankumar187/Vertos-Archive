@@ -1,4 +1,4 @@
-const { generateEmbeddings } = require('./openai.service');
+const { generateEmbeddings } = require('./huggingface.service');
 const { searchQdrant } = require('./qdrant.service');
 const Document = require('../models/Document');
 

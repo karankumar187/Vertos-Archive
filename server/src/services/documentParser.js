@@ -130,7 +130,11 @@ const ocrPdfBufferWithVision = async (buffer, pageCount = 0) => {
 
     const totalPages = uploadResult.pages || pageCount || 1;
     const maxPages = Math.min(totalPages, 15); // Cap to 15 pages to save OpenAI tokens
-    console.log(`[Parser] Uploaded temporary PDF to Cloudinary. Extracted ${totalPages} pages. OCRing up to ${maxPages} pages...`);
+    console.log(`[Parser] Uploaded temporary PDF to Cloudinary. Extracted ${totalPages} pages. Waiting 3 seconds for images to generate...`);
+
+    // Give Cloudinary 3 seconds to process the PDF to JPG conversion on their servers
+    // This prevents OpenAI from throwing a '400 Timeout' when trying to fetch the URLs.
+    await new Promise(resolve => setTimeout(resolve, 3000));
 
     // 2. Construct image URLs for each page
     const baseUrlParts = uploadResult.secure_url.split('/upload/');
