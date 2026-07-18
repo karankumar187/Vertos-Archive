@@ -109,6 +109,8 @@ export const eventsAPI = {
 
 export const archiveAPI = {
     getArchive: (params) => api.get('/archive', { params }),
+    downloadDocument: (id) => api.get(`/archive/download/${id}`, { responseType: 'blob' }),
+    getDownloadUrl: (id) => `${BASE}/archive/download/${id}`,
 };
 
 // Public Announcements API (no admin required)

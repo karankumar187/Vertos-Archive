@@ -38,11 +38,8 @@ const uploadBufferToCloudinary = (buffer, mimeType, folder = 'vertos_archive_doc
             ...(format && { format })
         };
         
-        // For 'raw' resources (like PDFs), Cloudinary often blocks public CDN delivery by default.
-        // We upload them as authenticated so we can generate API download URLs later.
-        if (resourceType === 'raw') {
-            uploadOptions.type = 'authenticated';
-        }
+        // Keep raw files as public so the secure_url never expires.
+        // (Cloudinary's default delivery type for raw is 'upload' = public.)
 
         const uploadStream = cloudinary.uploader.upload_stream(
             uploadOptions,

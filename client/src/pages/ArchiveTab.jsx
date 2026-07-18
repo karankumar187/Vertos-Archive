@@ -2,6 +2,26 @@ import { useState, useEffect, useRef } from "react";
 import { archiveAPI } from "../services/api";
 import { cacheGet, cacheSet } from "../utils/localCache";
 
+/* ── Programmatic download via backend proxy (fixes cross-origin download naming) ── */
+const handleDownload = async (doc) => {
+  try {
+    const res = await archiveAPI.downloadDocument(doc._id);
+    const url = window.URL.createObjectURL(new Blob([res.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    const ext = doc.fileType ? '.' + doc.fileType.split('/').pop().split('+')[0] : '.pdf';
+    link.setAttribute('download', `${doc.title}${ext}`);
+    document.body.appendChild(link);
+    link.click();
+    link.parentNode.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  } catch (err) {
+    console.error('Download failed:', err);
+    // Fallback: open in new tab
+    window.open(doc.fileUrl, '_blank');
+  }
+};
+
 /* ── Category metadata ─────────────────────────────────── */
 const CATEGORIES = [
   {
@@ -357,17 +377,19 @@ export default function ArchiveTab() {
                                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15,3 21,3 21,9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                                       View
                                     </a>
-                                    <a href={doc.fileUrl} download target="_blank" rel="noreferrer" style={{
-                                      display: "inline-flex", alignItems: "center", gap: 6,
-                                      fontSize: "0.82rem", fontWeight: 600, color: "#6b4d1f",
-                                      background: "#f8f4ee", border: "1.5px solid #f0e6d2", padding: "7px 14px", borderRadius: 9,
-                                      textDecoration: "none", transition: "all 0.18s"
-                                    }}
-                                    onMouseEnter={e => { e.currentTarget.style.background = "#e9dcc8"; e.currentTarget.style.borderColor = "#d4b896"; }}
-                                    onMouseLeave={e => { e.currentTarget.style.background = "#f8f4ee"; e.currentTarget.style.borderColor = "#f0e6d2"; }}>
+                                    <button
+                                      onClick={() => handleDownload(doc)}
+                                      style={{
+                                        display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer",
+                                        fontSize: "0.82rem", fontWeight: 600, color: "#6b4d1f",
+                                        background: "#f8f4ee", border: "1.5px solid #f0e6d2", padding: "7px 14px", borderRadius: 9,
+                                        textDecoration: "none", transition: "all 0.18s"
+                                      }}
+                                      onMouseEnter={e => { e.currentTarget.style.background = "#e9dcc8"; e.currentTarget.style.borderColor = "#d4b896"; }}
+                                      onMouseLeave={e => { e.currentTarget.style.background = "#f8f4ee"; e.currentTarget.style.borderColor = "#f0e6d2"; }}>
                                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                                       Download
-                                    </a>
+                                    </button>
                                   </div>
                                 </td>
                               </tr>
@@ -425,17 +447,19 @@ export default function ArchiveTab() {
                               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15,3 21,3 21,9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                               View
                             </a>
-                            <a href={doc.fileUrl} download target="_blank" rel="noreferrer" style={{
-                              display: "inline-flex", alignItems: "center", gap: 6,
-                              fontSize: "0.82rem", fontWeight: 600, color: "#6b4d1f",
-                              background: "#f8f4ee", border: "1.5px solid #f0e6d2", padding: "7px 14px", borderRadius: 9,
-                              textDecoration: "none", transition: "all 0.18s"
-                            }}
-                            onMouseEnter={e => { e.currentTarget.style.background = "#e9dcc8"; e.currentTarget.style.borderColor = "#d4b896"; }}
-                            onMouseLeave={e => { e.currentTarget.style.background = "#f8f4ee"; e.currentTarget.style.borderColor = "#f0e6d2"; }}>
+                            <button
+                              onClick={() => handleDownload(doc)}
+                              style={{
+                                display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer",
+                                fontSize: "0.82rem", fontWeight: 600, color: "#6b4d1f",
+                                background: "#f8f4ee", border: "1.5px solid #f0e6d2", padding: "7px 14px", borderRadius: 9,
+                                textDecoration: "none", transition: "all 0.18s"
+                              }}
+                              onMouseEnter={e => { e.currentTarget.style.background = "#e9dcc8"; e.currentTarget.style.borderColor = "#d4b896"; }}
+                              onMouseLeave={e => { e.currentTarget.style.background = "#f8f4ee"; e.currentTarget.style.borderColor = "#f0e6d2"; }}>
                               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                               Download
-                            </a>
+                            </button>
                           </div>
                         </td>
                       </tr>
