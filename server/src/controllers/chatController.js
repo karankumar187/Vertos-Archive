@@ -220,8 +220,8 @@ exports.sendMessage = async (req, res) => {
         }
 
         // 5. Perform Hybrid Search to get context
-        // For notes requests, fetch more chunks (80) to cover large documents thoroughly
-        const searchLimit = (currentFilters.category === 'notes') ? 80 : 40;
+        // For notes requests, fetch more chunks (150) to cover large documents thoroughly
+        const searchLimit = (currentFilters.category === 'notes') ? 150 : 40;
         let searchResults = await performHybridSearch(content, currentFilters, searchLimit);
 
         // Fallback logic: If we strictly filtered by 'notes' or 'pyq' but got nothing, fallback to syllabus
@@ -322,7 +322,7 @@ ${contextText ? contextText : "No relevant context found in the database."}
    - FIRST PREFERENCE: Use the provided source notes context. The context contains chunks from the uploaded document — treat every chunk as valuable reference material.
    - COVERAGE (CRITICAL): You MUST cover EVERY topic and sub-topic present in the provided context. DO NOT summarize or skip any section. If the context mentions a topic (e.g., Memory Management Schemes, RAID, Deadlock, Semaphores), you MUST include detailed notes for that exact topic.
    - DEPTH: For each topic, explain all key concepts, definitions, types, algorithms, and examples as found in the source material. Do NOT give a 2-line generic summary when the source has pages of detail.
-   - STRUCTURE: Use clear headings (## for main topics, ### for sub-topics), bullet points for lists, numbered steps for algorithms, and code blocks for code examples. For tables, ALWAYS start the markdown table on a new blank line (double newline). NEVER put a table inline next to bullet points or text.
+   - STRUCTURE: Use clear headings (## for main topics, ### for sub-topics), bullet points for lists, numbered steps for algorithms, and code blocks for code examples. For tables, NEVER put a table inside or next to a bulleted list. ALWAYS end the list, insert a blank line (double newline), and then start the markdown table on its own line.
    - SUBJECT-SPECIFIC RULES: For math/physics subjects include worked numerical examples; for coding subjects include functional code snippets with comments; for theory subjects include definitions, diagrams (described in text), and examples.
    - If notes are completely unavailable in the context, generate comprehensive notes using the syllabus context — but still cover every syllabus topic in detail.
    - DO NOT stop early. DO NOT end with "Conclusion" after only covering 3 topics when the syllabus/notes have 15 topics.
