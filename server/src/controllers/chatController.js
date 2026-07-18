@@ -254,21 +254,47 @@ exports.sendMessage = async (req, res) => {
         }
 
         // ═══════════════════════════════════════════════════════════════════════
-        // STEP 2: HYBRID SEARCH (Top 30)
+        // STEP 2: HYBRID SEARCH
         // ═══════════════════════════════════════════════════════════════════════
         let searchQuery = content;
         if (conversation.activeCourse && !content.toLowerCase().includes(conversation.activeCourse.toLowerCase())) {
             searchQuery = `${conversation.activeCourse} ${content}`;
         }
         console.log(`[ChatController] Step 2: Performing hybrid search for "${searchQuery}"...`);
-        
-        const searchLimit = (currentFilters.category === 'notes' || !currentFilters.category) ? 60 : 30;
-        let searchResults = await performHybridSearch(searchQuery, currentFilters, searchLimit);
 
-        if ((!searchResults || searchResults.length === 0) && (currentFilters.category === 'notes' || currentFilters.category === 'pyq')) {
-            console.log(`[ChatController] No ${currentFilters.category} found. Falling back to syllabus.`);
-            currentFilters.category = 'syllabus';
+        const isQuestionGenRequest = !currentFilters.category; // CA/midterm/ETE = no category set
+        let searchResults = [];
+
+        if (isQuestionGenRequest) {
+            // ── Two-phase search for question generation ─────────────────────
+            // Phase 1: Always search PYQs first (highest priority)
+            const pyqResults = await performHybridSearch(searchQuery, { ...currentFilters, category: 'pyq' }, 40);
+            console.log(`[ChatController] Phase 1 (PYQ): ${pyqResults.length} chunks found.`);
+
+            if (pyqResults.length >= 10) {
+                // Enough PYQs — use them exclusively
+                searchResults = pyqResults;
+                console.log(`[ChatController] Sufficient PYQs found. Using PYQs only.`);
+            } else {
+                // Not enough PYQs — supplement with notes + syllabus
+                console.log(`[ChatController] Insufficient PYQs (${pyqResults.length}). Supplementing with notes + syllabus...`);
+                const supplementResults = await performHybridSearch(searchQuery, { ...currentFilters, category: undefined }, 40);
+                // Merge: PYQs first, then supplemental (deduplicated by chunkId)
+                const seen = new Set(pyqResults.map(r => r.chunkId));
+                const supplementFiltered = supplementResults.filter(r => !seen.has(r.chunkId));
+                searchResults = [...pyqResults, ...supplementFiltered].slice(0, 60);
+                console.log(`[ChatController] Merged: ${pyqResults.length} PYQs + ${supplementFiltered.length} supplemental = ${searchResults.length} total.`);
+            }
+        } else {
+            // Standard single-phase search for notes, syllabus, etc.
+            const searchLimit = currentFilters.category === 'notes' ? 60 : 30;
             searchResults = await performHybridSearch(searchQuery, currentFilters, searchLimit);
+
+            if ((!searchResults || searchResults.length === 0) && (currentFilters.category === 'notes' || currentFilters.category === 'pyq')) {
+                console.log(`[ChatController] No ${currentFilters.category} found. Falling back to syllabus.`);
+                currentFilters.category = 'syllabus';
+                searchResults = await performHybridSearch(searchQuery, currentFilters, searchLimit);
+            }
         }
 
         // ═══════════════════════════════════════════════════════════════════════
@@ -287,7 +313,7 @@ exports.sendMessage = async (req, res) => {
         // ═══════════════════════════════════════════════════════════════════════
         // STEP 4: JINA RERANKER
         // ═══════════════════════════════════════════════════════════════════════
-        const rerankLimit = (currentFilters.category === 'notes' || currentFilters.category === 'pyq') ? 15 : 7;
+        const rerankLimit = (currentFilters.category === 'notes' || currentFilters.category === 'pyq' || isQuestionGenRequest) ? 15 : 7;
         console.log(`[ChatController] Step 4: Reranking ${searchResults.length} chunks with Jina AI (Limit: ${rerankLimit})...`);
         let finalChunks = searchResults; // fallback if Jina fails
         let rerankerPassed = true;
