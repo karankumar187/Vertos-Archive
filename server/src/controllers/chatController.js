@@ -61,10 +61,17 @@ exports.sendMessage = async (req, res) => {
     // Auto-extract course codes (e.g., "int 221", "CSE332", "174") from user query to strictly filter sources
     let currentFilters = filters || {};
     
-    // Check for syllabus request early to enforce category filter
+    // Check for syllabus or notes request early to enforce category filter
     const isSyllabusRequest = /\b(syllabus|course\s*overview|course\s*outline|course\s*content|what\s*is\s*covered|topics\s*covered|course\s*structure)\b/i.test(content);
+    const isNotesRequestEarly = /\b(notes|study\s*material|lecture\s*notes)\b/i.test(content);
+    const isGenericPyqRequestEarly = /\b(pyq|pyqs|previous year|past year|practice questions?|mid term|ete|etp|end term)\b/i.test(content);
+
     if (isSyllabusRequest) {
         currentFilters.category = 'syllabus';
+    } else if (isNotesRequestEarly) {
+        currentFilters.category = 'notes';
+    } else if (isGenericPyqRequestEarly) {
+        currentFilters.category = 'pyq';
     }
 
     const fullCourseMatch = content.match(/\b([a-zA-Z]{2,4})[-_\s]*(\d{3})\b/i);
