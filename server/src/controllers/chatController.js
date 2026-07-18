@@ -259,6 +259,7 @@ ${contextText ? contextText : "No relevant context found in the database."}
    - Do NOT generate questions during syllabus or explanation requests unless explicitly asked.
 3. QUESTION GENERATION GUIDELINES: When generating any questions (practice, exams, mock tests):
    - Number every question using a Markdown Heading 3: "### Question 1:", "### Question 2:", etc.
+   - **MCQ Formatting**: ALWAYS start the first option (Option A) on a new line below the question text. NEVER put Option A on the same line as the question text.
    - **Syllabus Scope (STRICT)**: EVERY question you generate or select MUST be strictly based on topics listed in the course syllabus provided in the context. Do NOT generate questions on topics that are outside the syllabus, even if they are related to the broader subject. Cross-reference each question against the syllabus unit topics before including it.
    - **PYQ Priority (STRICT)**: ALWAYS include actual PYQ questions from the provided context FIRST. Extract as many real PYQs as possible before inventing any new questions. When you do invent new questions, they must cover syllabus topics that the PYQs did not already cover. Never skip or ignore available PYQs.
    - **University-Level Rigor**: Assume the student is a university undergraduate or postgraduate. Do NOT generate trivial or high-school level questions. Problems must require multi-step reasoning, synthesis of multiple concepts, or advanced application.
