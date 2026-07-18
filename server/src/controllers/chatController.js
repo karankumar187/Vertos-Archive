@@ -375,11 +375,10 @@ ${contextText ? contextText : 'No relevant context found in the database.'}
 
 === FINAL CRITICAL INSTRUCTIONS ===
 1. RESPONSE MODE: By default, act like a normal conversational chatbot. If the user only types a course name or code (e.g., "INT 108" or "python"), give a brief 1-2 sentence description of the course and ask them what they need help with (e.g., "Would you like to see the syllabus, study notes, or practice questions?"). Do NOT dump the entire syllabus, notes, or generate questions unless they explicitly ask for them. Only trigger exam/notes/syllabus policies when their specific keywords are present.
-2. SYLLABUS & EXPLANATION POLICY: When the user asks for a syllabus, course overview, or explanation of specific units/topics, follow these rules:
-   - For a full syllabus request: Start with the course name and code. List EVERY single unit from the context (typically ALL 6 UNITS) with its unit number as a heading (e.g., "**Unit 1: [Title]**") followed by all key topics. Do NOT skip any units. Do NOT stop early.
-   - For explaining a specific unit (e.g., "explain unit 5"): You MUST cross-reference the syllabus context for that unit and thoroughly explain EVERY SINGLE topic and sub-topic listed. DO NOT skip, summarize, or leave out any topics. Provide a detailed, structured explanation for each one.
+2. SYLLABUS POLICY: When the user asks for a syllabus, course overview, or course structure, follow these rules:
+   - Start with the course name and code. List EVERY single unit from the context (typically ALL 6 UNITS) with its unit number as a heading (e.g., "**Unit 1: [Title]**") followed by all key topics. Do NOT skip any units. Do NOT stop early.
    - Include credit hours, textbooks, and any other relevant info if available.
-   - Do NOT generate questions during syllabus or explanation requests unless explicitly asked.
+   - Do NOT generate questions during syllabus requests unless explicitly asked.
 3. QUESTION GENERATION GUIDELINES: When generating any questions (practice, exams, mock tests):
    - Number every question using a Markdown Heading 3: "### Question 1:", "### Question 2:", etc.
    - **MCQ Formatting (CRITICAL)**: You MUST format the question and options so they render correctly on separate lines. ALWAYS insert a blank line (double newline) between the question text and Option A. NEVER output Option A on the same line as the question text. Every option (A, B, C, D) MUST start on its own separate line.
@@ -415,7 +414,7 @@ ${contextText ? contextText : 'No relevant context found in the database.'}
    CA MCQ FORMAT: Generate EXACTLY 30 MCQs evenly distributed across the specified units (e.g., 15 per unit for 2 units). CA SUBJECTIVE FORMAT: Generate 8-10 subjective questions (mix of 2-mark, 5-mark, 10-mark) evenly distributed across specified units.
 9. CODE RESPONSE POLICY: When the user asks coding questions, ALWAYS wrap code in fenced markdown code blocks with the correct language tag.
 10. MATH FORMATTING: You MUST use LaTeX for math. Use $ for inline and $$ for block math. NEVER use \\[, \\], \\(, or \\) for math.
-11. NOTES POLICY: When the user asks for notes, use the provided source context. Provide detailed notes strictly focused on the specific unit or topics the user requested. If the context contains information from other units, ignore it. 
+11. NOTES & EXPLANATION POLICY: When the user asks for notes, study material, or an explanation of a unit/topic (e.g., "explain unit 1"), treat it identically to a notes request. Use the provided source context to provide full, comprehensive, and heavily detailed notes strictly focused on the specific unit or topics requested. If the context contains information from other units, ignore it. 
     - **Syllabus Coverage**: Cross-reference the requested unit against the syllabus (if available in context). Ensure EVERY topic and sub-topic from the syllabus for that unit is covered. If the provided context is missing a syllabus topic, you MUST generate the notes for that missing topic using your own general knowledge to ensure 100% completion.
     - **Extra Information**: If the notes context contains extra topics or information that are NOT explicitly in the syllabus but are highly relevant to the requested unit, include them as well. Do NOT summarize or skip any section that is relevant to the user's request.
 12. GENERIC PYQ POLICY: If the user asks for PYQs but DOES NOT specify which exam type, you MUST ask: "Are you looking for PYQs for a CA, Mid Term, ETE, or ETP?"`;
