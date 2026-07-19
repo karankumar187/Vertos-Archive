@@ -20,6 +20,7 @@ const getViewableUrl = (url, title = '', ext = '') => {
   if (url.startsWith('https://res.cloudinary.com/')) {
     let proxyUrl = `${FILE_PROXY_BASE}/api/file/view?url=${encodeURIComponent(url)}&ext=${ext}`;
     if (title) proxyUrl += `&title=${encodeURIComponent(title)}`;
+    proxyUrl += '&v=2'; // Cache-buster for recent proxy fix
     return proxyUrl;
   }
   return url;
@@ -327,8 +328,8 @@ const MessageBubble = React.memo(function MessageBubble({ msg, onRegenerate, use
                                     >
                                         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#9a7845" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
                                     </button>
-                                ) : primaryUrl && primaryUrl !== '#' ? (
-                                    <a href={primaryUrl} target="_blank" rel="noopener noreferrer"
+                                ) : (
+                                    <a href={getViewableUrl(src.url, src.title)} target="_blank" rel="noopener noreferrer"
                                         title="Open"
                                         style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '20px', height: '20px', borderRadius: '4px', background: 'rgba(200,134,26,0.08)', border: '1px solid rgba(200,134,26,0.2)', cursor: 'pointer', flexShrink: 0, transition: 'all 0.15s', textDecoration: 'none' }}
                                         onMouseEnter={e => { e.currentTarget.style.background = 'rgba(200,134,26,0.18)'; }}
@@ -336,7 +337,7 @@ const MessageBubble = React.memo(function MessageBubble({ msg, onRegenerate, use
                                     >
                                         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#9a7845" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
                                     </a>
-                                ) : null}
+                                )}
 
                                 {/* Download button */}
                                 <button onClick={() => handleDownloadSource(src)}

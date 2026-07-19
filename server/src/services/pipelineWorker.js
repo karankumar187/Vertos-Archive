@@ -112,7 +112,7 @@ exports.processDocument = async (documentId) => {
 
             // Generate Embeddings & Push to Qdrant
             try {
-                console.log(`[Pipeline] Generating embeddings for ${chunks.length} chunks via OpenAI...`);
+                console.log(`[Pipeline] Generating embeddings for ${chunks.length} chunks...`);
                 const { generateEmbeddings } = require('./openai.service');
                 
                 // Contextualize chunks with metadata so each chunk is semantically linked to the document topic

@@ -130,34 +130,13 @@ const ocrPdfBufferWithVision = async (buffer, pageCount = 0) => {
 
     const totalPages = uploadResult.pages || pageCount || 1;
     const maxPages = Math.min(totalPages, 15); // Cap to 15 pages to save OpenAI tokens
-    console.log(`[Parser] Uploaded temporary PDF to Cloudinary. Extracted ${totalPages} pages. Waiting 3 seconds for images to generate...`);
+    console.log(`[Parser] Uploaded temporary PDF to Cloudinary. Extracted ${totalPages} pages. OCRing up to ${maxPages} pages...`);
 
     // 2. Construct image URLs for each page
     const baseUrlParts = uploadResult.secure_url.split('/upload/');
     const baseBeforeUpload = baseUrlParts[0] + '/upload/';
     // Replace extension at the very end of the URL
     const baseAfterUpload = baseUrlParts[1].replace(/\.pdf$/i, '.jpg');
-
-    const firstPageUrl = `${baseBeforeUpload}pg_1/${baseAfterUpload}`;
-    console.log(`[Parser] Uploaded temporary PDF to Cloudinary. Extracted ${totalPages} pages. Waiting for Cloudinary to generate images...`);
-
-    // Actively ping the first page image to ensure Cloudinary has finished processing it
-    // before we pass the URLs to OpenAI.
-    let isReady = false;
-    for (let attempts = 0; attempts < 6; attempts++) {
-        try {
-            await axios.head(firstPageUrl);
-            isReady = true;
-            break;
-        } catch (err) {
-            // Wait 2.5 seconds before retrying
-            await new Promise(resolve => setTimeout(resolve, 2500));
-        }
-    }
-
-    if (!isReady) {
-        console.warn(`[Parser] Warning: Cloudinary images may not be fully ready after 15s wait.`);
-    }
     
     const imageContents = [];
     for (let i = 1; i <= maxPages; i++) {

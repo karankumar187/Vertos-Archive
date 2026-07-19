@@ -202,20 +202,17 @@ app.get('/api/file/view', async (req, res) => {
                 return;
             }
             
-            // Generate signed URL only for authenticated Cloudinary resources
+            // Generate signed URL for authenticated Cloudinary resources
             const getSafeTargetUrl = (u) => {
                 const match = u.match(/\/(raw|image|video)\/(upload|authenticated)\/(?:s--[a-zA-Z0-9_-]+--\/)?(?:v\d+\/)?(.+?)$/);
                 if (match) {
                     const resource_type = match[1];
                     const type = match[2];
                     const publicIdWithExt = match[3];
-                    // Only sign 'authenticated' delivery type resources
-                    // Public 'upload' type resources can be fetched directly
-                    if (type === 'authenticated') {
-                        return cloudinary.utils.private_download_url(publicIdWithExt, '', { type, resource_type });
-                    }
+                    // raw: keep full public ID with extension
+                    return cloudinary.utils.private_download_url(publicIdWithExt, '', { type, resource_type });
                 }
-                return u; // Use original URL for public resources
+                return u;
             };
 
             const safeUrl = new URL(getSafeTargetUrl(targetUrl)).href;

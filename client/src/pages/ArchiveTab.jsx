@@ -55,6 +55,7 @@ const getViewableUrl = (url, title = '', ext = '') => {
     let params = `url=${encodeURIComponent(url)}`;
     if (title) params += `&title=${encodeURIComponent(title)}`;
     if (ext) params += `&ext=${ext}`;
+    params += '&v=2'; // Cache-buster for recent proxy fix
     return `${FILE_PROXY_BASE}/api/file/view?${params}`;
   }
   return url;
