@@ -274,25 +274,35 @@ exports.sendMessage = async (req, res) => {
         let searchResults = [];
 
         if (isQuestionGenRequest) {
-            // ── Two-phase search for question generation ─────────────────────
-            // Phase 1: Always search PYQs first (highest priority)
-            const pyqResults = await performHybridSearch(searchQuery, { ...currentFilters, category: 'pyq' }, 40);
-            console.log(`[ChatController] Phase 1 (PYQ): ${pyqResults.length} chunks found.`);
+            // ── Three-phase search for question generation ─────────────────────
+            // Phase 1: Always explicitly fetch the Syllabus (Crucial for knowing topics and units)
+            const syllabusSearchQuery = conversation.activeCourse ? `${conversation.activeCourse} syllabus` : searchQuery;
+            const syllabusResults = await performHybridSearch(syllabusSearchQuery, { ...currentFilters, category: 'syllabus' }, 20);
+            console.log(`[ChatController] Phase 1 (Syllabus): ${syllabusResults.length} chunks found.`);
 
+            // Phase 2: Fetch PYQs (highest priority for questions)
+            const pyqResults = await performHybridSearch(searchQuery, { ...currentFilters, category: 'pyq' }, 40);
+            console.log(`[ChatController] Phase 2 (PYQ): ${pyqResults.length} chunks found.`);
+
+            let questionResults = [];
             if (pyqResults.length >= 10) {
-                // Enough PYQs — use them exclusively
-                searchResults = pyqResults;
-                console.log(`[ChatController] Sufficient PYQs found. Using PYQs only.`);
+                // Enough PYQs — use them
+                questionResults = pyqResults;
+                console.log(`[ChatController] Sufficient PYQs found.`);
             } else {
-                // Not enough PYQs — supplement with notes + syllabus
-                console.log(`[ChatController] Insufficient PYQs (${pyqResults.length}). Supplementing with notes + syllabus...`);
+                // Not enough PYQs — supplement with notes
+                console.log(`[ChatController] Insufficient PYQs (${pyqResults.length}). Supplementing with notes...`);
                 const supplementResults = await performHybridSearch(searchQuery, { ...currentFilters, category: undefined }, 40);
-                // Merge: PYQs first, then supplemental (deduplicated by chunkId)
                 const seen = new Set(pyqResults.map(r => r.chunkId));
                 const supplementFiltered = supplementResults.filter(r => !seen.has(r.chunkId));
-                searchResults = [...pyqResults, ...supplementFiltered].slice(0, 60);
-                console.log(`[ChatController] Merged: ${pyqResults.length} PYQs + ${supplementFiltered.length} supplemental = ${searchResults.length} total.`);
+                questionResults = [...pyqResults, ...supplementFiltered];
             }
+
+            // Phase 3: Merge syllabus + questions
+            const seenFinal = new Set(syllabusResults.map(r => r.chunkId));
+            const questionsFiltered = questionResults.filter(r => !seenFinal.has(r.chunkId));
+            searchResults = [...syllabusResults, ...questionsFiltered].slice(0, 80);
+            console.log(`[ChatController] Merged: ${syllabusResults.length} Syllabus + ${questionsFiltered.length} Questions/Notes = ${searchResults.length} total.`);
         } else {
             // Standard single-phase search for notes, syllabus, etc.
             const searchLimit = currentFilters.category === 'notes' ? 60 : 30;
