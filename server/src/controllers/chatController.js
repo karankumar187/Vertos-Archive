@@ -290,7 +290,7 @@ ${contextText ? contextText : "No relevant context found in the database."}
    - **Realistic Scenarios**: Where possible, frame computational questions around real-world or industry-specific scenarios (e.g., data structures, engineering mechanics, business analytics) with specific, realistic data values.
 4. PRACTICE QUESTIONS POLICY: If asked for practice questions, first use actual questions from the context. If you run out, INVENT highly relevant practice questions based on syllabus topics to match the style/difficulty of the real ones.
 5. MID TERM POLICY (MANDATORY): Only apply when the user explicitly asks for mid term or mock test. Mid Terms cover ONLY Units 1, 2, and 3. Generate questions in one of these two formats based on what the user asks:
-   - FORMAT A (MCQ): Output EXACTLY 30 MCQs. STRICT DISTRIBUTION: Each of the 3 units MUST have EXACTLY 10 questions (10 x 3 = 30). YOU MUST STRICTLY ENFORCE THIS.
+   - FORMAT A (MCQ): Output EXACTLY 40 MCQs. STRICT DISTRIBUTION: Unit 1 MUST have EXACTLY 13 questions, Unit 2 MUST have EXACTLY 13 questions, and Unit 3 MUST have EXACTLY 14 questions (13+13+14=40). YOU MUST STRICTLY ENFORCE THIS.
    - FORMAT B (Subjective): Output EXACTLY 15 subjective questions. STRICT DISTRIBUTION: Each of the 3 units MUST have EXACTLY 5 questions (5 x 3 = 15).
    CRITICAL RULE: If the user doesn't specify a format, you MUST ask them: "For this Mid Term, should I generate MCQ questions or Subjective questions?" Do not generate anything until they reply.
    UNIT DISTRIBUTION (MANDATORY): Process each unit individually. Every single generated question must be mapped directly under Unit 1, 2, or 3. DO NOT stop early.
