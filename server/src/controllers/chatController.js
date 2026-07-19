@@ -329,17 +329,18 @@ exports.sendMessage = async (req, res) => {
         }
 
         // ═══════════════════════════════════════════════════════════════════════
-        // STEP 4: JINA RERANKER
+        // STEP 4: JINA RERANKER (TEMPORARILY DISABLED)
         // ═══════════════════════════════════════════════════════════════════════
         let rerankLimit = 7;
         if (isQuestionGenRequest) rerankLimit = 50; // Exams require massive context to cover all units
         else if (currentFilters.category === 'notes') rerankLimit = 40; // Notes require comprehensive coverage
         else if (currentFilters.category === 'pyq') rerankLimit = 20;
 
-        console.log(`[ChatController] Step 4: Reranking ${searchResults.length} chunks with Jina AI (Limit: ${rerankLimit})...`);
-        let finalChunks = searchResults; // fallback if Jina fails
+        console.log(`[ChatController] Step 4: Reranking temporarily disabled. Using top ${rerankLimit} raw chunks...`);
+        let finalChunks = searchResults.slice(0, rerankLimit);
         let rerankerPassed = true;
 
+        /*
         try {
             const { results: reranked, passedThreshold } = await rerank(searchQuery, searchResults, rerankLimit);
             finalChunks = reranked;
@@ -349,6 +350,7 @@ exports.sendMessage = async (req, res) => {
             // Graceful fallback: use top results from hybrid search directly
             finalChunks = searchResults.slice(0, rerankLimit);
         }
+        */
 
         if (!rerankerPassed) {
             const weakMatchMsg = `I found some documents that contain similar words to your query, but none of them seem to directly answer your question. Could you try rephrasing or adding more context? For example, specify the course code (e.g., "CSE 332") or the exact topic name.`;
