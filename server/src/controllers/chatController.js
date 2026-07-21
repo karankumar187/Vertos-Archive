@@ -389,6 +389,24 @@ ${contextText ? contextText : "No relevant context found in the database."}
         const isJustCourseCode = content.trim().split(/\s+/).length <= 3 && /\b([a-zA-Z]{3})[-_\s]*(\d{3})\b/i.test(content);
         const isNoPolicyTriggered = !isSyllabusRequest && !isMidTermRequest && !isEteRequest && !isEtpRequest && !isCaRequest && !isNotesRequest && !isGenericPyqRequest;
 
+        // Detect follow-ups to previously generated CA/ETE/Mid-term questions
+        // e.g. "give me solution of question 2", "explain question 5", "what's the answer to q3"
+        const isFollowUpOnGeneratedContent = content.length < 150 && history.length > 1 &&
+            /\b(solution|solve|explain|answer|why|how|question\s*\d+|q\s*\d+|que\s*\d+)\b/i.test(content);
+
+        if (isFollowUpOnGeneratedContent && !isCaRequest && !isEteRequest && !isMidTermRequest && !isEtpRequest && !isNotesRequest) {
+            // Look backwards in history to detect what exam type was previously generated
+            for (let i = history.length - 2; i >= 0; i--) {
+                const msg = history[i];
+                if (msg.role === 'assistant') {
+                    if (/\b(class assessment|class test|unit test)\b/i.test(msg.content)) { isCaRequest = true; break; }
+                    if (/\b(end[- ]?term exam|ETE|final exam)\b/i.test(msg.content)) { isEteRequest = true; break; }
+                    if (/\b(mid[- ]?term|mock test)\b/i.test(msg.content)) { isMidTermRequest = true; break; }
+                    if (/\b(practical|ETP|viva)\b/i.test(msg.content)) { isEtpRequest = true; break; }
+                }
+            }
+        }
+
         // Re-run search with the original query if the short follow-up yielded no results
         if (inheritedOriginalQuery && sourceData.length === 0) {
             const reSearchResults = await performHybridSearch(inheritedOriginalQuery, currentFilters);
@@ -414,14 +432,26 @@ ${contextText ? contextText : "No relevant context found in the database."}
         if (isSyllabusRequest) {
             userQueryFinal = content + "\n\n[REMINDER: The user is asking about the SYLLABUS. Do NOT generate questions. Present the syllabus as a clean, structured overview. Make sure to list ALL UNITS (typically all 6 units) without skipping any and do NOT stop early. Include textbooks if available.]"
         } else if (isMidTermRequest) {
-            userQueryFinal = content + "\n\n[REMINDER: MID TERM request detected. Generate EXACTLY 40 MCQs from Units 1, 2 and 3 only. Number as '### Question 1:', '### Question 2:', etc. PYQ RULE: Extract ALL actual PYQ questions from the provided context FIRST — do NOT skip any available PYQs. Only after exhausting real PYQs, invent new questions matching their pattern. SCOPE RULE: Every question MUST be strictly based on topics listed in the syllabus for Units 1-3. Do NOT ask about topics outside the syllabus. STYLE RULE: Study the provided PYQ questions — if they are numerical/computational, ALL your generated questions MUST also be numerical/computational. If the PYQs contain code, your questions must contain code. NEVER generate generic theoretical 'What is X?' or 'Define Y' questions unless the PYQs themselves are purely theoretical. Do NOT stop early.]"
+            if (isFollowUpOnGeneratedContent) {
+                userQueryFinal = content + "\n\n[REMINDER: The user is asking a FOLLOW-UP question about a MID TERM paper that was already generated in this conversation. DO NOT re-generate the paper. DO NOT ask for any clarification. Simply provide the solution, explanation, or answer to the specific question the user is referring to. Use the conversation history above to identify the relevant question.]";
+            } else {
+                userQueryFinal = content + "\n\n[REMINDER: MID TERM request detected. Generate EXACTLY 40 MCQs from Units 1, 2 and 3 only. Number as '### Question 1:', '### Question 2:', etc. PYQ RULE: Extract ALL actual PYQ questions from the provided context FIRST — do NOT skip any available PYQs. Only after exhausting real PYQs, invent new questions matching their pattern. SCOPE RULE: Every question MUST be strictly based on topics listed in the syllabus for Units 1-3. Do NOT ask about topics outside the syllabus. STYLE RULE: Study the provided PYQ questions — if they are numerical/computational, ALL your generated questions MUST also be numerical/computational. If the PYQs contain code, your questions must contain code. NEVER generate generic theoretical 'What is X?' or 'Define Y' questions unless the PYQs themselves are purely theoretical. Do NOT stop early.]";
+            }
         } else if (isEtpRequest) {
             userQueryFinal = content + "\n\n[REMINDER: END TERM PRACTICAL (ETP) request detected. Generate one comprehensive practical question. PYQ RULE: Use actual PYQ practical questions FIRST if available. SCOPE RULE: The question MUST be strictly based on practical topics listed in the syllabus. Do NOT test topics outside the syllabus. STYLE RULE: Study the provided PYQ questions — if they require writing code, your question must require writing code. If they require solving numerical problems, your question must require solving. NEVER generate generic theoretical questions.]"
         } else if (isEteRequest) {
-            userQueryFinal = content + "\n\n[REMINDER: END TERM EXAM (ETE) request detected. Cover ALL 6 UNITS. Ask format if unspecified ('For this ETE, should I generate a full MCQ paper (60 questions), a mixed paper (30 MCQs + subjective), or a fully subjective paper (7 long questions)?'). PYQ RULE: Extract ALL actual PYQ questions from the provided context FIRST — do NOT skip any available PYQs. Map them to their syllabus units. If PYQs only cover early units, distribute them there and invent new questions for the remaining units. SCOPE RULE: Every question MUST be strictly based on topics listed in the syllabus. Do NOT ask about topics outside the syllabus even if related to the subject. STYLE RULE (MANDATORY): Study the exact nature of the provided PYQ questions. If they are numerical, then EVERY invented question MUST ALSO be numerical — give actual numbers, formulas, and values to compute. If code-based, give code-based questions. NEVER fall back to generic 'What is X?' or 'Define Y' theoretical questions unless the PYQs themselves are purely theoretical.]"
+            if (isFollowUpOnGeneratedContent) {
+                userQueryFinal = content + "\n\n[REMINDER: The user is asking a FOLLOW-UP question about an END TERM EXAM (ETE) paper that was already generated in this conversation. DO NOT re-generate the paper. DO NOT ask for any clarification. Simply provide the solution, explanation, or answer to the specific question the user is referring to. Use the conversation history above to identify the relevant question.]";
+            } else {
+                userQueryFinal = content + "\n\n[REMINDER: END TERM EXAM (ETE) request detected. Cover ALL 6 UNITS. Ask format if unspecified ('For this ETE, should I generate a full MCQ paper (60 questions), a mixed paper (30 MCQs + subjective), or a fully subjective paper (7 long questions)?'). PYQ RULE: Extract ALL actual PYQ questions from the provided context FIRST — do NOT skip any available PYQs. Map them to their syllabus units. If PYQs only cover early units, distribute them there and invent new questions for the remaining units. SCOPE RULE: Every question MUST be strictly based on topics listed in the syllabus. Do NOT ask about topics outside the syllabus even if related to the subject. STYLE RULE (MANDATORY): Study the exact nature of the provided PYQ questions. If they are numerical, then EVERY invented question MUST ALSO be numerical — give actual numbers, formulas, and values to compute. If code-based, give code-based questions. NEVER fall back to generic 'What is X?' or 'Define Y' theoretical questions unless the PYQs themselves are purely theoretical.]";
+            }
         } else if (isCaRequest) {
             const userSpecifiedType = /\b(mcq|subjective|objective|coding|numerical|implementation|multiple[\s-]?choice)\b/i.test(content);
-            if (userSpecifiedType) {
+            if (isFollowUpOnGeneratedContent) {
+                // The user is asking for a solution/explanation of a previously generated CA question.
+                // Do NOT re-ask clarification. Just answer from conversation history.
+                userQueryFinal = content + "\n\n[REMINDER: The user is asking a FOLLOW-UP question about a CLASS ASSESSMENT (CA) that was already generated in this conversation. DO NOT ask for course, units, or question type again — that information is already in the conversation history. Simply provide the solution, explanation, or answer to the question the user is asking about. Use the conversation history above to identify the relevant question.]";
+            } else if (userSpecifiedType) {
                 userQueryFinal = content + "\n\n[REMINDER: CLASS ASSESSMENT (CA) request detected. The user has specified the question type. Generate questions NOW. PYQ RULE: Extract ALL actual PYQ questions from the provided context FIRST for the specified units — do NOT skip any available PYQs. Only after exhausting real PYQs, invent new questions matching their pattern. SCOPE RULE: Every question MUST be strictly based on topics listed in the syllabus for the specified units. Do NOT ask about topics outside the syllabus. STYLE RULE (MANDATORY): Study the exact nature of the provided PYQ questions. If they are numerical, then EVERY question you generate MUST ALSO be numerical — give actual numbers, formulas, and values to compute. If code-based, give code to write. NEVER fall back to generic 'What is X?' theoretical questions unless PYQs are purely theoretical. RULES BY SUBJECT TYPE: (1) For CODING subjects (INT, CSE, MVC, Java, Python): Subjective questions MUST be CODE IMPLEMENTATION — ask the student to WRITE working code. (2) For MATHS/PHYSICS: Subjective must be numerical problems with actual values. (3) For MCQs: Generate EXACTLY 30 MCQs. DO NOT stop early.]"
             } else {
                 userQueryFinal = content + "\n\n[REMINDER: CLASS ASSESSMENT (CA) request detected. Check if the user has specified: (1) course, (2) units, and (3) question type. If ANY of these are missing, you MUST ask before generating. Specifically, if the question type is not specified, ask: 'For this CA, should I generate MCQ questions or Subjective questions?' CRITICAL: You are FORBIDDEN from generating any questions in this response. Your ONLY job right now is to ask the clarifying questions. Do NOT assume anything.]"
