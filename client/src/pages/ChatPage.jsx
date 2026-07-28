@@ -474,7 +474,7 @@ const ChatInput = ({ onSend, loading, onStop, activeCategory }) => {
             outline: "none",
             resize: "none",
             fontFamily: "'Inter', sans-serif",
-            fontSize: "0.92rem",
+            fontSize: "16px", // Must be at least 16px to prevent iOS Safari auto-zoom
             color: "#1f1209",
             lineHeight: 1.6,
             padding: "4px 0",
@@ -902,8 +902,8 @@ export default function ChatPage() {
 
 
   return (
-    <div style={{
-      height: "calc(100vh - 68px)",
+    <div className="chatpage-wrapper" style={{
+      height: "calc(100dvh - 68px)",
       display: "flex",
       background: "transparent",
       overflow: "hidden",
