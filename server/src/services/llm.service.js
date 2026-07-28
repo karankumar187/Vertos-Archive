@@ -27,7 +27,7 @@ const groqClient = new OpenAI({
 
 const hfClient = new OpenAI({
     apiKey: process.env.HF_API_KEY || 'dummy-key',
-    baseURL: 'https://api-inference.huggingface.co/v1/',
+    baseURL: 'https://router.huggingface.co/nscale/v1/',
     maxRetries: 0,
 });
 
@@ -90,7 +90,7 @@ const getProvidersWaterfall = (confidence) => {
             waterfall.push({ id: 'groq', client: groqClient, model: 'llama-3.1-8b-instant', providerName: 'Groq' });
         }
         if (process.env.HF_API_KEY) {
-            waterfall.push({ id: 'huggingface', client: hfClient, model: 'meta-llama/Meta-Llama-3-8B-Instruct', providerName: 'HuggingFace' });
+            waterfall.push({ id: 'huggingface', client: hfClient, model: 'meta-llama/Llama-3.1-8B-Instruct', providerName: 'HuggingFace (nscale)' });
         }
         if (process.env.MISTRAL_API_KEY) {
             waterfall.push({ id: 'mistral', client: mistralClient, model: 'open-mistral-nemo', providerName: 'Mistral' });
