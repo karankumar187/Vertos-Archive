@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
+import { SocketProvider } from "./context/SocketContext";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import Hero from "./components/Hero";
@@ -77,7 +78,8 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <Routes>
+        <SocketProvider>
+          <Routes>
           {/* Public */}
           <Route path="/" element={<Layout><Hero /></Layout>} />
           <Route path="/login" element={<PublicOnlyRoute><Layout><LoginPage /></Layout></PublicOnlyRoute>} />
@@ -113,6 +115,7 @@ function App() {
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </SocketProvider>
       </AuthProvider>
     </BrowserRouter>
   );

@@ -264,6 +264,12 @@ app.get('/api/file/view', async (req, res) => {
     }
 });
 
+const http = require('http');
+const server = http.createServer(app);
+const { initSocket } = require('./src/config/socket');
+const io = initSocket(server);
+app.set('io', io);
+
 // Health check
 app.get('/', (req, res) => {
     res.send('Vertos Archive API is running...');
@@ -279,6 +285,6 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = config.PORT || 5001;
-app.listen(PORT, () => {
+server.listen(PORT, () => {
     console.log(`Server running in ${config.NODE_ENV || 'development'} mode on port ${PORT}`);
 });

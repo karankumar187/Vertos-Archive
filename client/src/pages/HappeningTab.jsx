@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { eventsAPI, announcementsAPI } from "../services/api";
 import { cacheGet, cacheSet } from "../utils/localCache";
+import { useSocket } from "../context/SocketContext";
 import EventDetailsModal from "../components/EventDetailsModal";
 
 const EventCard = ({ event, onClick }) => {
@@ -71,6 +72,8 @@ export default function HappeningTab() {
   const [loading, setLoading] = useState(true);
   const [selectedEvent, setSelectedEvent] = useState(null);
 
+  const socket = useSocket();
+
   const fetchEvents = async (background = false) => {
     try {
       if (!background) setLoading(true);
@@ -115,6 +118,37 @@ export default function HappeningTab() {
       fetchEvents();
     }
   }, []);
+
+  useEffect(() => {
+    if (!socket) return;
+    socket.on('new_event', (event) => {
+      setEvents(prev => [...prev, event]); // Push to events
+    });
+    socket.on('new_announcement', (ann) => {
+      if (ann.type === 'Event') {
+        const formattedAnn = {
+          _fromAnnouncement: true,
+          _id: ann._id,
+          title: ann.title,
+          description: ann.content,
+          content: ann.content,
+          type: 'Event',
+          date: ann.eventDate || ann.createdAt,
+          eventDate: ann.eventDate || ann.createdAt,
+          location: '',
+          audience: ann.audience,
+          registrationLink: ann.registrationLink || null,
+          registeredUsers: ann.registeredUsers || []
+        };
+        setEvents(prev => [...prev, formattedAnn]);
+      }
+    });
+
+    return () => {
+      socket.off('new_event');
+      socket.off('new_announcement');
+    };
+  }, [socket]);
 
   const handleRegisterSuccess = (eventId, newCount) => {
     setEvents(prev => prev.map(ev => {

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { adminAPI } from "../../services/api";
+import { useSocket } from "../../context/SocketContext";
 
 const CATEGORIES = [
   { label: "Notes",          value: "notes" },
@@ -173,7 +174,7 @@ function ReviewModal({ doc, mode, onClose, onSuccess }) {
 }
 
 export default function AdminDocuments() {
-  const [activeTab, setActiveTab] = useState("Pending"); // Pending, Approved, Rejected
+  const [activeTab, setActiveTab] = useState("pending"); // "pending" | "live"
   const [pendingDocs, setPendingDocs] = useState([]);
   const [liveDocs, setLiveDocs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -181,10 +182,22 @@ export default function AdminDocuments() {
   
   const [reviewModal, setReviewModal] = useState({ open: false, doc: null, mode: null });
   const [textModal, setTextModal] = useState({ open: false, text: '' });
+  
+  const socket = useSocket();
 
   useEffect(() => {
     fetchData();
   }, []);
+
+  useEffect(() => {
+    if (!socket) return;
+    socket.on('new_document_pending', (doc) => {
+      setPendingDocs(prev => [doc, ...prev]);
+    });
+    return () => {
+      socket.off('new_document_pending');
+    };
+  }, [socket]);
 
   const fetchData = async (force = false) => {
     const CACHE_KEY = "admin_documents_cache";

@@ -81,6 +81,18 @@ exports.uploadDocument = async (req, res) => {
         }
         await contributor.save();
 
+        // 5. Emit socket event for real-time admin notification
+        try {
+            const io = req.app.get('io');
+            if (io) {
+                // Populate uploader info so admin sees who uploaded it
+                await pendingDoc.populate('uploaderId', 'name email avatar');
+                io.emit('new_document_pending', pendingDoc);
+            }
+        } catch (socketErr) {
+            console.error('[Socket] Failed to emit new_document_pending:', socketErr);
+        }
+
         res.status(201).json({
             success: true,
             message: 'Document uploaded successfully and is pending review.',

@@ -35,6 +35,18 @@ exports.createAnnouncement = async (req, res) => {
             targetId: ann._id,
             ipAddress: req.ip || 'N/A'
         });
+
+        if (status === 'published') {
+            try {
+                const io = req.app.get('io');
+                if (io) {
+                    io.emit('new_announcement', ann);
+                }
+            } catch (err) {
+                console.error('[Socket] Failed to emit new_announcement:', err);
+            }
+        }
+
         res.status(201).json({ success: true, data: ann });
     } catch (err) {
         res.status(500).json({ success: false, message: 'Server error' });

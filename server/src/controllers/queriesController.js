@@ -57,6 +57,17 @@ exports.createQuery = async (req, res) => {
 
     await newQuery.save();
 
+    try {
+      const io = req.app.get('io');
+      if (io) {
+        // Populate author before emitting
+        await newQuery.populate('author', 'name avatar');
+        io.emit('new_query', newQuery);
+      }
+    } catch (socketErr) {
+      console.error('[Socket] Failed to emit new_query:', socketErr);
+    }
+
     res.status(201).json({ success: true, data: newQuery });
   } catch (error) {
     console.error('Error creating query:', error);
@@ -125,6 +136,20 @@ exports.addAnswer = async (req, res) => {
 
     // Populate the newly added answer's author before returning
     await query.populate('answers.author', 'name avatar');
+
+    try {
+      const io = req.app.get('io');
+      if (io) {
+        // Find the specific answer we just added
+        const newAnswer = query.answers[query.answers.length - 1];
+        // Emit only to the specific room for this query
+        io.to(`query_${id}`).emit('new_reply', { queryId: id, answer: newAnswer });
+        // Also emit globally for feed updates if needed
+        io.emit('query_updated', query);
+      }
+    } catch (socketErr) {
+      console.error('[Socket] Failed to emit new_reply:', socketErr);
+    }
 
     res.status(201).json({ success: true, data: query });
   } catch (error) {

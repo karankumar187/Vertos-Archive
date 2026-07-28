@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { queriesAPI } from "../services/api";
 import { cacheGet, cacheSet, cacheInvalidate } from "../utils/localCache";
 import { useAuth } from "../context/AuthContext";
+import { useSocket } from "../context/SocketContext";
 
 // --- SVGs ---
 const SearchIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>;
@@ -98,6 +99,8 @@ export default function QueriesTab() {
     }
   };
 
+  const socket = useSocket();
+
   useEffect(() => {
     const cached = cacheGet('community_queries');
     if (cached) {
@@ -108,6 +111,47 @@ export default function QueriesTab() {
       fetchQueries();
     }
   }, []);
+
+  // Socket logic
+  useEffect(() => {
+    if (!socket) return;
+    socket.on('new_query', (query) => {
+      setQueries(prev => [query, ...prev]);
+    });
+
+    socket.on('query_updated', (updatedQuery) => {
+      setQueries(prev => prev.map(q => q._id === updatedQuery._id ? updatedQuery : q));
+    });
+
+    return () => {
+      socket.off('new_query');
+      socket.off('query_updated');
+    };
+  }, [socket]);
+
+  // Join/leave query room
+  useEffect(() => {
+    if (!socket || !selectedQuery) return;
+    
+    socket.emit('join_query', selectedQuery._id);
+    
+    const handleNewReply = ({ queryId, answer }) => {
+      if (queryId === selectedQuery._id) {
+        setSelectedQuery(prev => {
+          // Prevent duplicates
+          if (prev.answers.some(a => a._id === answer._id)) return prev;
+          return { ...prev, answers: [...prev.answers, answer] };
+        });
+      }
+    };
+
+    socket.on('new_reply', handleNewReply);
+
+    return () => {
+      socket.emit('leave_query', selectedQuery._id);
+      socket.off('new_reply', handleNewReply);
+    };
+  }, [socket, selectedQuery?._id]);
 
   // Auto-scroll to bottom of chat
   useEffect(() => {

@@ -37,6 +37,15 @@ exports.createEvent = async (req, res) => {
 
     await newEvent.save();
 
+    try {
+      const io = req.app.get('io');
+      if (io) {
+        io.emit('new_event', newEvent);
+      }
+    } catch (err) {
+      console.error('[Socket] Failed to emit new_event:', err);
+    }
+
     res.status(201).json({ success: true, data: newEvent });
   } catch (error) {
     console.error('Error creating event:', error);
