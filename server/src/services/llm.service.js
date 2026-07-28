@@ -36,6 +36,12 @@ const hfClient = new OpenAI({
     maxRetries: 0,
 });
 
+const mistralClient = new OpenAI({
+    apiKey: process.env.MISTRAL_API_KEY || 'dummy-key',
+    baseURL: 'https://api.mistral.ai/v1',
+    maxRetries: 0,
+});
+
 const OPENAI_MODEL = 'gpt-4o-mini';
 
 // Fraction of chunks that must exceed this cosine score to count as "covered"
@@ -93,6 +99,9 @@ const getProvidersWaterfall = (confidence) => {
         }
         if (process.env.HF_API_KEY) {
             waterfall.push({ id: 'huggingface', client: hfClient, model: 'meta-llama/Meta-Llama-3-8B-Instruct', providerName: 'HuggingFace' });
+        }
+        if (process.env.MISTRAL_API_KEY) {
+            waterfall.push({ id: 'mistral', client: mistralClient, model: 'open-mistral-nemo', providerName: 'Mistral' });
         }
     }
 
