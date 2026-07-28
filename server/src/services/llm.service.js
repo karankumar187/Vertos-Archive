@@ -24,9 +24,9 @@ const groqClient = new OpenAI({
     maxRetries: 0,
 });
 
-const togetherClient = new OpenAI({
-    apiKey: process.env.TOGETHER_API_KEY || '',
-    baseURL: 'https://api.together.xyz/v1',
+const cerebrasClient = new OpenAI({
+    apiKey: process.env.CEREBRAS_API_KEY || '',
+    baseURL: 'https://api.cerebras.ai/v1',
     maxRetries: 0,
 });
 
@@ -88,8 +88,8 @@ const getProvidersWaterfall = (confidence) => {
         if (process.env.GROQ_API_KEY) {
             waterfall.push({ id: 'groq', client: groqClient, model: 'llama-3.1-8b-instant', providerName: 'Groq' });
         }
-        if (process.env.TOGETHER_API_KEY) {
-            waterfall.push({ id: 'together', client: togetherClient, model: 'meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo', providerName: 'Together AI' });
+        if (process.env.CEREBRAS_API_KEY) {
+            waterfall.push({ id: 'cerebras', client: cerebrasClient, model: 'llama3.1-8b', providerName: 'Cerebras' });
         }
         if (process.env.HF_API_KEY) {
             waterfall.push({ id: 'huggingface', client: hfClient, model: 'meta-llama/Meta-Llama-3-8B-Instruct', providerName: 'HuggingFace' });
