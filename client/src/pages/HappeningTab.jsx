@@ -20,6 +20,7 @@ const EventCard = ({ event, onClick }) => {
 
   return (
     <div
+      className="happening-card"
       onClick={onClick}
       style={{
         background: "#fff", borderRadius: "16px", padding: "22px 24px",
@@ -30,12 +31,12 @@ const EventCard = ({ event, onClick }) => {
       onMouseEnter={e => { e.currentTarget.style.boxShadow = "0 8px 24px rgba(200,134,26,0.12)"; e.currentTarget.style.transform = "translateY(-2px)"; }}
       onMouseLeave={e => { e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.03)"; e.currentTarget.style.transform = "translateY(0)"; }}
     >
-      <div style={{ width: 70, height: 70, borderRadius: "14px", background: accentColor + "1A", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+      <div className="happening-date-box" style={{ width: 70, height: 70, borderRadius: "14px", background: accentColor + "1A", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
         <span style={{ fontSize: "0.8rem", fontWeight: 700, color: accentColor }}>{month}</span>
         <span style={{ fontSize: "1.8rem", fontWeight: 800, color: "#1f1209", lineHeight: 1 }}>{day}</span>
       </div>
 
-      <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "12px" }}>
           <h3 style={{ margin: "0 0 6px 0", fontSize: "1.15rem", fontWeight: 700, color: "#1f1209" }}>{event.title}</h3>
           <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>

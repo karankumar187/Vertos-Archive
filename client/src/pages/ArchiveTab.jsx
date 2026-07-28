@@ -328,10 +328,11 @@ export default function ArchiveTab() {
   return (
     <>
       {galleryDoc && <GalleryModal doc={galleryDoc} onClose={closeGallery} />}
-      <div style={{ display: "flex", gap: 28, alignItems: "flex-start" }}>
+      <div style={{ maxWidth: 1200, margin: "0 auto", position: "relative" }}>
+        <div className="archive-layout" style={{ display: "flex", gap: 28, alignItems: "flex-start" }}>
 
       {/* ── LEFT MAIN PANEL ── */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 28, minWidth: 0 }}>
+      <div className="archive-main" style={{ flex: 1, display: "flex", flexDirection: "column", gap: 28, minWidth: 0 }}>
 
         {/* Search Bar */}
         <div style={{
@@ -644,7 +645,7 @@ export default function ArchiveTab() {
       </div>
 
       {/* ── RIGHT SIDEBAR ── */}
-      <div style={{ width: 280, flexShrink: 0, display: "flex", flexDirection: "column", gap: 20 }}>
+      <div className="archive-filter-sidebar" style={{ width: 280, flexShrink: 0, display: "flex", flexDirection: "column", gap: 20 }}>
 
         {/* Stats */}
         <div style={{ background: "#fff", borderRadius: 16, border: "1.5px solid #f0e6d2", padding: 20, boxShadow: "0 4px 16px rgba(160,110,40,0.06)" }}>
