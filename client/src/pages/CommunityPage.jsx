@@ -180,10 +180,9 @@ const Avatar = ({ user, size = 40, showBadge = true }) => {
 };
 
 /* ─── Feed Tab ──────────────────────────────────────────────── */
-function FeedTab({ setActiveTab }) {
+function FeedTab({ setActiveTab, setSelectedQueryId }) {
   const [topContributors, setTopContributors] = useState([]);
   const [activeDiscussions, setActiveDiscussions] = useState([]);
-  const [selectedQueryId, setSelectedQueryId] = useState(null);
   const [upcomingEvents, setUpcomingEvents] = useState([]);
   const [announcements, setAnnouncements] = useState([]);
   const [stats, setStats] = useState({ docs: '-', contributors: '-', queries: '-', members: '-' });
@@ -650,6 +649,7 @@ function FeedTab({ setActiveTab }) {
 /* ─── Main Community Page ───────────────────────────────────── */
 export default function CommunityPage() {
   const [activeTab, setActiveTab] = useState("feed");
+  const [selectedQueryId, setSelectedQueryId] = useState(null);
   const location = useLocation();
 
   useEffect(() => {
@@ -725,7 +725,7 @@ export default function CommunityPage() {
 
       {/* ── TAB CONTENT ── */}
       <div className="community-content-area" style={{ position: "relative", zIndex: 1, maxWidth: 1280, margin: "0 auto", width: "100%", padding: "28px 24px", flex: 1, boxSizing: "border-box" }}>
-        {activeTab === "feed"        && <FeedTab setActiveTab={updateTab} />}
+        {activeTab === "feed"        && <FeedTab setActiveTab={updateTab} setSelectedQueryId={setSelectedQueryId} />}
         {activeTab === "leaderboard" && <LeaderboardComponent />}
         {activeTab === "queries"     && <QueriesTab defaultQueryId={selectedQueryId} />}
         {activeTab === "archive"     && <ArchiveTab />}
