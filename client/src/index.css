@@ -267,11 +267,19 @@ body {
   /* Queries - hide sidebar, show full screen chat on mobile */
   .queries-split-view {
     flex-direction: column !important;
-    height: calc(100vh - 160px) !important;
+    height: calc(100vh - 150px) !important;
     min-height: 0 !important;
     border-radius: 0 !important;
     border-left: none !important;
     border-right: none !important;
+    margin: -16px -12px 0 -12px !important;
+    width: calc(100% + 24px) !important;
+  }
+  .chat-header-compact {
+    padding: 10px 16px !important;
+  }
+  .chat-input-compact {
+    padding: 10px 16px !important;
   }
   .queries-sidebar {
     width: 100% !important;

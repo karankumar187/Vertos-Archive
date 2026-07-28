@@ -553,18 +553,19 @@ export default function QueriesTab({ defaultQueryId }) {
           <div className="queries-chat-panel" style={{ flex: 1, display: "flex", flexDirection: "column", background: "#fff", position: "relative" }}>
             
             {/* Chat Header */}
-            <div style={{ padding: "16px 24px", borderBottom: "1px solid #e5d9c5", background: "#fff", zIndex: 10, display: "flex", justifyContent: "space-between", alignItems: "center", boxShadow: "0 2px 10px rgba(160,110,40,0.03)" }}>
-              <div>
-                {/* Back button - only visible on mobile */}
-                <button className="mobile-only" onClick={() => setSelectedQuery(null)} style={{ background: "none", border: "none", color: "#c8861a", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: "6px", padding: 0, marginBottom: "6px", fontSize: "0.85rem" }}>
+            <div className="chat-header-compact" style={{ padding: "12px 20px", borderBottom: "1px solid #e5d9c5", background: "#fff", zIndex: 10, display: "flex", justifyContent: "space-between", alignItems: "center", boxShadow: "0 2px 10px rgba(160,110,40,0.03)" }}>
+              <div style={{ flex: 1, minWidth: 0, paddingRight: "12px" }}>
+                <button className="mobile-only" onClick={() => setSelectedQuery(null)} style={{ background: "none", border: "none", color: "#c8861a", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: "6px", padding: 0, marginBottom: "4px", fontSize: "0.85rem" }}>
                   <ArrowLeftIcon /> Back
                 </button>
-                <h2 style={{ margin: "0 0 4px 0", color: "#1f1209", fontSize: "1.1rem", fontWeight: 800 }}>{selectedQuery.title}</h2>
-                <div style={{ fontSize: "0.8rem", color: "#8b6535", display: "flex", gap: "8px", alignItems: "center" }}>
-                  Started by <strong style={{ color: "#4b3823" }}>{selectedQuery.author?.name || 'Anonymous'}</strong> • {new Date(selectedQuery.createdAt).toLocaleDateString()}
-                  {selectedQuery.tags?.map((t, i) => (
-                    <span key={i} style={{ background: "#f8f4ee", padding: "2px 6px", borderRadius: "4px", fontSize: "0.7rem", fontWeight: 600 }}>{t}</span>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                  <h2 style={{ margin: 0, color: "#1f1209", fontSize: "1.05rem", fontWeight: 800, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%" }}>{selectedQuery.title}</h2>
+                  {selectedQuery.tags?.slice(0, 1).map((t, i) => (
+                    <span key={i} style={{ background: "#fdfaf5", color: "#c8861a", border: "1px solid #e9dcc8", padding: "2px 8px", borderRadius: "100px", fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase" }}>{t}</span>
                   ))}
+                </div>
+                <div style={{ fontSize: "0.75rem", color: "#8b6535", marginTop: "4px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  Started by <strong style={{ color: "#4b3823" }}>{selectedQuery.author?.name || 'Anonymous'}</strong> • {new Date(selectedQuery.createdAt).toLocaleDateString()}
                 </div>
               </div>
               
@@ -662,8 +663,8 @@ export default function QueriesTab({ defaultQueryId }) {
             </div>
 
             {/* Input Area (Sticky Bottom) */}
-            <div style={{ padding: "16px 24px", background: "#fff", borderTop: "1px solid #e5d9c5", zIndex: 10 }}>
-              <form onSubmit={handleAnswer} style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+            <div className="chat-input-compact" style={{ padding: "12px 20px", background: "#fff", borderTop: "1px solid #e5d9c5", zIndex: 10 }}>
+              <form onSubmit={handleAnswer} style={{ display: "flex", gap: "10px", alignItems: "center" }}>
                 <div style={{ flex: 1, border: "1px solid #e5d9c5", borderRadius: "100px", background: "#f8f4ee", display: "flex", alignItems: "center", padding: "0 16px", transition: "border 0.2s" }} onFocus={e => e.currentTarget.style.borderColor = "#c8861a"} onBlur={e => e.currentTarget.style.borderColor = "#e5d9c5"}>
                   <input 
                     type="text"
