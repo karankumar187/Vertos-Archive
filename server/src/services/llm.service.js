@@ -19,7 +19,7 @@ const qwenClient = new OpenAI({
 });
 
 const OPENAI_MODEL = 'gpt-4o-mini';
-const QWEN_MODEL   = 'qwen/qwq-32b:free';
+const FREE_MODEL   = 'google/gemma-4-31b-it:free';
 
 // Fraction of chunks that must exceed this cosine score to count as "covered"
 const COVERAGE_THRESHOLD = 0.40;
@@ -81,7 +81,7 @@ const selectModel = (confidence) => {
     const qwenReady = Boolean(process.env.OPENROUTER_API_KEY);
 
     if (qwenReady && confidence >= threshold) {
-        return { client: qwenClient, model: QWEN_MODEL, provider: 'openrouter/qwen' };
+        return { client: qwenClient, model: FREE_MODEL, provider: 'openrouter/free' };
     }
     return { client: openaiClient, model: OPENAI_MODEL, provider: 'openai' };
 };
@@ -155,5 +155,5 @@ module.exports = {
     openaiClient,
     qwenClient,
     OPENAI_MODEL,
-    QWEN_MODEL,
+    FREE_MODEL,
 };
