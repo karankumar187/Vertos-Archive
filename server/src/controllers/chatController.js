@@ -265,16 +265,53 @@ exports.sendMessage = async (req, res) => {
             await conversation.save();
         }
 
-        // 5. Perform Hybrid Search to get context
+        // ── 5. Early Query Classification ────────────────────────────────────
+        // Determine query type BEFORE hitting Qdrant to avoid unnecessary DB calls.
+        //
+        // Policy keywords — any of these means this is a RAG query:
+        const _isMidTermEarly   = !isSyllabusRequest && /\b(mid[\s-]?term|midterm|mock[\s-]?test|40\s*mcq)\b/i.test(content);
+        const _isEteEarly       = !isSyllabusRequest && /\b(end[\s-]?term|ete|final[\s-]?exam|final[\s-]?paper|end[\s-]?sem|endsem)\b/i.test(content);
+        const _isEtpEarly       = !isSyllabusRequest && /\b(etp|end[\s-]?term[\s-]?practical|practical[\s-]?exam|lab[\s-]?exam|viva)\b/i.test(content);
+        const _isCaEarly        = !isSyllabusRequest && /\b(ca|class[\s-]?assessment|class[\s-]?test|unit[\s-]?test|ca[\s-]?\d|ca\d)\b/i.test(content);
+        const _isNotesEarly     = !isSyllabusRequest && !_isMidTermEarly && !_isEteEarly && !_isEtpEarly && !_isCaEarly && /\b(notes|study\s*material|lecture\s*notes|explain|explanation)\b/i.test(content);
+        const _isPyqEarly       = !isSyllabusRequest && !_isMidTermEarly && !_isEteEarly && !_isEtpEarly && !_isCaEarly && /\b(pyq|pyqs|previous year|past year|practice questions?)\b/i.test(content);
+        const _hasCourseCode    = /\b([a-zA-Z]{2,4})[-_\s]*(\d{3})\b/i.test(content) || Boolean(currentFilters.subject);
+
+        // Follow-up on already generated exam content (e.g. "solution of q3", "explain question 5")
+        const _isFollowUpEarly  = content.length < 150 && history.length > 1 &&
+            /\b(solution|solve|explain|answer|why|how|question\s*\d+|q\s*\d+|que\s*\d+)\b/i.test(content);
+
+        // A query needs RAG if it touches any university / course-related topic
+        const isRagQuery = isSyllabusRequest || _isMidTermEarly || _isEteEarly || _isEtpEarly ||
+                           _isCaEarly || _isNotesEarly || _isPyqEarly || _hasCourseCode || _isFollowUpEarly;
+
+        // Casual greeting — very short, no substance ("hi", "thanks", "ok")
+        const isCasualChat = !isRagQuery &&
+            content.trim().split(/\s+/).length <= 8 &&
+            /^(hi|hello|hey|thanks|thank\s*you|ok|okay|sure|yes|no|bye|good|great|nice|cool|got\s*it|understood|lol|haha|what['']?s\s*up|sup)/i.test(content.trim());
+
+        // General task — has substance but no university keywords (e.g. "write a sorting algorithm")
+        const isGeneralTask = !isRagQuery && !isCasualChat;
+
+        // Skip Qdrant entirely for non-RAG queries
+        const skipRag = !isRagQuery;
+
+        console.log(`[QueryClassifier] isRagQuery=${isRagQuery}, isCasualChat=${isCasualChat}, isGeneralTask=${isGeneralTask}`);
+
+        // ── 5a. Perform Hybrid Search (RAG queries only) ──────────────────────
         // For notes requests, fetch more chunks (150) to cover large documents thoroughly
         const searchLimit = (currentFilters.category === 'notes') ? 150 : 40;
-        let searchResults = await performHybridSearch(content, currentFilters, searchLimit);
+        let searchResults = [];
 
-        // Fallback logic: If we strictly filtered by 'notes' or 'pyq' but got nothing, fallback to syllabus
-        if ((!searchResults || searchResults.length === 0) && (currentFilters.category === 'notes' || currentFilters.category === 'pyq')) {
-            console.log(`[ChatController] No ${currentFilters.category} found for ${currentFilters.subject}. Falling back to syllabus.`);
-            currentFilters.category = 'syllabus';
-            searchResults = await performHybridSearch(content, currentFilters);
+        if (!skipRag) {
+            searchResults = await performHybridSearch(content, currentFilters, searchLimit);
+
+            // Fallback: If strictly filtered by 'notes' or 'pyq' but got nothing, fall back to syllabus
+            if ((!searchResults || searchResults.length === 0) && (currentFilters.category === 'notes' || currentFilters.category === 'pyq')) {
+                console.log(`[ChatController] No ${currentFilters.category} found for ${currentFilters.subject}. Falling back to syllabus.`);
+                currentFilters.category = 'syllabus';
+                searchResults = await performHybridSearch(content, currentFilters);
+            }
         }
 
         // Build context string from search results
@@ -392,12 +429,16 @@ ${contextText ? contextText : "No relevant context found in the database."}
         }
 
         // Conditionally append exam-specific reminder based on user intent
-        // isSyllabusRequest is already evaluated at the start of the function
-        let isMidTermRequest = !isSyllabusRequest && /\b(mid[\s-]?term|midterm|mock[\s-]?test|40\s*mcq)\b/i.test(content);
-        let isEteRequest = !isSyllabusRequest && /\b(end[\s-]?term|ete|final[\s-]?exam|final[\s-]?paper|end[\s-]?sem|endsem)\b/i.test(content);
-        let isEtpRequest = !isSyllabusRequest && /\b(etp|end[\s-]?term[\s-]?practical|practical[\s-]?exam|lab[\s-]?exam|viva)\b/i.test(content);
-        let isCaRequest  = !isSyllabusRequest && /\b(ca|class[\s-]?assessment|class[\s-]?test|unit[\s-]?test|ca[\s-]?\d|ca\d)\b/i.test(content);
-        
+        // Re-use the early classification flags computed before the search
+        let isMidTermRequest = _isMidTermEarly;
+        let isEteRequest     = _isEteEarly;
+        let isEtpRequest     = _isEtpEarly;
+        let isCaRequest      = _isCaEarly;
+        let isNotesRequest   = _isNotesEarly;
+        let isGenericPyqRequest = _isPyqEarly;
+        const isJustCourseCode  = content.trim().split(/\s+/).length <= 3 && /\b([a-zA-Z]{3})[-_\s]*(\d{3})\b/i.test(content);
+        const isNoPolicyTriggered = skipRag; // same condition — no policy keyword detected
+
         // Inherit policy if the user is answering a clarification question from the assistant
         let inheritedOriginalQuery = null;
         if (content.length < 80 && history.length > 1) {
@@ -409,17 +450,13 @@ ${contextText ? contextText : "No relevant context found in the database."}
                 }
             }
             const isPyqFollowUp = lastAssistantMsg && /\bare you looking for pyqs\b/i.test(lastAssistantMsg);
-            
+
             if (isPyqFollowUp || (lastAssistantMsg && /\b(mcq|subjective|format|multiple-choice|unit|units|type)\b/i.test(lastAssistantMsg))) {
-                
-                // Only inherit flags if it's NOT the PYQ question (since the PYQ question lists all exams, forcing flags would trigger all policies)
                 if (!isPyqFollowUp) {
                     if (/\b(CA|Class Assessment)\b/i.test(lastAssistantMsg)) isCaRequest = true;
                     if (/\b(ETE|End Term|Final Exam)\b/i.test(lastAssistantMsg)) isEteRequest = true;
                     if (/\b(Mid Term|Mock Test)\b/i.test(lastAssistantMsg)) isMidTermRequest = true;
                 }
-                
-                // Find the original user request that started this flow to enrich the search
                 for (let i = history.length - 3; i >= 0; i--) {
                     if (history[i].role === 'user' && history[i].content.length > content.length) {
                         inheritedOriginalQuery = history[i].content;
@@ -429,16 +466,9 @@ ${contextText ? contextText : "No relevant context found in the database."}
             }
         }
 
-        let isNotesRequest = !isSyllabusRequest && !isMidTermRequest && !isEteRequest && !isEtpRequest && !isCaRequest && /\b(notes|study\s*material|lecture\s*notes|explain|explanation)\b/i.test(content);
-        let isGenericPyqRequest = !isSyllabusRequest && !isMidTermRequest && !isEteRequest && !isEtpRequest && !isCaRequest && /\b(pyq|pyqs|previous year|past year|practice questions?)\b/i.test(content);
-        
-        const isJustCourseCode = content.trim().split(/\s+/).length <= 3 && /\b([a-zA-Z]{3})[-_\s]*(\d{3})\b/i.test(content);
-        const isNoPolicyTriggered = !isSyllabusRequest && !isMidTermRequest && !isEteRequest && !isEtpRequest && !isCaRequest && !isNotesRequest && !isGenericPyqRequest;
-
         // Detect follow-ups to previously generated CA/ETE/Mid-term questions
         // e.g. "give me solution of question 2", "explain question 5", "what's the answer to q3"
-        const isFollowUpOnGeneratedContent = content.length < 150 && history.length > 1 &&
-            /\b(solution|solve|explain|answer|why|how|question\s*\d+|q\s*\d+|que\s*\d+)\b/i.test(content);
+        const isFollowUpOnGeneratedContent = _isFollowUpEarly;
 
         if (isFollowUpOnGeneratedContent && !isCaRequest && !isEteRequest && !isMidTermRequest && !isEtpRequest && !isNotesRequest) {
             // Look backwards in history to detect what exam type was previously generated
@@ -529,13 +559,17 @@ ${contextText ? contextText : "No relevant context found in the database."}
         // ── 8a. Compute retrieval confidence and choose model ─────────────────
         const confidence = computeConfidence(searchResults);
 
-        // Follow-up questions on previously generated content (e.g. "solution of question 29")
-        // are answered entirely from conversation history — RAG retrieval quality is irrelevant.
-        // Override confidence to 1.0 so these cheap, history-based responses always use Qwen.
-        const effectiveConfidence = isFollowUpOnGeneratedContent ? 1.0 : confidence;
+        // Override confidence to 1.0 for queries that don't need OpenAI:
+        //  - skipRag (casual chat / general tasks)  → no RAG was done, Free LLM handles it fine
+        //  - isFollowUpOnGeneratedContent           → answered from history, not from retrieved docs
+        const effectiveConfidence = (skipRag || isFollowUpOnGeneratedContent) ? 1.0 : confidence;
+
+        const overrideReason = skipRag
+            ? (isCasualChat ? ' [casual-chat]' : ' [general-task]')
+            : isFollowUpOnGeneratedContent ? ' [follow-up override]' : '';
 
         const { client: llmClient, model: llmModel, provider: llmProvider } = selectModel(effectiveConfidence);
-        console.log(`[LLM Router] confidence=${confidence.toFixed(3)} (effective=${effectiveConfidence.toFixed(3)}), provider=${llmProvider}, model=${llmModel}${isFollowUpOnGeneratedContent ? ' [follow-up override]' : ''}`);
+        console.log(`[LLM Router] confidence=${confidence.toFixed(3)} (effective=${effectiveConfidence.toFixed(3)}), provider=${llmProvider}, model=${llmModel}${overrideReason}`);
 
 
         // ── 8b. Detect whether this request needs batched generation ──────────
