@@ -19,7 +19,7 @@ const qwenClient = new OpenAI({
 });
 
 const OPENAI_MODEL = 'gpt-4o-mini';
-const FREE_MODEL   = 'google/gemma-4-31b-it:free';
+const FREE_MODEL   = 'openrouter/free';
 
 // Fraction of chunks that must exceed this cosine score to count as "covered"
 const COVERAGE_THRESHOLD = 0.40;
