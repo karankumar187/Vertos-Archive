@@ -418,12 +418,12 @@ export default function QueriesTab({ defaultQueryId }) {
                 onClick={() => setSelectedQuery(q)}
                 className="discussion-card-full"
                 style={{ 
-                  padding: "24px 32px", 
+                  padding: "20px 24px", 
                   cursor: "pointer", 
                   background: "#fff",
                   border: isSelected ? "2px solid #c8861a" : "1px solid #f0e6d2",
-                  borderRadius: "16px",
-                  display: "flex", gap: "20px",
+                  borderRadius: "14px",
+                  display: "flex", gap: "16px",
                   position: "relative",
                   transition: "all 0.2s",
                   boxShadow: isSelected ? "0 4px 16px rgba(200,134,26,0.15)" : "0 2px 8px rgba(0,0,0,0.03)"
@@ -441,13 +441,13 @@ export default function QueriesTab({ defaultQueryId }) {
                   <span style={{ fontSize: "0.65rem", fontWeight: 800, color: "#6b4d1f", textTransform: "uppercase", letterSpacing: "0.05em" }}>{primaryTag}</span>
                 </div>
 
-                <div className="discussion-card-avatar-wrapper" style={{ flexShrink: 0, marginTop: "4px" }}>
-                  <Avatar user={q.author} size={56} />
+                <div className="discussion-card-avatar-wrapper" style={{ flexShrink: 0, marginTop: "2px" }}>
+                  <Avatar user={q.author} size={42} />
                 </div>
                 
                 <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "6px" }}>
-                    <h4 style={{ margin: 0, fontSize: "1.2rem", color: "#1f1209", fontWeight: 800, lineHeight: 1.3, paddingRight: "16px" }}>
+                    <h4 style={{ margin: 0, fontSize: "1.05rem", color: "#1f1209", fontWeight: 700, lineHeight: 1.3, paddingRight: "16px" }}>
                       {q.title}
                     </h4>
                     {currentUser && (q.author?._id === (currentUser._id || currentUser.id) || currentUser.role === 'admin') && (
@@ -463,8 +463,8 @@ export default function QueriesTab({ defaultQueryId }) {
                     )}
                   </div>
                   
-                  <div style={{ fontSize: "0.85rem", color: "#8b6535", marginBottom: "16px", display: "flex", alignItems: "center", gap: "6px" }}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 015.5 5.5v0a5.5 5.5 0 01-5.5 5.5H11"/></svg>
+                  <div style={{ fontSize: "0.8rem", color: "#8b6535", marginBottom: "12px", display: "flex", alignItems: "center", gap: "6px" }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 015.5 5.5v0a5.5 5.5 0 01-5.5 5.5H11"/></svg>
                     {lastMessage ? (
                       <>Latest reply from <strong style={{ color: "#4b3823" }}>@{lastMessage.author?.name?.split(' ')[0] || 'someone'}</strong> {timeAgo(lastMessage.createdAt)}</>
                     ) : (
@@ -472,7 +472,7 @@ export default function QueriesTab({ defaultQueryId }) {
                     )}
                   </div>
                   
-                  <p style={{ margin: 0, fontSize: "0.95rem", color: "#6b4d1f", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", marginBottom: "16px" }}>
+                  <p style={{ margin: 0, fontSize: "0.9rem", color: "#6b4d1f", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", marginBottom: "12px" }}>
                     {q.description}
                   </p>
                   
