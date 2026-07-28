@@ -3,7 +3,7 @@ const Message = require('../models/Message');
 const { performHybridSearch } = require('../services/search.service');
 const { openaiClient } = require('../services/openai.service');
 const Document = require('../models/Document');
-const { computeConfidence, getProvidersWaterfall, createThinkFilter } = require('../services/llm.service');
+const { computeConfidence, getProvidersWaterfall, createThinkFilter, markProviderFailure } = require('../services/llm.service');
 const { streamBatchedQuestions } = require('../services/questionBatcher');
 
 // ---------------------------------------------------------------------------
@@ -685,6 +685,7 @@ ${contextText ? contextText : "No relevant context found in the database."}
                     res.write(`event: provider_used\ndata: ${JSON.stringify({ providerName: usedProvider.providerName, model: usedProvider.model, fallback: currentProviderIdx > 0 })}\n\n`);
                 } catch (err) {
                     console.warn(`[LLM Router] ${providerName} stream failed: ${err.message}. Retrying...`);
+                    markProviderFailure(id); // Place on cooldown so other requests don't wait for this timeout
                     lastStreamErr = err;
                     currentProviderIdx++; // Move to next provider
                 }

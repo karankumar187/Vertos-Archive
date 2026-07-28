@@ -45,6 +45,15 @@ const COVERAGE_THRESHOLD = 0.40;
 // Default confidence cutoff (overridable via .env LLM_CONFIDENCE_THRESHOLD)
 const DEFAULT_CONFIDENCE_THRESHOLD = 0.45;
 
+// Circuit breaker state to prevent cascading delays when rate limited
+const providerCooldowns = {};
+
+const markProviderFailure = (providerId) => {
+    if (providerId === 'openai') return; // Never cooldown our ultimate fallback
+    console.warn(`[LLM Router] ${providerId} placed on 20s cooldown due to failure.`);
+    providerCooldowns[providerId] = Date.now() + 20000;
+};
+
 // ---------------------------------------------------------------------------
 // computeConfidence
 // ---------------------------------------------------------------------------
@@ -81,18 +90,19 @@ const getProvidersWaterfall = (confidence) => {
     const threshold = parseFloat(process.env.LLM_CONFIDENCE_THRESHOLD ?? String(DEFAULT_CONFIDENCE_THRESHOLD));
     const waterfall = [];
 
-    // Only add free providers if confidence meets threshold
+    // Only add free providers if confidence meets threshold and they are not on cooldown
     if (confidence >= threshold) {
-        if (process.env.OPENROUTER_API_KEY) {
+        const now = Date.now();
+        if (process.env.OPENROUTER_API_KEY && (!providerCooldowns['openrouter'] || now > providerCooldowns['openrouter'])) {
             waterfall.push({ id: 'openrouter', client: openRouterClient, model: 'openrouter/free', providerName: 'OpenRouter' });
         }
-        if (process.env.GROQ_API_KEY) {
+        if (process.env.GROQ_API_KEY && (!providerCooldowns['groq'] || now > providerCooldowns['groq'])) {
             waterfall.push({ id: 'groq', client: groqClient, model: 'llama-3.1-8b-instant', providerName: 'Groq' });
         }
-        if (process.env.HF_API_KEY) {
+        if (process.env.HF_API_KEY && (!providerCooldowns['huggingface'] || now > providerCooldowns['huggingface'])) {
             waterfall.push({ id: 'huggingface', client: hfClient, model: 'meta-llama/Llama-3.1-8B-Instruct', providerName: 'HuggingFace (nscale)' });
         }
-        if (process.env.MISTRAL_API_KEY) {
+        if (process.env.MISTRAL_API_KEY && (!providerCooldowns['mistral'] || now > providerCooldowns['mistral'])) {
             waterfall.push({ id: 'mistral', client: mistralClient, model: 'open-mistral-nemo', providerName: 'Mistral' });
         }
     }
@@ -148,5 +158,6 @@ module.exports = {
     computeConfidence,
     getProvidersWaterfall,
     createThinkFilter,
+    markProviderFailure,
     openaiClient,
 };

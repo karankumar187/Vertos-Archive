@@ -1,6 +1,6 @@
 'use strict';
 
-const { createThinkFilter } = require('./llm.service');
+const { createThinkFilter, markProviderFailure } = require('./llm.service');
 
 // Maximum questions per LLM call — keeps each prompt within safe token limits
 const BATCH_SIZE = 10;
@@ -226,6 +226,7 @@ const streamBatchedQuestions = async ({
                 batchSuccess = true;
             } catch (err) {
                 console.warn(`[QuestionBatcher] ${providerName} (${model}) failed on batch ${bIdx + 1}: ${err.message}. Retrying...`);
+                markProviderFailure(id); // Place on cooldown so other requests don't wait for this timeout
                 lastError = err;
                 currentProviderIdx++; // Move to next provider in the waterfall
             }
