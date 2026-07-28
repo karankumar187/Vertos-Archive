@@ -3,6 +3,52 @@ const Message = require('../models/Message');
 const { performHybridSearch } = require('../services/search.service');
 const { openaiClient } = require('../services/openai.service');
 const Document = require('../models/Document');
+const { computeConfidence, selectModel, createThinkFilter } = require('../services/llm.service');
+const { streamBatchedQuestions } = require('../services/questionBatcher');
+
+// ---------------------------------------------------------------------------
+// extractCaUnits
+// ---------------------------------------------------------------------------
+/**
+ * Parses unit numbers from the user's message and conversation history.
+ * Handles patterns like:
+ *   "unit 1 and 2"  →  [1, 2]
+ *   "units 1, 2, 3" →  [1, 2, 3]
+ *   "unit 1 to 3"   →  [1, 2, 3]
+ *
+ * @param {string}   content  — current user message
+ * @param {object[]} history  — Message objects with .content
+ * @returns {number[]} sorted unique unit numbers in [1..6]
+ */
+const extractCaUnits = (content, history = []) => {
+    // Search current message first, then walk back through history
+    const sources = [content, ...history.map(h => h.content || '')];
+
+    for (const src of sources) {
+        // Range pattern: "unit 1 to 3"
+        const rangeMatch = src.match(/units?\s*(\d+)\s*(?:to|through|-)\s*(\d+)/i);
+        if (rangeMatch) {
+            const from = parseInt(rangeMatch[1], 10);
+            const to   = parseInt(rangeMatch[2], 10);
+            const units = [];
+            for (let i = from; i <= to && i <= 6; i++) units.push(i);
+            if (units.length) return units;
+        }
+
+        // List / "and" pattern: "units 1, 2" or "unit 1 and unit 2"
+        const listMatch = src.match(/units?\s*([\d\s,and&+]+)/i);
+        if (listMatch) {
+            const nums = listMatch[1].match(/\d+/g);
+            if (nums) {
+                const units = [...new Set(nums.map(Number).filter(n => n >= 1 && n <= 6))]
+                    .sort((a, b) => a - b);
+                if (units.length) return units;
+            }
+        }
+    }
+
+    return [];
+};
 
 // Get all conversations for a user
 exports.getConversations = async (req, res) => {
@@ -479,23 +525,134 @@ ${contextText ? contextText : "No relevant context found in the database."}
         // Send sources immediately as the first event so UI can display citations
         res.write(`event: sources\ndata: ${JSON.stringify(sourceData)}\n\n`);
 
-        // 8. Call OpenAI with streaming
-        const stream = await openaiClient.chat.completions.create({
-            model: "gpt-4o-mini",
-            messages: apiMessages,
-            max_tokens: 16000,
-            stream: true,
-        });
+        // 8. Confidence-based LLM routing + batched question generation
+        // ── 8a. Compute retrieval confidence and choose model ─────────────────
+        const confidence = computeConfidence(searchResults);
+        const { client: llmClient, model: llmModel, provider: llmProvider } = selectModel(confidence);
+        console.log(`[LLM Router] confidence=${confidence.toFixed(3)}, provider=${llmProvider}, model=${llmModel}`);
 
-        let fullAssistantResponse = "";
+        // ── 8b. Detect whether this request needs batched generation ──────────
+        // Batching is used for large question sets (ETE 60Q, Mid-Term 40Q, CA 30Q)
+        // to stay within per-call token output limits regardless of which model is chosen.
+        let batchTaskType  = null;
+        let caUnitsForBatch = [];
 
-        for await (const chunk of stream) {
-            const token = chunk.choices[0]?.delta?.content || "";
-            if (token) {
-                fullAssistantResponse += token;
-                // SSE format: data: <payload>\n\n
-                // We stringify the token to safely handle newlines and special characters
-                res.write(`data: ${JSON.stringify({ token })}\n\n`);
+        if (!isFollowUpOnGeneratedContent) {
+            // Gather all conversation text for indicator detection
+            const allText = [content, ...history.map(h => h.content || '')].join(' ');
+            const mcqIndicated = /\b(mcq|objective|multiple[\s-]?choice)\b/i.test(allText);
+
+            if (isMidTermRequest && mcqIndicated) {
+                // Mid-Term: always 40 MCQs across 3 units → batch
+                batchTaskType = 'midterm_mcq';
+
+            } else if (isEteRequest) {
+                // ETE Format A (60 MCQs)
+                const isFormatA = /\bformat\s*a\b|\bfull\s*mcq\b|\b60\s*(questions?|mcqs?)\b/i.test(allText);
+                // ETE Format B (30 MCQs + subjective — batch only the MCQ part)
+                const isFormatB = /\bformat\s*b\b|\bmixed\b/i.test(allText);
+                if (isFormatA) batchTaskType = 'ete_mcq';
+                else if (isFormatB) batchTaskType = 'ete_mixed_mcq';
+                // Format C (7 subjective) → no batching needed (≤ 10)
+
+            } else if (isCaRequest && mcqIndicated) {
+                // CA MCQ: 30 questions, split by unit count
+                batchTaskType  = 'ca_mcq';
+                caUnitsForBatch = extractCaUnits(content, history);
+
+            } else if (isCaRequest && /\b(subjective|coding|implementation|numerical)\b/i.test(allText)) {
+                // CA Subjective: 15 questions — only batch when 3+ units (total ≥ 10/unit)
+                caUnitsForBatch = extractCaUnits(content, history);
+                if (caUnitsForBatch.length >= 2) {
+                    batchTaskType = 'ca_subjective';
+                }
+            }
+        }
+
+        let fullAssistantResponse = '';
+
+        if (batchTaskType) {
+            // ── 8c. Batched path ─────────────────────────────────────────────
+            console.log(`[LLM Router] Batched generation — type=${batchTaskType}, units=[${caUnitsForBatch}], model=${llmModel}`);
+
+            try {
+                fullAssistantResponse = await streamBatchedQuestions({
+                    taskType:       batchTaskType,
+                    caUnits:        caUnitsForBatch,
+                    subject:        currentFilters.subject || '',
+                    systemPrompt:   apiMessages[0].content,
+                    userQueryFinal,
+                    client:         llmClient,
+                    model:          llmModel,
+                    onToken: (token) => {
+                        res.write(`data: ${JSON.stringify({ token })}\n\n`);
+                    },
+                });
+            } catch (batchErr) {
+                // Fallback: if chosen model fails mid-batch, retry the whole
+                // request once with OpenAI to avoid leaving the user with nothing.
+                if (llmProvider !== 'openai') {
+                    console.warn(`[LLM Router] Batch failed on ${llmProvider}, retrying with OpenAI...`, batchErr.message);
+                    fullAssistantResponse = await streamBatchedQuestions({
+                        taskType:       batchTaskType,
+                        caUnits:        caUnitsForBatch,
+                        subject:        currentFilters.subject || '',
+                        systemPrompt:   apiMessages[0].content,
+                        userQueryFinal,
+                        client:         openaiClient,
+                        model:          'gpt-4o-mini',
+                        onToken: (token) => {
+                            res.write(`data: ${JSON.stringify({ token })}\n\n`);
+                        },
+                    });
+                } else {
+                    throw batchErr;
+                }
+            }
+
+        } else {
+            // ── 8d. Standard streaming path ──────────────────────────────────
+            const isQwen       = llmProvider !== 'openai';
+            const thinkFilter  = isQwen ? createThinkFilter() : null;
+
+            let stream;
+            try {
+                stream = await llmClient.chat.completions.create({
+                    model:      llmModel,
+                    messages:   apiMessages,
+                    max_tokens: 16000,
+                    stream:     true,
+                });
+            } catch (initErr) {
+                // If chosen model fails to start (e.g. OpenRouter quota), fall back to OpenAI
+                if (isQwen) {
+                    console.warn(`[LLM Router] ${llmProvider} stream init failed, falling back to OpenAI:`, initErr.message);
+                    stream = await openaiClient.chat.completions.create({
+                        model:      'gpt-4o-mini',
+                        messages:   apiMessages,
+                        max_tokens: 16000,
+                        stream:     true,
+                    });
+                } else {
+                    throw initErr;
+                }
+            }
+
+            for await (const chunk of stream) {
+                let token = chunk.choices[0]?.delta?.content || '';
+                if (!token) continue;
+
+                // Strip <think>…</think> blocks emitted by Qwen3 before the actual answer
+                if (thinkFilter) {
+                    token = thinkFilter(token);
+                }
+
+                if (token) {
+                    fullAssistantResponse += token;
+                    // SSE format: data: <payload>\n\n
+                    // We stringify the token to safely handle newlines and special characters
+                    res.write(`data: ${JSON.stringify({ token })}\n\n`);
+                }
             }
         }
 
