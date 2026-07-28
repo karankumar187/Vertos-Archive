@@ -288,7 +288,7 @@ export default function QueriesTab() {
   
   const AskModal = () => (
     <div style={{ position: "fixed", inset: 0, background: "rgba(255,255,255,0.9)", zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(4px)" }}>
-      <div style={{ background: "#fff", width: "100%", maxWidth: "500px", padding: "32px", borderRadius: "16px", border: "1px solid #c8861a", boxShadow: "0 12px 40px rgba(200,134,26,0.15)" }}>
+      <div className="queries-ask-modal-inner" style={{ background: "#fff", width: "100%", maxWidth: "500px", padding: "32px", borderRadius: "16px", border: "1px solid #c8861a", boxShadow: "0 12px 40px rgba(200,134,26,0.15)" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
           <h2 style={{ margin: 0, color: "#1f1209", fontSize: "1.4rem" }}>Start New Discussion</h2>
           <button onClick={() => setShowAskForm(false)} style={{ background: "none", border: "none", fontSize: "1.5rem", color: "#8b6535", cursor: "pointer" }}>&times;</button>
@@ -503,15 +503,15 @@ export default function QueriesTab() {
           
           <SearchBar style={{ marginBottom: "24px" }} />
           
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "32px" }}>
+          <div className="queries-toolbar" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "32px" }}>
             <button onClick={() => setSortBy(prev => prev === 'latest' ? 'popular' : 'latest')} style={{ background: "#fff", border: "1px solid #f0e6d2", padding: "10px 20px", borderRadius: "12px", display: "flex", alignItems: "center", gap: "8px", fontWeight: 700, color: "#1f1209", cursor: "pointer", boxShadow: "0 2px 4px rgba(0,0,0,0.02)" }}>
               {sortBy === 'latest' ? 'Latest first' : 'Popular first'} <FilterIcon />
             </button>
-            <div style={{ display: "flex", alignItems: "center", gap: "24px" }}>
+            <div className="queries-toolbar-right" style={{ display: "flex", alignItems: "center", gap: "24px" }}>
               <button onClick={() => setSearchQuery("")} style={{ background: "none", border: "none", display: "flex", alignItems: "center", gap: "8px", fontWeight: 700, color: "#8b6535", cursor: "pointer" }}>
                 <CheckIcon /> Clear filters
               </button>
-              <button onClick={() => setShowAskForm(true)} style={{ background: "linear-gradient(135deg, #c8861a, #b45309)", color: "#fff", border: "none", padding: "12px 24px", borderRadius: "12px", fontWeight: 800, fontSize: "0.95rem", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", boxShadow: "0 4px 16px rgba(200,134,26,0.2)" }}>
+              <button className="queries-new-btn" onClick={() => setShowAskForm(true)} style={{ background: "linear-gradient(135deg, #c8861a, #b45309)", color: "#fff", border: "none", padding: "12px 24px", borderRadius: "12px", fontWeight: 800, fontSize: "0.95rem", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", boxShadow: "0 4px 16px rgba(200,134,26,0.2)" }}>
                 <PlusIcon /> Start New Discussion
               </button>
             </div>
@@ -522,10 +522,10 @@ export default function QueriesTab() {
         </div>
       ) : (
         // ─── SPLIT SCREEN VIEW (DISCUSSION SELECTED) ───
-        <div style={{ display: "flex", gap: "0", background: "#fff", border: "1px solid #e5d9c5", borderRadius: "12px", overflow: "hidden", height: "calc(100vh - 140px)", minHeight: "600px", boxShadow: "0 10px 30px rgba(160,110,40,0.05)" }}>
+        <div className="queries-split-view" style={{ display: "flex", gap: "0", background: "#fff", border: "1px solid #e5d9c5", borderRadius: "12px", overflow: "hidden", height: "calc(100vh - 140px)", minHeight: "600px", boxShadow: "0 10px 30px rgba(160,110,40,0.05)" }}>
           
           {/* LEFT SIDEBAR */}
-          <div style={{ width: "420px", background: "#f8f4ee", display: "flex", flexDirection: "column", borderRight: "1px solid #e5d9c5", flexShrink: 0 }}>
+          <div className="queries-sidebar" style={{ width: "420px", background: "#f8f4ee", display: "flex", flexDirection: "column", borderRight: "1px solid #e5d9c5", flexShrink: 0 }}>
             <div style={{ padding: "20px", borderBottom: "1px solid #e5d9c5", background: "#fff" }}>
               <button onClick={() => setSelectedQuery(null)} style={{ background: "none", border: "none", color: "#c8861a", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", padding: 0, marginBottom: "20px", fontSize: "0.95rem" }}>
                 <ArrowLeftIcon /> Back to all discussions
@@ -542,11 +542,15 @@ export default function QueriesTab() {
           </div>
 
           {/* RIGHT CHAT SCREEN */}
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", background: "#fff", position: "relative" }}>
+          <div className="queries-chat-panel" style={{ flex: 1, display: "flex", flexDirection: "column", background: "#fff", position: "relative" }}>
             
             {/* Chat Header */}
             <div style={{ padding: "16px 24px", borderBottom: "1px solid #e5d9c5", background: "#fff", zIndex: 10, display: "flex", justifyContent: "space-between", alignItems: "center", boxShadow: "0 2px 10px rgba(160,110,40,0.03)" }}>
               <div>
+                {/* Back button - only visible on mobile */}
+                <button className="mobile-only" onClick={() => setSelectedQuery(null)} style={{ background: "none", border: "none", color: "#c8861a", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: "6px", padding: 0, marginBottom: "6px", fontSize: "0.85rem" }}>
+                  <ArrowLeftIcon /> Back
+                </button>
                 <h2 style={{ margin: "0 0 4px 0", color: "#1f1209", fontSize: "1.1rem", fontWeight: 800 }}>{selectedQuery.title}</h2>
                 <div style={{ fontSize: "0.8rem", color: "#8b6535", display: "flex", gap: "8px", alignItems: "center" }}>
                   Started by <strong style={{ color: "#4b3823" }}>{selectedQuery.author?.name || 'Anonymous'}</strong> • {new Date(selectedQuery.createdAt).toLocaleDateString()}

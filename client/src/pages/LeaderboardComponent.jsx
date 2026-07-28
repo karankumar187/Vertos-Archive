@@ -286,75 +286,66 @@ function Row({ entry, isMe }) {
   };
 
   return (
-    <div style={{
-      display: "grid",
-      gridTemplateColumns: "56px 1fr 100px 120px 110px 70px",
-      alignItems: "center", gap: "16px",
-      padding: "18px 28px",
-      background: isMe ? "#fdfaf5" : "#fff",
-      borderBottom: "1px solid #f5efeb",
-      borderLeft: isMe ? "3px solid #c8861a" : "3px solid transparent",
-      transition: "background 0.15s",
-    }}
+    <div
       onMouseEnter={e => e.currentTarget.style.background = "#fdfaf5"}
       onMouseLeave={e => e.currentTarget.style.background = isMe ? "#fdfaf5" : "#fff"}
+      style={{
+        display: "flex", alignItems: "center", gap: "12px",
+        padding: "14px 20px",
+        background: isMe ? "#fdfaf5" : "#fff",
+        borderBottom: "1px solid #f5efeb",
+        borderLeft: isMe ? "3px solid #c8861a" : "3px solid transparent",
+        transition: "background 0.15s",
+      }}
     >
-      {/* Rank */}
-      <div style={{ display: "flex", alignItems: "center", paddingLeft: "4px" }}>
-        <div style={{
-          width: 30, height: 30, borderRadius: "50%",
-          background: badge.bg, color: badge.color, border: badge.border,
-          display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: "13px", fontWeight: 700, opacity: badge.opacity || 1
-        }}>
-          {entry.rank}
-        </div>
+      {/* Rank badge */}
+      <div style={{
+        width: 30, height: 30, borderRadius: "50%", flexShrink: 0,
+        background: badge.bg, color: badge.color, border: badge.border,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        fontSize: "13px", fontWeight: 700, opacity: badge.opacity || 1
+      }}>
+        {entry.rank}
       </div>
 
-      {/* Contributor */}
-      <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
-        <Avatar user={entry} size={40} style={{
-          border: top3 ? "2px solid #e8c96a" : "1.5px solid #f0e6d2"
-        }} />
-        <div>
-          <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.9rem", fontWeight: isMe ? 700 : 600, color: "#1f1209", margin: 0 }}>
-            {entry.name}
-            {isMe && <span style={{ marginLeft: "8px", fontSize: "0.7rem", color: "#c8861a", fontWeight: 600 }}>(you)</span>}
+      {/* Avatar */}
+      <Avatar user={entry} size={38} style={{ border: top3 ? "2px solid #e8c96a" : "1.5px solid #f0e6d2", flexShrink: 0 }} />
+
+      {/* Name + reg */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.9rem", fontWeight: isMe ? 700 : 600, color: "#1f1209", margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+          {entry.name}
+          {isMe && <span style={{ marginLeft: "6px", fontSize: "0.7rem", color: "#c8861a", fontWeight: 600 }}>(you)</span>}
+        </p>
+        {entry.regNo && (
+          <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.7rem", color: "#8b6535", margin: 0, marginTop: "1px" }}>
+            {entry.regNo}
           </p>
-          {entry.regNo && (
-            <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.72rem", color: "#8b6535", margin: 0, marginTop: "2px" }}>
-              {entry.regNo}
-            </p>
-          )}
+        )}
+      </div>
+
+      {/* Docs + Discussions (hide on very small screens via class) */}
+      <div className="mobile-hide" style={{ display: "flex", gap: "16px", alignItems: "center" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+          <DocIcon />
+          <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.85rem", fontWeight: 600, color: "#4b3823" }}>{entry.docs}</span>
         </div>
-      </div>
-
-      {/* Docs */}
-      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-        <DocIcon />
-        <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.9rem", fontWeight: 600, color: "#4b3823" }}>
-          {entry.docs}
-        </span>
-      </div>
-
-      {/* Discussions */}
-      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8b6535" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
-        <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.9rem", fontWeight: 600, color: "#4b3823" }}>
-          {entry.discussions || 0}
-        </span>
+        <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8b6535" strokeWidth="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+          <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.85rem", fontWeight: 600, color: "#4b3823" }}>{entry.discussions || 0}</span>
+        </div>
       </div>
 
       {/* Points */}
-      <div style={{ textAlign: "center" }}>
+      <div style={{ textAlign: "right", flexShrink: 0 }}>
         <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.95rem", fontWeight: 700, color: top3 ? "#c8861a" : "#8b6535" }}>
           {entry.points.toLocaleString()}
         </span>
-        <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.75rem", color: "#8b6535", marginLeft: "3px" }}>pts</span>
+        <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.72rem", color: "#8b6535", marginLeft: "2px" }}>pts</span>
       </div>
 
       {/* Trend */}
-      <div style={{ display: "flex", justifyContent: "center" }}>
+      <div style={{ display: "flex", justifyContent: "center", flexShrink: 0 }}>
         {getTrend()}
       </div>
     </div>
@@ -418,7 +409,7 @@ export default function LeaderboardPage() {
       <div style={{ maxWidth: "900px", margin: "0 auto" }}>
 
         {/* ── Header Row ── */}
-        <div className="anim-up d1" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "40px" }}>
+        <div className="leaderboard-header-row anim-up d1" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "40px" }}>
           <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
             <TrophyImg />
             <div>
@@ -432,7 +423,7 @@ export default function LeaderboardPage() {
           </div>
 
           {/* Period Selector */}
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", position: "relative", zIndex: 100 }} onClick={e => e.stopPropagation()}>
+          <div className="leaderboard-period-btns" style={{ display: "flex", alignItems: "center", gap: "8px", position: "relative", zIndex: 100 }} onClick={e => e.stopPropagation()}>
             <button
               onClick={() => setShowDropdown(!showDropdown)}
               style={{
@@ -509,8 +500,8 @@ export default function LeaderboardPage() {
           boxShadow: "0 2px 16px rgba(160,110,40,0.04)",
           marginBottom: "24px"
         }}>
-          {/* Header row */}
-          <div style={{
+          {/* Header row - hidden on mobile */}
+          <div className="mobile-hide" style={{
             display: "grid", gridTemplateColumns: "56px 1fr 100px 120px 110px 70px",
             padding: "16px 28px", background: "#fdfaf5",
             borderBottom: "1px solid #f0e6d2",
@@ -562,10 +553,11 @@ export default function LeaderboardPage() {
         </div>
 
         {/* ── Bottom Stats Strip ── */}
-        <div className="anim-up d4" style={{
+        <div className="anim-up d4 community-stats-grid" style={{
           background: "#fdfaf5", border: "1px solid #f0e6d2",
           borderRadius: "20px", padding: "28px 32px",
-          display: "flex", justifyContent: "space-around", alignItems: "center",
+          display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))",
+          justifyContent: "space-around", alignItems: "center", gap: "16px",
           boxShadow: "0 2px 12px rgba(160,110,40,0.03)"
         }}>
           {[

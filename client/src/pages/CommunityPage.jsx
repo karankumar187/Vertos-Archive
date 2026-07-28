@@ -392,13 +392,13 @@ function FeedTab({ setActiveTab }) {
       )}
 
       {/* ── HERO BANNER ── */}
-      <div style={{
+      <div className="community-hero-banner" style={{
         borderRadius: "20px", overflow: "visible", position: "relative",
         background: "#fff", boxShadow: "0 4px 24px rgba(160,110,40,0.08)",
         border: "1px solid #f0e6d2", display: "flex", minHeight: "280px",
       }}>
         {/* Left Text Content */}
-        <div style={{ flex: "0 0 45%", padding: "40px 40px", display: "flex", flexDirection: "column", justifyContent: "center", gap: "16px", zIndex: 1 }}>
+        <div className="community-hero-left" style={{ flex: "0 0 45%", padding: "40px 40px", display: "flex", flexDirection: "column", justifyContent: "center", gap: "16px", zIndex: 1 }}>
           <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "#c8861a", letterSpacing: "0.12em", textTransform: "uppercase", display: "flex", alignItems: "center", gap: "6px" }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="#c8861a"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
             Community
@@ -444,7 +444,7 @@ function FeedTab({ setActiveTab }) {
         </div>
 
         {/* Right Banner Image */}
-        <div style={{ flex: 1, position: "relative", overflow: "visible" }}>
+        <div className="community-hero-right" style={{ flex: 1, position: "relative", overflow: "visible" }}>
           <img src={campusBanner} alt="Community" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "100% center", borderTopRightRadius: "20px", borderBottomRightRadius: "20px" }} />
           {/* Fade Left */}
           <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: "80px", background: "linear-gradient(to right, #fff, transparent)", zIndex: 1 }} />
@@ -460,7 +460,7 @@ function FeedTab({ setActiveTab }) {
       </div>
 
       {/* ── LIVE STATS ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "16px" }}>
+      <div className="community-stats-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "16px" }}>
         <StatCard IconComp={DocIcon} value={loading ? '...' : stats.docs} label="Resources Shared" />
         <StatCard IconComp={TrophyIcon} value={loading ? '...' : stats.contributors} label="Top Contributors" />
         <StatCard IconComp={ChatIcon} value={loading ? '...' : stats.queries} label="Queries Asked" />
@@ -508,7 +508,7 @@ function FeedTab({ setActiveTab }) {
       )}
 
       {/* ── BOTTOM 3-COL GRID ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(290px, 1fr))", gap: "20px" }}>
+      <div className="mobile-grid-1" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(290px, 1fr))", gap: "20px" }}>
 
         {/* Top Contributors */}
         <div style={{ background: "#fff", borderRadius: "16px", padding: "24px", border: "1px solid #f0e6d2", boxShadow: "0 2px 8px rgba(160,110,40,0.04)", display: "flex", flexDirection: "column", maxHeight: "520px" }}>
@@ -615,7 +615,7 @@ function FeedTab({ setActiveTab }) {
       </div>
 
       {/* ── FEATURE CARDS ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: "16px" }}>
+      <div className="community-feature-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: "16px" }}>
         <FeatureCard IconComp={TrophyIcon} title="Leaderboard" description="See top contributors and rising stars in the community." buttonText="View Leaderboard" onClick={() => setActiveTab('leaderboard')} accentColor="#c8861a" bgColor="#FFF3CC" />
         <FeatureCard IconComp={QueriesIcon} title="Queries" description="Ask questions, share knowledge and get help quickly." buttonText="Go to Queries" onClick={() => setActiveTab('queries')} accentColor="#7c3aed" bgColor="#EDE9FE" />
         <FeatureCard IconComp={ArchiveIcon} title="Archive" description="Explore all uploaded resources with proper categories." buttonText="Explore Archive" onClick={() => setActiveTab('archive')} accentColor="#059669" bgColor="#D1FAE5" />
@@ -624,7 +624,7 @@ function FeedTab({ setActiveTab }) {
       </div>
 
       {/* ── TRUST BADGES ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px", paddingTop: "8px" }}>
+      <div className="community-trust-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px", paddingTop: "8px" }}>
         {[
           { icon: "✓", title: "Verified Resources", desc: "All resources are reviewed by our community experts." },
           { icon: "🤝", title: "Safe & Supportive", desc: "A respectful space to learn and grow together." },
@@ -683,12 +683,12 @@ export default function CommunityPage() {
       {/* Fade overlay so content remains readable over the sketch */}
       <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0, background: "rgba(248, 244, 238, 0.75)" }}/>
 
-      <div style={{
+      <div className="community-tab-nav" style={{
         position: "sticky", top: 84, zIndex: 40, width: "100%",
         display: "flex", justifyContent: "center", pointerEvents: "none",
         padding: "0 24px"
       }}>
-        <div style={{
+        <div className="community-tab-pill" style={{
           pointerEvents: "auto",
           background: "rgba(255, 255, 255, 0.96)", backdropFilter: "blur(16px)",
           border: "1px solid #f0e6d2", borderRadius: "100px",
@@ -702,7 +702,7 @@ export default function CommunityPage() {
             return (
               <div key={t.id} style={{ display: "flex", alignItems: "center", gap: "4px" }}>
                 {index > 0 && <div style={{ width: "1px", height: "20px", background: "#f0e6d2", margin: "0 4px" }} />}
-                <button onClick={() => updateTab(t.id)} style={{
+                <button className="community-tab-btn" onClick={() => updateTab(t.id)} style={{
                   padding: "6px 14px", border: "none", background: active ? "#fdfaf5" : "transparent",
                   color: active ? "#1f1209" : "#8b6535",
                   fontWeight: active ? 700 : 600, fontSize: "0.78rem",
@@ -722,7 +722,7 @@ export default function CommunityPage() {
       </div>
 
       {/* ── TAB CONTENT ── */}
-      <div style={{ position: "relative", zIndex: 1, maxWidth: 1280, margin: "0 auto", width: "100%", padding: "28px 24px", flex: 1, boxSizing: "border-box" }}>
+      <div className="community-content-area" style={{ position: "relative", zIndex: 1, maxWidth: 1280, margin: "0 auto", width: "100%", padding: "28px 24px", flex: 1, boxSizing: "border-box" }}>
         {activeTab === "feed"        && <FeedTab setActiveTab={updateTab} />}
         {activeTab === "leaderboard" && <LeaderboardComponent />}
         {activeTab === "queries"     && <QueriesTab />}
