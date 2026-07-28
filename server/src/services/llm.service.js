@@ -9,7 +9,7 @@ const { openaiClient } = require('./openai.service');
 
 // ── Free Provider Clients (OpenAI-compatible) ───────────────────────────
 const openRouterClient = new OpenAI({
-    apiKey: process.env.OPENROUTER_API_KEY || '',
+    apiKey: process.env.OPENROUTER_API_KEY || 'dummy-key',
     baseURL: 'https://openrouter.ai/api/v1',
     defaultHeaders: {
         'HTTP-Referer': process.env.CLIENT_URL || 'https://vertos.app',
@@ -19,19 +19,19 @@ const openRouterClient = new OpenAI({
 });
 
 const groqClient = new OpenAI({
-    apiKey: process.env.GROQ_API_KEY || '',
+    apiKey: process.env.GROQ_API_KEY || 'dummy-key',
     baseURL: 'https://api.groq.com/openai/v1',
     maxRetries: 0,
 });
 
 const cerebrasClient = new OpenAI({
-    apiKey: process.env.CEREBRAS_API_KEY || '',
+    apiKey: process.env.CEREBRAS_API_KEY || 'dummy-key',
     baseURL: 'https://api.cerebras.ai/v1',
     maxRetries: 0,
 });
 
 const hfClient = new OpenAI({
-    apiKey: process.env.HF_API_KEY || '',
+    apiKey: process.env.HF_API_KEY || 'dummy-key',
     baseURL: 'https://api-inference.huggingface.co/v1/',
     maxRetries: 0,
 });
