@@ -49,7 +49,7 @@ export default function AboutPage() {
         </div>
 
         {/* Features Mini */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
+        <div className="mobile-grid-1" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
           <div style={{ background: "#fff", borderRadius: "12px", padding: "24px", border: "1px solid #f0e6d2", display: "flex", flexDirection: "column", gap: "12px" }}>
             <span style={{ fontSize: "2rem" }}>🤖</span>
             <h3 style={{ fontSize: "1.1rem", fontWeight: 700, margin: 0, color: "#1f1209" }}>AI-Powered RAG</h3>
