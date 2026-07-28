@@ -267,7 +267,11 @@ exports.sendMessage = async (req, res) => {
 
         // ── 5. Early Query Classification ────────────────────────────────────
         // Determine query type BEFORE hitting Qdrant to avoid unnecessary DB calls.
-        //
+        
+        // Check for casual greeting FIRST — very short, no substance ("hi", "thanks", "ok")
+        const isCasualChat = content.trim().split(/\s+/).length <= 8 &&
+            /^(hi|hello|hey|thanks|thank\s*you|ok|okay|sure|yes|no|bye|good|great|nice|cool|got\s*it|understood|lol|haha|what['']?s\s*up|sup)/i.test(content.trim());
+
         // Policy keywords — any of these means this is a RAG query:
         const _isMidTermEarly   = !isSyllabusRequest && /\b(mid[\s-]?term|midterm|mock[\s-]?test|40\s*mcq)\b/i.test(content);
         const _isEteEarly       = !isSyllabusRequest && /\b(end[\s-]?term|ete|final[\s-]?exam|final[\s-]?paper|end[\s-]?sem|endsem)\b/i.test(content);
@@ -281,16 +285,12 @@ exports.sendMessage = async (req, res) => {
         const _isFollowUpEarly  = content.length < 150 && history.length > 1 &&
             /\b(solution|solve|explain|answer|why|how|question\s*\d+|q\s*\d+|que\s*\d+)\b/i.test(content);
 
-        // A query needs RAG if it touches any university / course-related topic
-        const isRagQuery = isSyllabusRequest || _isMidTermEarly || _isEteEarly || _isEtpEarly ||
-                           _isCaEarly || _isNotesEarly || _isPyqEarly || _hasCourseCode || _isFollowUpEarly;
-
-        // Casual greeting — very short, no substance ("hi", "thanks", "ok")
-        const isCasualChat = !isRagQuery &&
-            content.trim().split(/\s+/).length <= 8 &&
-            /^(hi|hello|hey|thanks|thank\s*you|ok|okay|sure|yes|no|bye|good|great|nice|cool|got\s*it|understood|lol|haha|what['']?s\s*up|sup)/i.test(content.trim());
+        // A query needs RAG if it touches any university / course-related topic, and is NOT a casual chat
+        const isRagQuery = !isCasualChat && (isSyllabusRequest || _isMidTermEarly || _isEteEarly || _isEtpEarly ||
+                           _isCaEarly || _isNotesEarly || _isPyqEarly || _hasCourseCode || _isFollowUpEarly);
 
         // General task — has substance but no university keywords (e.g. "write a sorting algorithm")
+        // However, if we have an active subject context (_hasCourseCode), we treat it as RAG to stay on topic.
         const isGeneralTask = !isRagQuery && !isCasualChat;
 
         // Skip Qdrant entirely for non-RAG queries
