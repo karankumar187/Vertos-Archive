@@ -572,6 +572,16 @@ ${contextText ? contextText : "No relevant context found in the database."}
         const primaryProvider = waterfallProviders[0];
         console.log(`[LLM Router] confidence=${confidence.toFixed(3)} (effective=${effectiveConfidence.toFixed(3)}), waterfall=${waterfallProviders.length} providers. Primary=${primaryProvider.providerName} (${primaryProvider.model})${overrideReason}`);
 
+        // Send provider routing info to the client as an early SSE event
+        res.write(`event: provider\ndata: ${JSON.stringify({
+            providerName: primaryProvider.providerName,
+            model: primaryProvider.model,
+            confidence: parseFloat(confidence.toFixed(3)),
+            effectiveConfidence: parseFloat(effectiveConfidence.toFixed(3)),
+            waterfallCount: waterfallProviders.length,
+            overrideReason: overrideReason.trim() || null,
+        })}\n\n`);
+
 
         // ── 8b. Detect whether this request needs batched generation ──────────
         // Batching is used for large question sets (ETE 60Q, Mid-Term 40Q, CA 30Q)
@@ -670,6 +680,9 @@ ${contextText ? contextText : "No relevant context found in the database."}
                     }
 
                     streamSuccess = true;
+                    // Notify client which provider was actually used (may differ from primary if fallback occurred)
+                    const usedProvider = waterfallProviders[currentProviderIdx];
+                    res.write(`event: provider_used\ndata: ${JSON.stringify({ providerName: usedProvider.providerName, model: usedProvider.model, fallback: currentProviderIdx > 0 })}\n\n`);
                 } catch (err) {
                     console.warn(`[LLM Router] ${providerName} stream failed: ${err.message}. Retrying...`);
                     lastStreamErr = err;

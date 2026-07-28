@@ -382,6 +382,24 @@ const MessageBubble = React.memo(function MessageBubble({ msg, onRegenerate, use
                     </svg>
                 </button>
             )}
+
+            {!isUser && (msg.providerUsed || msg.provider) && (() => {
+                const p = msg.providerUsed || msg.provider;
+                return (
+                    <div style={{
+                        display: 'flex', alignItems: 'center', gap: '4px',
+                        background: '#fdfaf5', border: '1px solid #e9dcc8',
+                        padding: '2px 8px', borderRadius: '10px',
+                        fontSize: '0.65rem', color: '#8b6535', fontWeight: 600,
+                        marginLeft: 'auto'
+                    }} title={`Model: ${p.model}`}>
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+                        </svg>
+                        {p.providerName}
+                    </div>
+                );
+            })()}
         </div>
       </div>
 
@@ -828,6 +846,8 @@ export default function ChatPage() {
         let done = false;
         let buffer = '';
         let isSourcesEvent = false;
+        let isProviderEvent = false;
+        let isProviderUsedEvent = false;
 
         while (!done) {
             const { value, done: readerDone } = await reader.read();
@@ -841,6 +861,10 @@ export default function ChatPage() {
                 lines.forEach(line => {
                     if (line.startsWith('event: sources')) {
                         isSourcesEvent = true;
+                    } else if (line.startsWith('event: provider')) {
+                        isProviderEvent = true;
+                    } else if (line.startsWith('event: provider_used')) {
+                        isProviderUsedEvent = true;
                     } else if (line.startsWith('data: ')) {
                         const dataStr = line.replace('data: ', '').trim();
                         if (dataStr === '[DONE]') {
@@ -859,6 +883,21 @@ export default function ChatPage() {
                                     setMessages(prev => prev.map(m => m.id === assistantMsgId ? { ...m, sources: parsed } : m));
                                 }
                                 isSourcesEvent = false;
+                            } else if (isProviderEvent) {
+                                // Store provider routing info in message (shown as a badge)
+                                if (!assistantMsgId) {
+                                    assistantMsgId = `a_${Date.now()}`;
+                                    setMessages(prev => [...prev, { role: "assistant", id: assistantMsgId, content: "", time: now, sources: [], provider: parsed }]);
+                                } else {
+                                    setMessages(prev => prev.map(m => m.id === assistantMsgId ? { ...m, provider: parsed } : m));
+                                }
+                                isProviderEvent = false;
+                            } else if (isProviderUsedEvent) {
+                                // Update with the actual provider that was used (after fallback)
+                                if (assistantMsgId) {
+                                    setMessages(prev => prev.map(m => m.id === assistantMsgId ? { ...m, providerUsed: parsed } : m));
+                                }
+                                isProviderUsedEvent = false;
                             } else if (parsed.token) {
                                 if (!assistantMsgId) {
                                     assistantMsgId = `a_${Date.now()}`;
