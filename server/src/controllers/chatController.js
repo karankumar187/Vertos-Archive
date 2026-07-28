@@ -528,8 +528,15 @@ ${contextText ? contextText : "No relevant context found in the database."}
         // 8. Confidence-based LLM routing + batched question generation
         // ── 8a. Compute retrieval confidence and choose model ─────────────────
         const confidence = computeConfidence(searchResults);
-        const { client: llmClient, model: llmModel, provider: llmProvider } = selectModel(confidence);
-        console.log(`[LLM Router] confidence=${confidence.toFixed(3)}, provider=${llmProvider}, model=${llmModel}`);
+
+        // Follow-up questions on previously generated content (e.g. "solution of question 29")
+        // are answered entirely from conversation history — RAG retrieval quality is irrelevant.
+        // Override confidence to 1.0 so these cheap, history-based responses always use Qwen.
+        const effectiveConfidence = isFollowUpOnGeneratedContent ? 1.0 : confidence;
+
+        const { client: llmClient, model: llmModel, provider: llmProvider } = selectModel(effectiveConfidence);
+        console.log(`[LLM Router] confidence=${confidence.toFixed(3)} (effective=${effectiveConfidence.toFixed(3)}), provider=${llmProvider}, model=${llmModel}${isFollowUpOnGeneratedContent ? ' [follow-up override]' : ''}`);
+
 
         // ── 8b. Detect whether this request needs batched generation ──────────
         // Batching is used for large question sets (ETE 60Q, Mid-Term 40Q, CA 30Q)
