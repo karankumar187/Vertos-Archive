@@ -267,19 +267,21 @@ body {
   /* Queries - hide sidebar, show full screen chat on mobile */
   .queries-split-view {
     flex-direction: column !important;
-    height: calc(100vh - 150px) !important;
+    height: calc(100dvh - 120px) !important;
     min-height: 0 !important;
     border-radius: 0 !important;
-    border-left: none !important;
-    border-right: none !important;
-    margin: -16px -12px 0 -12px !important;
+    border: none !important;
+    margin: -16px -12px -90px -12px !important;
     width: calc(100% + 24px) !important;
+    overflow: hidden !important;
   }
   .chat-header-compact {
     padding: 10px 16px !important;
+    flex-shrink: 0 !important;
   }
   .chat-input-compact {
     padding: 10px 16px !important;
+    flex-shrink: 0 !important;
   }
   .queries-sidebar {
     width: 100% !important;
@@ -294,8 +296,12 @@ body {
     display: flex !important;
   }
   .queries-chat-panel {
+    flex: 1 !important;
     height: 100% !important;
     min-height: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
   }
   .queries-list-view {
     padding: 12px 0 !important;

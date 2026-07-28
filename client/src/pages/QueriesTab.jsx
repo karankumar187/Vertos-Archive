@@ -333,7 +333,7 @@ export default function QueriesTab({ defaultQueryId }) {
         placeholder="Search the forum..."
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
-        style={{ width: "100%", padding: "16px 24px 16px 52px", borderRadius: "100px", border: "1px solid #e5d9c5", outline: "none", fontSize: "1rem", boxSizing: "border-box", background: "#fff", boxShadow: "0 4px 12px rgba(160,110,40,0.05)", fontFamily: "'Inter', sans-serif" }}
+        style={{ width: "100%", padding: "16px 24px 16px 52px", borderRadius: "100px", border: "1px solid #e5d9c5", outline: "none", fontSize: "16px", boxSizing: "border-box", background: "#fff", boxShadow: "0 4px 12px rgba(160,110,40,0.05)", fontFamily: "'Inter', sans-serif" }}
       />
     </div>
   );
@@ -530,7 +530,7 @@ export default function QueriesTab({ defaultQueryId }) {
         </div>
       ) : (
         // ─── SPLIT SCREEN VIEW (DISCUSSION SELECTED) ───
-        <div className="queries-split-view" style={{ display: "flex", gap: "0", background: "#fff", border: "1px solid #e5d9c5", borderRadius: "12px", overflow: "hidden", height: "calc(100vh - 140px)", minHeight: "600px", boxShadow: "0 10px 30px rgba(160,110,40,0.05)" }}>
+        <div className="queries-split-view" style={{ display: "flex", gap: "0", background: "#fff", border: "1px solid #e5d9c5", borderRadius: "12px", overflow: "hidden", height: "calc(100dvh - 140px)", boxShadow: "0 10px 30px rgba(160,110,40,0.05)" }}>
           
           {/* LEFT SIDEBAR */}
           <div className="queries-sidebar" style={{ width: "420px", background: "#f8f4ee", display: "flex", flexDirection: "column", borderRight: "1px solid #e5d9c5", flexShrink: 0 }}>
@@ -673,7 +673,7 @@ export default function QueriesTab({ defaultQueryId }) {
                     placeholder="Type a message..." 
                     style={{ 
                       width: "100%", padding: "14px 0", border: "none", outline: "none", 
-                      fontFamily: "inherit", background: "transparent", fontSize: "0.95rem", color: "#1f1209"
+                      fontFamily: "inherit", background: "transparent", fontSize: "16px", color: "#1f1209"
                     }}
                   />
                 </div>

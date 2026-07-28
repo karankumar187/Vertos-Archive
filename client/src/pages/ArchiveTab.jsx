@@ -322,7 +322,7 @@ export default function ArchiveTab() {
   /* ── Styles ─────────────────────────────────────── */
   const inputStyle = {
     outline: "none", border: "none", background: "transparent",
-    fontFamily: "'Inter', sans-serif", fontSize: "0.9rem", color: "#1f1209", width: "100%"
+    fontFamily: "'Inter', sans-serif", fontSize: "16px", color: "#1f1209", width: "100%"
   };
 
   return (

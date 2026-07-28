@@ -238,6 +238,7 @@ function FeedTab({ setActiveTab }) {
           .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
           .slice(0, 10)
           .map(q => ({
+            _id: q._id,
             q: q.title, by: q.author?.name || 'Anonymous',
             ago: new Date(q.createdAt).toLocaleDateString(),
             answers: q.answers?.length || 0,
