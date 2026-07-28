@@ -358,6 +358,26 @@ export default function ArchiveTab() {
           )}
         </div>
 
+        {/* Quick filter chips (Moved from sidebar to top) */}
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: "-12px", marginBottom: "8px" }}>
+          {["all", ...CATEGORIES.map(c => c.id)].map(id => {
+            const cat = CATEGORIES.find(c => c.id === id);
+            const active = categoryFilter === id;
+            return (
+              <button key={id} onClick={() => setCategoryFilter(id)} style={{
+                padding: "8px 16px", borderRadius: 100, border: "1.5px solid",
+                borderColor: active ? (cat?.color || "#c8861a") : "#e9dcc8",
+                background: active ? (cat?.color || "#c8861a") : "#fdfaf5",
+                color: active ? "#fff" : "#6b4d1f",
+                fontWeight: 600, fontSize: "0.85rem", cursor: "pointer", transition: "all 0.18s",
+                fontFamily: "'Inter', sans-serif"
+              }}>
+                {id === "all" ? "All" : cat?.label}
+              </button>
+            );
+          })}
+        </div>
+
         {/* Category Cards */}
         <div>
           <h3 style={{ margin: "0 0 14px 0", fontFamily: "'Playfair Display', serif", fontSize: "1.15rem", color: "#1f1209" }}>
@@ -717,28 +737,6 @@ export default function ArchiveTab() {
           </div>
         </div>
 
-        {/* Quick filter chips */}
-        <div style={{ background: "#fff", borderRadius: 16, border: "1.5px solid #f0e6d2", padding: 20, boxShadow: "0 4px 16px rgba(160,110,40,0.06)" }}>
-          <h4 style={{ margin: "0 0 14px 0", fontFamily: "'Playfair Display', serif", fontSize: "1rem", color: "#1f1209" }}>Quick Filter</h4>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-            {["all", ...CATEGORIES.map(c => c.id)].map(id => {
-              const cat = CATEGORIES.find(c => c.id === id);
-              const active = categoryFilter === id;
-              return (
-                <button key={id} onClick={() => setCategoryFilter(id)} style={{
-                  padding: "6px 14px", borderRadius: 100, border: "1.5px solid",
-                  borderColor: active ? (cat?.color || "#c8861a") : "#e9dcc8",
-                  background: active ? (cat?.color || "#c8861a") : "#fdfaf5",
-                  color: active ? "#fff" : "#6b4d1f",
-                  fontWeight: 600, fontSize: "0.78rem", cursor: "pointer", transition: "all 0.18s",
-                  fontFamily: "'Inter', sans-serif"
-                }}>
-                  {id === "all" ? "All" : cat?.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
       </div>
 
       <style>{`@keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }`}</style>

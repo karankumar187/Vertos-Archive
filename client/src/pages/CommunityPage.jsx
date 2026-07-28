@@ -183,6 +183,7 @@ const Avatar = ({ user, size = 40, showBadge = true }) => {
 function FeedTab({ setActiveTab }) {
   const [topContributors, setTopContributors] = useState([]);
   const [activeDiscussions, setActiveDiscussions] = useState([]);
+  const [selectedQueryId, setSelectedQueryId] = useState(null);
   const [upcomingEvents, setUpcomingEvents] = useState([]);
   const [announcements, setAnnouncements] = useState([]);
   const [stats, setStats] = useState({ docs: '-', contributors: '-', queries: '-', members: '-' });
@@ -411,7 +412,7 @@ function FeedTab({ setActiveTab }) {
           </p>
           <div style={{ display: "flex", alignItems: "center", gap: "20px", marginTop: "8px" }}>
             <button
-              onClick={() => setActiveTab('queries')}
+              onClick={() => { setSelectedQueryId(null); setActiveTab('queries'); }}
               style={{
                 background: "#c8861a", color: "#fff", border: "none", borderRadius: "10px",
                 padding: "12px 22px", fontSize: "0.88rem", fontWeight: 700, cursor: "pointer",
@@ -543,11 +544,11 @@ function FeedTab({ setActiveTab }) {
             <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 700, color: "#1f1209", display: "flex", alignItems: "center", gap: "6px" }}>
               <FireIcon /> Active Discussions
             </h3>
-            <button onClick={() => setActiveTab('queries')} style={{ background: "none", border: "none", color: "#c8861a", fontSize: "0.8rem", fontWeight: 600, cursor: "pointer" }}>View All</button>
+            <button onClick={() => { setSelectedQueryId(null); setActiveTab('queries'); }} style={{ background: "none", border: "none", color: "#c8861a", fontSize: "0.8rem", fontWeight: 600, cursor: "pointer" }}>View All</button>
           </div>
           <div style={{ flex: 1, overflowY: "auto", paddingRight: "4px", display: "flex", flexDirection: "column", gap: "14px" }}>
             {activeDiscussions.length > 0 ? activeDiscussions.map((d, i) => (
-              <div key={i} onClick={() => setActiveTab('queries')} style={{ paddingBottom: i !== activeDiscussions.length - 1 ? "14px" : 0, borderBottom: i !== activeDiscussions.length - 1 ? "1px solid #f5efeb" : "none", cursor: "pointer", flexShrink: 0 }}>
+              <div key={i} onClick={() => { setSelectedQueryId(d._id); setActiveTab('queries'); }} style={{ paddingBottom: i !== activeDiscussions.length - 1 ? "14px" : 0, borderBottom: i !== activeDiscussions.length - 1 ? "1px solid #f5efeb" : "none", cursor: "pointer", flexShrink: 0 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "6px" }}>
                   <div style={{ fontSize: "0.88rem", fontWeight: 600, color: "#1f1209", flex: 1, paddingRight: "10px", lineHeight: 1.4 }}>{d.q}</div>
                   <span style={{ fontSize: "0.68rem", padding: "3px 8px", background: d.tagBg, color: d.tagColor, borderRadius: "12px", fontWeight: 700, whiteSpace: "nowrap" }}>{d.tag}</span>
@@ -617,7 +618,7 @@ function FeedTab({ setActiveTab }) {
       {/* ── FEATURE CARDS ── */}
       <div className="community-feature-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: "16px" }}>
         <FeatureCard IconComp={TrophyIcon} title="Leaderboard" description="See top contributors and rising stars in the community." buttonText="View Leaderboard" onClick={() => setActiveTab('leaderboard')} accentColor="#c8861a" bgColor="#FFF3CC" />
-        <FeatureCard IconComp={QueriesIcon} title="Queries" description="Ask questions, share knowledge and get help quickly." buttonText="Go to Queries" onClick={() => setActiveTab('queries')} accentColor="#7c3aed" bgColor="#EDE9FE" />
+        <FeatureCard IconComp={QueriesIcon} title="Queries" description="Ask questions, share knowledge and get help quickly." buttonText="Go to Queries" onClick={() => { setSelectedQueryId(null); setActiveTab('queries'); }} accentColor="#7c3aed" bgColor="#EDE9FE" />
         <FeatureCard IconComp={ArchiveIcon} title="Archive" description="Explore all uploaded resources with proper categories." buttonText="Explore Archive" onClick={() => setActiveTab('archive')} accentColor="#059669" bgColor="#D1FAE5" />
         <FeatureCard IconComp={HappeningIcon} title="Happening" description="Stay updated with all events and activities in the university." buttonText="View Events" onClick={() => setActiveTab('happening')} accentColor="#dc2626" bgColor="#FEE2E2" />
         <FeatureCard IconComp={ContributeIcon} title="Contribute" description="Upload resources and help make our community stronger." buttonText="Contribute Now" onClick={() => setActiveTab('contribute')} accentColor="#db2777" bgColor="#FCE7F3" />
@@ -725,7 +726,7 @@ export default function CommunityPage() {
       <div className="community-content-area" style={{ position: "relative", zIndex: 1, maxWidth: 1280, margin: "0 auto", width: "100%", padding: "28px 24px", flex: 1, boxSizing: "border-box" }}>
         {activeTab === "feed"        && <FeedTab setActiveTab={updateTab} />}
         {activeTab === "leaderboard" && <LeaderboardComponent />}
-        {activeTab === "queries"     && <QueriesTab />}
+        {activeTab === "queries"     && <QueriesTab defaultQueryId={selectedQueryId} />}
         {activeTab === "archive"     && <ArchiveTab />}
         {activeTab === "happening"   && <HappeningTab />}
         {activeTab === "contribute"  && <ContributePage />}

@@ -51,7 +51,7 @@ const EventCard = ({ event, onClick }) => {
           </div>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "16px", marginTop: "10px", paddingTop: "10px", borderTop: "1px solid #f1f5f9" }}>
+        <div className="happening-card-bottom" style={{ display: "flex", alignItems: "center", gap: "16px", marginTop: "10px", paddingTop: "10px", borderTop: "1px solid #f1f5f9" }}>
           <div style={{ fontSize: "0.8rem", color: "#64748b", display: "flex", alignItems: "center", gap: "6px" }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
             {event.location || event.audience || 'Campus'}

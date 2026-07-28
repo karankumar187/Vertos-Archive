@@ -387,10 +387,10 @@ body {
   .discussion-card-full {
     padding: 16px !important;
     gap: 12px !important;
+    flex-direction: column !important;
   }
-  .discussion-card-avatar-lg {
-    width: 40px !important;
-    height: 40px !important;
+  .discussion-card-avatar-wrapper {
+    display: none !important;
   }
   .discussion-card-title {
     font-size: 1rem !important;

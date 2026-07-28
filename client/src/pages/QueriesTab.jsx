@@ -58,7 +58,7 @@ const Avatar = ({ user, size = 40, showBadge = true }) => {
   );
 };
 
-export default function QueriesTab() {
+export default function QueriesTab({ defaultQueryId }) {
   const [queries, setQueries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedQuery, setSelectedQuery] = useState(null);
@@ -98,6 +98,13 @@ export default function QueriesTab() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (defaultQueryId && queries.length > 0) {
+      const q = queries.find(query => query._id === defaultQueryId);
+      if (q) setSelectedQuery(q);
+    }
+  }, [defaultQueryId, queries]);
 
   const socket = useSocket();
 
@@ -376,7 +383,7 @@ export default function QueriesTab() {
                   
                   <Avatar user={q.author} size={44} />
                   
-                  <div style={{ flex: 1, minWidth: 0 }}>
+                  <div className="discussion-card-content" style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "4px" }}>
                       <h4 style={{ margin: 0, fontSize: "0.95rem", color: "#1f1209", fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                         {q.title}
@@ -409,6 +416,7 @@ export default function QueriesTab() {
               <div 
                 key={q._id} 
                 onClick={() => setSelectedQuery(q)}
+                className="discussion-card-full"
                 style={{ 
                   padding: "24px 32px", 
                   cursor: "pointer", 
@@ -422,7 +430,7 @@ export default function QueriesTab() {
                 }}
               >
                 {/* Floating Tag */}
-                <div style={{ 
+                <div className="discussion-card-tag" style={{ 
                   position: "absolute", top: -14, right: 24, 
                   background: "#fff", border: "1px solid #f0e6d2", 
                   borderRadius: "100px", padding: "4px 12px", 
@@ -433,7 +441,7 @@ export default function QueriesTab() {
                   <span style={{ fontSize: "0.65rem", fontWeight: 800, color: "#6b4d1f", textTransform: "uppercase", letterSpacing: "0.05em" }}>{primaryTag}</span>
                 </div>
 
-                <div style={{ flexShrink: 0, marginTop: "4px" }}>
+                <div className="discussion-card-avatar-wrapper" style={{ flexShrink: 0, marginTop: "4px" }}>
                   <Avatar user={q.author} size={56} />
                 </div>
                 
