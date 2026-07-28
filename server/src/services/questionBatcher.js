@@ -141,8 +141,7 @@ const makeBatchInstruction = ({ batchIdx, totalBatches, batch, taskType, subject
  * @param {string}    opts.subject        — course code/name (e.g. "CSE 332"), may be ''
  * @param {string}    opts.systemPrompt   — full system prompt (includes retrieved context)
  * @param {string}    opts.userQueryFinal — the enriched user message (with REMINDER injections)
- * @param {object}    opts.client         — OpenAI-compatible client (openaiClient or qwenClient)
- * @param {string}    opts.model          — model identifier string
+ * @param {Array}     opts.waterfallProviders — Array of provider objects { id, client, model, providerName }
  * @param {Function}  opts.onToken        — called with each visible token string
  *
  * @returns {Promise<string>} the full assembled response
@@ -153,8 +152,7 @@ const streamBatchedQuestions = async ({
     subject = '',
     systemPrompt,
     userQueryFinal,
-    client,
-    model,
+    waterfallProviders,
     onToken,
 }) => {
     const batches      = buildUnitBatches(taskType, caUnits);
@@ -162,10 +160,10 @@ const streamBatchedQuestions = async ({
 
     if (totalBatches === 0) return '';
 
-    const isQwen = model.toLowerCase().includes('qwen');
     let fullResponse = '';
+    let currentProviderIdx = 0;
 
-    console.log(`[QuestionBatcher] Starting: taskType=${taskType}, totalBatches=${totalBatches}, model=${model}`);
+    console.log(`[QuestionBatcher] Starting: taskType=${taskType}, totalBatches=${totalBatches}, providersAvailable=${waterfallProviders.length}`);
 
     for (let bIdx = 0; bIdx < totalBatches; bIdx++) {
         const batch = batches[bIdx];
@@ -181,54 +179,61 @@ const streamBatchedQuestions = async ({
             userQueryFinal,
         });
 
-        // Each batch gets: system prompt + (for batch 1) user instruction
-        // For batch 2+, we keep prompts lean — numbering in the instruction is
-        // sufficient for continuity; we don't re-inject history to save tokens.
         const apiMessages = [
             { role: 'system', content: systemPrompt },
             { role: 'user',   content: batchInstruction },
         ];
 
-        // Token budget: short batches (≤5 questions) need less space
         const maxTokens = count <= 5 ? 3000 : 6000;
-
         console.log(`[QuestionBatcher] Batch ${bIdx + 1}/${totalBatches} — Unit ${unit ?? '?'}, Q${startQ}–${endQ} (${count} questions)`);
 
-        try {
-            const stream = await client.chat.completions.create({
-                model,
-                messages: apiMessages,
-                max_tokens: maxTokens,
-                stream: true,
-            });
+        let batchSuccess = false;
+        let lastError = null;
 
-            // Per-batch think-block filter (new instance per batch)
-            const thinkFilter = isQwen ? createThinkFilter() : null;
+        while (!batchSuccess && currentProviderIdx < waterfallProviders.length) {
+            const { client, model, providerName, id } = waterfallProviders[currentProviderIdx];
+            const isNonOpenAI = id !== 'openai';
+            
+            try {
+                const stream = await client.chat.completions.create({
+                    model,
+                    messages: apiMessages,
+                    max_tokens: maxTokens,
+                    stream: true,
+                });
 
-            for await (const chunk of stream) {
-                let token = chunk.choices[0]?.delta?.content ?? '';
-                if (!token) continue;
+                // Think filter for non-OpenAI models
+                const thinkFilter = isNonOpenAI ? createThinkFilter() : null;
 
-                if (thinkFilter) {
-                    token = thinkFilter(token);
+                for await (const chunk of stream) {
+                    let token = chunk.choices[0]?.delta?.content ?? '';
+                    if (!token) continue;
+
+                    if (thinkFilter) token = thinkFilter(token);
+
+                    if (token) {
+                        fullResponse += token;
+                        onToken(token);
+                    }
                 }
 
-                if (token) {
-                    fullResponse += token;
-                    onToken(token);
+                if (bIdx < totalBatches - 1) {
+                    const sep = '\n';
+                    fullResponse += sep;
+                    onToken(sep);
                 }
-            }
 
-            // Add a blank line separator between batches so questions don't run together
-            if (bIdx < totalBatches - 1) {
-                const sep = '\n';
-                fullResponse += sep;
-                onToken(sep);
+                batchSuccess = true;
+            } catch (err) {
+                console.warn(`[QuestionBatcher] ${providerName} (${model}) failed on batch ${bIdx + 1}: ${err.message}. Retrying...`);
+                lastError = err;
+                currentProviderIdx++; // Move to next provider in the waterfall
             }
+        }
 
-        } catch (err) {
-            console.error(`[QuestionBatcher] Error in batch ${bIdx + 1}:`, err.message);
-            throw err;
+        if (!batchSuccess) {
+            console.error(`[QuestionBatcher] All waterfall providers failed on batch ${bIdx + 1}!`);
+            throw lastError; // Throw the last error so chatController catches it
         }
     }
 

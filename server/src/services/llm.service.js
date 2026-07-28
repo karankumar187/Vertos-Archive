@@ -7,19 +7,36 @@ const OpenAI = require('openai');
 // ── Re-use the existing hardened OpenAI client from openai.service ────────
 const { openaiClient } = require('./openai.service');
 
-// ── Qwen client via OpenRouter (OpenAI-compatible) ────────────────────────
-const qwenClient = new OpenAI({
+// ── Free Provider Clients (OpenAI-compatible) ───────────────────────────
+const openRouterClient = new OpenAI({
     apiKey: process.env.OPENROUTER_API_KEY || '',
     baseURL: 'https://openrouter.ai/api/v1',
     defaultHeaders: {
         'HTTP-Referer': process.env.CLIENT_URL || 'https://vertos.app',
         'X-Title': 'Vertos Archive',
     },
-    maxRetries: 2,
+    maxRetries: 0, // Disable internal retries so waterfall moves to next provider quickly
+});
+
+const groqClient = new OpenAI({
+    apiKey: process.env.GROQ_API_KEY || '',
+    baseURL: 'https://api.groq.com/openai/v1',
+    maxRetries: 0,
+});
+
+const togetherClient = new OpenAI({
+    apiKey: process.env.TOGETHER_API_KEY || '',
+    baseURL: 'https://api.together.xyz/v1',
+    maxRetries: 0,
+});
+
+const hfClient = new OpenAI({
+    apiKey: process.env.HF_API_KEY || '',
+    baseURL: 'https://api-inference.huggingface.co/v1/',
+    maxRetries: 0,
 });
 
 const OPENAI_MODEL = 'gpt-4o-mini';
-const FREE_MODEL   = 'openrouter/free';
 
 // Fraction of chunks that must exceed this cosine score to count as "covered"
 const COVERAGE_THRESHOLD = 0.40;
@@ -30,20 +47,6 @@ const DEFAULT_CONFIDENCE_THRESHOLD = 0.45;
 // ---------------------------------------------------------------------------
 // computeConfidence
 // ---------------------------------------------------------------------------
-/**
- * Computes a weighted confidence score from Qdrant hybrid search results.
- *
- * Formula:
- *   confidence = 0.5 × top1Score  +  0.3 × avgTop5  +  0.2 × coverageScore
- *
- * Where:
- *   top1Score     — cosine similarity of the best-matching chunk (0–1)
- *   avgTop5       — mean cosine similarity of the top-5 chunks (0–1)
- *   coverageScore — fraction of ALL returned chunks with score ≥ COVERAGE_THRESHOLD
- *
- * @param {Array} searchResults — output of performHybridSearch (each item has .vectorScore)
- * @returns {number} confidence in [0, 1]
- */
 const computeConfidence = (searchResults = []) => {
     if (!searchResults || searchResults.length === 0) return 0;
 
@@ -62,48 +65,46 @@ const computeConfidence = (searchResults = []) => {
 };
 
 // ---------------------------------------------------------------------------
-// selectModel
+// getProvidersWaterfall
 // ---------------------------------------------------------------------------
 /**
- * Returns the LLM client and model name to use for a given confidence score.
- *
- * Uses Qwen (free) when:
- *   - OPENROUTER_API_KEY is set AND
- *   - confidence >= threshold (default 0.45, configurable via env)
- *
- * Falls back to OpenAI gpt-4o-mini otherwise.
+ * Returns an ordered array of LLM providers to try.
+ * 
+ * If confidence is high, it returns all available free providers followed by OpenAI.
+ * If confidence is low, it returns only OpenAI.
  *
  * @param {number} confidence — output of computeConfidence()
- * @returns {{ client: OpenAI, model: string, provider: string }}
+ * @returns {Array<{ id: string, client: OpenAI, model: string, providerName: string }>}
  */
-const selectModel = (confidence) => {
+const getProvidersWaterfall = (confidence) => {
     const threshold = parseFloat(process.env.LLM_CONFIDENCE_THRESHOLD ?? String(DEFAULT_CONFIDENCE_THRESHOLD));
-    const qwenReady = Boolean(process.env.OPENROUTER_API_KEY);
+    const waterfall = [];
 
-    if (qwenReady && confidence >= threshold) {
-        return { client: qwenClient, model: FREE_MODEL, provider: 'openrouter/free' };
+    // Only add free providers if confidence meets threshold
+    if (confidence >= threshold) {
+        if (process.env.OPENROUTER_API_KEY) {
+            waterfall.push({ id: 'openrouter', client: openRouterClient, model: 'openrouter/free', providerName: 'OpenRouter' });
+        }
+        if (process.env.GROQ_API_KEY) {
+            waterfall.push({ id: 'groq', client: groqClient, model: 'llama-3.1-8b-instant', providerName: 'Groq' });
+        }
+        if (process.env.TOGETHER_API_KEY) {
+            waterfall.push({ id: 'together', client: togetherClient, model: 'meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo', providerName: 'Together AI' });
+        }
+        if (process.env.HF_API_KEY) {
+            waterfall.push({ id: 'huggingface', client: hfClient, model: 'meta-llama/Meta-Llama-3-8B-Instruct', providerName: 'HuggingFace' });
+        }
     }
-    return { client: openaiClient, model: OPENAI_MODEL, provider: 'openai' };
+
+    // Always append OpenAI as the final fallback (or the only option if confidence is low)
+    waterfall.push({ id: 'openai', client: openaiClient, model: OPENAI_MODEL, providerName: 'OpenAI' });
+
+    return waterfall;
 };
 
 // ---------------------------------------------------------------------------
 // createThinkFilter
 // ---------------------------------------------------------------------------
-/**
- * Returns a stateful transform function that strips <think>…</think> blocks
- * from a Qwen streaming response.
- *
- * Call once per request, then pipe every raw streaming token through it.
- * Returns the visible text for that token (may be an empty string while
- * buffering inside a think block).
- *
- * Example:
- *   const filter = createThinkFilter();
- *   for await (const chunk of stream) {
- *       const visible = filter(chunk.choices[0]?.delta?.content || '');
- *       if (visible) emit(visible);
- *   }
- */
 const createThinkFilter = () => {
     let buffer      = '';
     let sawOpen     = false;  // saw <think>
@@ -124,16 +125,13 @@ const createThinkFilter = () => {
             const closeIdx = buffer.indexOf('</think>');
             if (closeIdx !== -1) {
                 done = true;
-                // Everything after </think> (strip leading newlines added by Qwen)
                 const after = buffer.slice(closeIdx + '</think>'.length).replace(/^\n+/, '');
                 buffer = '';
                 return after;
             }
-            // Still inside the think block — suppress output
             return '';
         }
 
-        // Haven't seen <think> — if enough content has arrived without it, flush
         if (buffer.length >= 20) {
             done = true;
             const out = buffer;
@@ -145,15 +143,9 @@ const createThinkFilter = () => {
     };
 };
 
-// ---------------------------------------------------------------------------
-// Exports
-// ---------------------------------------------------------------------------
 module.exports = {
     computeConfidence,
-    selectModel,
+    getProvidersWaterfall,
     createThinkFilter,
     openaiClient,
-    qwenClient,
-    OPENAI_MODEL,
-    FREE_MODEL,
 };

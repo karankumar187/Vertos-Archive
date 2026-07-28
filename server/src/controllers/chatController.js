@@ -3,7 +3,7 @@ const Message = require('../models/Message');
 const { performHybridSearch } = require('../services/search.service');
 const { openaiClient } = require('../services/openai.service');
 const Document = require('../models/Document');
-const { computeConfidence, selectModel, createThinkFilter } = require('../services/llm.service');
+const { computeConfidence, getProvidersWaterfall, createThinkFilter } = require('../services/llm.service');
 const { streamBatchedQuestions } = require('../services/questionBatcher');
 
 // ---------------------------------------------------------------------------
@@ -568,8 +568,9 @@ ${contextText ? contextText : "No relevant context found in the database."}
             ? (isCasualChat ? ' [casual-chat]' : ' [general-task]')
             : isFollowUpOnGeneratedContent ? ' [follow-up override]' : '';
 
-        const { client: llmClient, model: llmModel, provider: llmProvider } = selectModel(effectiveConfidence);
-        console.log(`[LLM Router] confidence=${confidence.toFixed(3)} (effective=${effectiveConfidence.toFixed(3)}), provider=${llmProvider}, model=${llmModel}${overrideReason}`);
+        const waterfallProviders = getProvidersWaterfall(effectiveConfidence);
+        const primaryProvider = waterfallProviders[0];
+        console.log(`[LLM Router] confidence=${confidence.toFixed(3)} (effective=${effectiveConfidence.toFixed(3)}), waterfall=${waterfallProviders.length} providers. Primary=${primaryProvider.providerName} (${primaryProvider.model})${overrideReason}`);
 
 
         // ── 8b. Detect whether this request needs batched generation ──────────
@@ -614,7 +615,7 @@ ${contextText ? contextText : "No relevant context found in the database."}
 
         if (batchTaskType) {
             // ── 8c. Batched path ─────────────────────────────────────────────
-            console.log(`[LLM Router] Batched generation — type=${batchTaskType}, units=[${caUnitsForBatch}], model=${llmModel}`);
+            console.log(`[LLM Router] Batched generation — type=${batchTaskType}, units=[${caUnitsForBatch}]`);
 
             try {
                 fullAssistantResponse = await streamBatchedQuestions({
@@ -623,77 +624,62 @@ ${contextText ? contextText : "No relevant context found in the database."}
                     subject:        currentFilters.subject || '',
                     systemPrompt:   apiMessages[0].content,
                     userQueryFinal,
-                    client:         llmClient,
-                    model:          llmModel,
+                    waterfallProviders, // pass the whole waterfall
                     onToken: (token) => {
                         res.write(`data: ${JSON.stringify({ token })}\n\n`);
                     },
                 });
             } catch (batchErr) {
-                // Fallback: if chosen model fails mid-batch, retry the whole
-                // request once with OpenAI to avoid leaving the user with nothing.
-                if (llmProvider !== 'openai') {
-                    console.warn(`[LLM Router] Batch failed on ${llmProvider}, retrying with OpenAI...`, batchErr.message);
-                    fullAssistantResponse = await streamBatchedQuestions({
-                        taskType:       batchTaskType,
-                        caUnits:        caUnitsForBatch,
-                        subject:        currentFilters.subject || '',
-                        systemPrompt:   apiMessages[0].content,
-                        userQueryFinal,
-                        client:         openaiClient,
-                        model:          'gpt-4o-mini',
-                        onToken: (token) => {
-                            res.write(`data: ${JSON.stringify({ token })}\n\n`);
-                        },
-                    });
-                } else {
-                    throw batchErr;
-                }
+                console.error(`[LLM Router] All batch providers failed. Sending error...`, batchErr.message);
+                throw batchErr;
             }
 
         } else {
-            // ── 8d. Standard streaming path ──────────────────────────────────
-            const isQwen       = llmProvider !== 'openai';
-            const thinkFilter  = isQwen ? createThinkFilter() : null;
+            // ── 8d. Standard streaming path (with Waterfall) ─────────────────
+            let streamSuccess = false;
+            let currentProviderIdx = 0;
+            let lastStreamErr = null;
 
-            let stream;
-            try {
-                stream = await llmClient.chat.completions.create({
-                    model:      llmModel,
-                    messages:   apiMessages,
-                    max_tokens: 16000,
-                    stream:     true,
-                });
-            } catch (initErr) {
-                // If chosen model fails to start (e.g. OpenRouter quota), fall back to OpenAI
-                if (isQwen) {
-                    console.warn(`[LLM Router] ${llmProvider} stream init failed, falling back to OpenAI:`, initErr.message);
-                    stream = await openaiClient.chat.completions.create({
-                        model:      'gpt-4o-mini',
+            while (!streamSuccess && currentProviderIdx < waterfallProviders.length) {
+                const { client: llmClient, model: llmModel, providerName, id } = waterfallProviders[currentProviderIdx];
+                const isNonOpenAI = id !== 'openai';
+                
+                try {
+                    const stream = await llmClient.chat.completions.create({
+                        model:      llmModel,
                         messages:   apiMessages,
                         max_tokens: 16000,
                         stream:     true,
                     });
-                } else {
-                    throw initErr;
+
+                    // Only apply think filter for non-OpenAI models
+                    const thinkFilter  = isNonOpenAI ? createThinkFilter() : null;
+
+                    for await (const chunk of stream) {
+                        let token = chunk.choices[0]?.delta?.content || '';
+                        if (!token) continue;
+
+                        if (thinkFilter) {
+                            token = thinkFilter(token);
+                        }
+
+                        if (token) {
+                            fullAssistantResponse += token;
+                            res.write(`data: ${JSON.stringify({ token })}\n\n`);
+                        }
+                    }
+
+                    streamSuccess = true;
+                } catch (err) {
+                    console.warn(`[LLM Router] ${providerName} stream failed: ${err.message}. Retrying...`);
+                    lastStreamErr = err;
+                    currentProviderIdx++; // Move to next provider
                 }
             }
 
-            for await (const chunk of stream) {
-                let token = chunk.choices[0]?.delta?.content || '';
-                if (!token) continue;
-
-                // Strip <think>…</think> blocks emitted by Qwen3 before the actual answer
-                if (thinkFilter) {
-                    token = thinkFilter(token);
-                }
-
-                if (token) {
-                    fullAssistantResponse += token;
-                    // SSE format: data: <payload>\n\n
-                    // We stringify the token to safely handle newlines and special characters
-                    res.write(`data: ${JSON.stringify({ token })}\n\n`);
-                }
+            if (!streamSuccess) {
+                console.error(`[LLM Router] All waterfall providers failed!`);
+                throw lastStreamErr;
             }
         }
 
