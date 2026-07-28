@@ -9,6 +9,7 @@ import ArchiveTab from "./ArchiveTab";
 import HappeningTab from "./HappeningTab";
 import { queriesAPI, eventsAPI, leaderboardAPI, announcementsAPI } from "../services/api";
 import { cacheGet, cacheSet } from "../utils/localCache";
+import { useSocket } from "../context/SocketContext";
 import EventDetailsModal from "../components/EventDetailsModal";
 
 /* ─── SVG Icon Components ───────────────────────────────────── */
@@ -312,6 +313,69 @@ function FeedTab({ setActiveTab }) {
       fetchFeedData();
     }
   }, []);
+
+  const socket = useSocket();
+
+  useEffect(() => {
+    if (!socket) return;
+    
+    // Quick, optimistic updates for the feed without fetching full payloads
+    socket.on('new_query', (query) => {
+      setActiveDiscussions(prev => {
+        const newD = {
+          q: query.title, by: query.author?.name || 'Anonymous',
+          ago: new Date(query.createdAt).toLocaleDateString(),
+          answers: 0, tag: query.tags?.[0] || 'General', tagColor: '#7c3aed', tagBg: '#EDE9FE'
+        };
+        return [newD, ...prev].slice(0, 10);
+      });
+      setStats(prev => ({ ...prev, queries: (parseInt(prev.queries) || 0) + 1 + "" }));
+    });
+
+    socket.on('query_updated', (query) => {
+       setActiveDiscussions(prev => {
+          return prev.map(d => {
+            if (d.q === query.title) return { ...d, answers: query.answers?.length || 0 };
+            return d;
+          });
+       });
+    });
+
+    socket.on('new_event', (ev) => {
+      setUpcomingEvents(prev => {
+        const dateObj = new Date(ev.date || ev.eventDate);
+        const newEv = {
+          _id: ev._id, month: dateObj.toLocaleString('default', { month: 'short' }).toUpperCase(),
+          day: dateObj.getDate(), title: ev.title, desc: `${ev.type} • ${ev.location || ev.audience || ''}`,
+          registered: 0, color: ev.type === 'Hackathon' ? '#c8861a' : ev.type === 'Workshop' ? '#7c3aed' : ev.type === 'Event' ? '#db2777' : '#059669', typeBadge: ev.type, _raw: ev
+        };
+        return [newEv, ...prev].slice(0, 10);
+      });
+    });
+
+    socket.on('new_announcement', (ann) => {
+      if (ann.type === 'Event') {
+        setUpcomingEvents(prev => {
+          const dateObj = new Date(ann.eventDate || ann.createdAt);
+          const newEv = {
+            _id: ann._id, month: dateObj.toLocaleString('default', { month: 'short' }).toUpperCase(),
+            day: dateObj.getDate(), title: ann.title, desc: `Event • ${ann.audience || ''}`,
+            registered: 0, color: '#db2777', typeBadge: 'Event', _raw: ann
+          };
+          return [newEv, ...prev].slice(0, 10);
+        });
+      } else {
+        setAnnouncements(prev => [ann, ...prev].slice(0, 5));
+      }
+    });
+
+    return () => {
+      socket.off('new_query');
+      socket.off('query_updated');
+      socket.off('new_event');
+      socket.off('new_announcement');
+    };
+  }, [socket]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "28px", paddingBottom: "64px" }}>
