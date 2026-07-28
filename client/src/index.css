@@ -267,11 +267,9 @@ body {
   /* Queries - hide sidebar, show full screen chat on mobile */
   .queries-split-view {
     flex-direction: column !important;
-    height: calc(100vh - 120px) !important;
+    height: calc(100vh - 160px) !important;
     min-height: 0 !important;
     border-radius: 0 !important;
-    margin: -16px -12px -90px -12px !important;
-    width: calc(100% + 24px) !important;
     border-left: none !important;
     border-right: none !important;
   }

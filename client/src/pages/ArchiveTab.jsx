@@ -378,48 +378,7 @@ export default function ArchiveTab() {
           })}
         </div>
 
-        {/* Category Cards */}
-        <div>
-          <h3 style={{ margin: "0 0 14px 0", fontFamily: "'Playfair Display', serif", fontSize: "1.15rem", color: "#1f1209" }}>
-            Categories
-          </h3>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14 }}>
-            {CATEGORIES.map(cat => (
-              <button
-                key={cat.id}
-                onClick={() => setCategoryFilter(categoryFilter === cat.id ? "all" : cat.id)}
-                style={{
-                  background: categoryFilter === cat.id ? cat.bg : "#fff",
-                  border: categoryFilter === cat.id ? "none" : "1.5px solid #f0e6d2",
-                  borderRadius: 16, padding: "18px 20px", cursor: "pointer",
-                  textAlign: "left", transition: "all 0.22s",
-                  boxShadow: categoryFilter === cat.id
-                    ? `0 8px 24px ${cat.color}40`
-                    : "0 2px 8px rgba(160,110,40,0.05)"
-                }}
-                onMouseEnter={e => { if (categoryFilter !== cat.id) e.currentTarget.style.borderColor = cat.color; }}
-                onMouseLeave={e => { if (categoryFilter !== cat.id) e.currentTarget.style.borderColor = "#f0e6d2"; }}
-              >
-                <div style={{
-                  width: 52, height: 52, borderRadius: 14,
-                  background: categoryFilter === cat.id ? "rgba(255,255,255,0.25)" : cat.bg,
-                  display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 12
-                }}>
-                  <cat.icon />
-                </div>
-                <div style={{
-                  fontWeight: 700, fontSize: "1rem",
-                  color: categoryFilter === cat.id ? "#fff" : "#1f1209",
-                  fontFamily: "'Inter', sans-serif"
-                }}>{cat.label}</div>
-                <div style={{
-                  fontSize: "0.8rem", marginTop: 3,
-                  color: categoryFilter === cat.id ? "rgba(255,255,255,0.8)" : "#9a7845"
-                }}>{catCounts[cat.id] || 0} resources</div>
-              </button>
-            ))}
-          </div>
-        </div>
+
 
         {/* Courses / Files Section */}
         <div>
