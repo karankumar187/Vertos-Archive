@@ -19,7 +19,7 @@ const qwenClient = new OpenAI({
 });
 
 const OPENAI_MODEL = 'gpt-4o-mini';
-const QWEN_MODEL   = 'qwen/qwen3-30b-a3b:free';
+const QWEN_MODEL   = 'qwen/qwq-32b:free';
 
 // Fraction of chunks that must exceed this cosine score to count as "covered"
 const COVERAGE_THRESHOLD = 0.40;
