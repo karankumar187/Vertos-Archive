@@ -465,8 +465,12 @@ ${contextSection}
                 }
             }
             const isPyqFollowUp = lastAssistantMsg && /\bare you looking for pyqs\b/i.test(lastAssistantMsg);
+            
+            // Check if the last assistant message was explicitly asking a clarification question
+            // (prevents accidentally triggering on the welcome message which just lists features)
+            const isClarificationQuestion = lastAssistantMsg && /\b(should I generate|are you looking for pyqs|which course is this|which units does this)\b/i.test(lastAssistantMsg);
 
-            if (isPyqFollowUp || (lastAssistantMsg && /\b(mcq|subjective|format|multiple-choice|unit|units|type)\b/i.test(lastAssistantMsg))) {
+            if (isClarificationQuestion) {
                 if (!isPyqFollowUp) {
                     if (/\b(CA|Class Assessment)\b/i.test(lastAssistantMsg)) isCaRequest = true;
                     if (/\b(ETE|End Term|Final Exam)\b/i.test(lastAssistantMsg)) isEteRequest = true;
@@ -478,6 +482,7 @@ ${contextSection}
                         break;
                     }
                 }
+
             }
         }
 
