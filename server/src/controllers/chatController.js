@@ -232,8 +232,10 @@ exports.sendMessage = async (req, res) => {
         } 
         // Finally, if both are empty (e.g. an old conversation before this feature), fallback to history parsing
         else if (!currentFilters.subject && !conversation.activeCourse) {
-            // Search from the most recent message backwards
+            // Search from the most recent message backwards, ONLY looking at user messages
             for (let i = history.length - 1; i >= 0; i--) {
+                if (history[i].role !== 'user') continue;
+                
                 const histFullMatch = history[i].content.match(/\b([a-zA-Z]{2,4})[-_\s]*(\d{3})\b/i);
                 const histNumMatch = history[i].content.match(/\b(\d{3})\b/);
                 
