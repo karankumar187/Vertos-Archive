@@ -219,33 +219,34 @@ exports.sendMessage = async (req, res) => {
         history.reverse();
 
         // 4.5. Manage Active Course Context (Sticky Context)
+        // IMPORTANT: only apply sticky context if the current query has actual
+        // study/course keywords. Generic questions like "what is database" should
+        // NOT inherit the previous course and get locked into a narrow RAG search.
         let activeCourseUpdated = false;
 
-        // If the user's current message explicitly mentioned a subject, update the conversation's active course
         if (currentFilters.subject && currentFilters.subject !== conversation.activeCourse) {
+            // Current message explicitly mentions a subject → update saved context
             conversation.activeCourse = currentFilters.subject;
             activeCourseUpdated = true;
-        } 
-        // Otherwise, if we didn't find one in the current message but have one saved, use the saved context
-        else if (!currentFilters.subject && conversation.activeCourse) {
+        } else if (!currentFilters.subject && conversation.activeCourse && _isRagByKeywords) {
+            // No explicit subject in this message, but the query IS a study/RAG query
+            // (e.g. "give me notes", "explain unit 2") → carry forward saved course
             currentFilters.subject = conversation.activeCourse;
-        } 
-        // Finally, if both are empty (e.g. an old conversation before this feature), fallback to history parsing
-        else if (!currentFilters.subject && !conversation.activeCourse) {
-            // Search from the most recent message backwards, ONLY looking at user messages
+        } else if (!currentFilters.subject && !conversation.activeCourse) {
+            // Both empty → fallback to scanning history for a course code
             for (let i = history.length - 1; i >= 0; i--) {
                 if (history[i].role !== 'user') continue;
-                
+
                 const histFullMatch = history[i].content.match(/\b([a-zA-Z]{2,4})[-_\s]*(\d{3})\b/i);
                 const histNumMatch = history[i].content.match(/\b(\d{3})\b/);
-                
+
                 if (histFullMatch || histNumMatch) {
                     try {
                         const courseCode = histFullMatch ? histFullMatch[1] : '';
                         const courseNum = histFullMatch ? histFullMatch[2] : histNumMatch[1];
                         const regexStr = courseCode ? `^${courseCode}[-_\\s]*${courseNum}$` : `^[A-Za-z]{2,4}[-_\\s]*${courseNum}$`;
                         const regexMatch = new RegExp(regexStr, 'i');
-                        
+
                         const uniqueSubjects = await Document.distinct('subject', { subject: regexMatch });
                         if (uniqueSubjects.length > 0) {
                             currentFilters.subject = uniqueSubjects[0];
@@ -262,14 +263,17 @@ exports.sendMessage = async (req, res) => {
                 }
             }
         }
+        // else: query has no study keywords → don't apply sticky context at all
+
 
         if (activeCourseUpdated) {
             await conversation.save();
         }
 
         // ── 5. Early Query Classification ────────────────────────────────────
-        // Determine query type BEFORE hitting Qdrant to avoid unnecessary DB calls.
-        
+        // Determine query type BEFORE hitting Qdrant and BEFORE sticky context
+        // so we can decide whether to inherit activeCourse.
+
         // Check for casual greeting FIRST — very short, no substance ("hi", "thanks", "ok")
         const isCasualChat = content.trim().split(/\s+/).length <= 8 &&
             /^(hi|hello|hey|thanks|thank\s*you|ok|okay|sure|yes|no|bye|good|great|nice|cool|got\s*it|understood|lol|haha|what['']?s\s*up|sup)/i.test(content.trim());
@@ -281,24 +285,26 @@ exports.sendMessage = async (req, res) => {
         const _isCaEarly        = !isSyllabusRequest && /\b(ca|class[\s-]?assessment|class[\s-]?test|unit[\s-]?test|ca[\s-]?\d|ca\d)\b/i.test(content);
         const _isNotesEarly     = !isSyllabusRequest && !_isMidTermEarly && !_isEteEarly && !_isEtpEarly && !_isCaEarly && /\b(notes|study\s*material|lecture\s*notes|explain|explanation)\b/i.test(content);
         const _isPyqEarly       = !isSyllabusRequest && !_isMidTermEarly && !_isEteEarly && !_isEtpEarly && !_isCaEarly && /\b(pyq|pyqs|previous year|past year|practice questions?)\b/i.test(content);
-        const _hasCourseCode    = /\b([a-zA-Z]{2,4})[-_\s]*(\d{3})\b/i.test(content) || Boolean(currentFilters.subject);
+        // Course code in current message ONLY (not inherited from history yet)
+        const _hasExplicitCourseCode = /\b([a-zA-Z]{2,4})[-_\s]*(\d{3})\b/i.test(content);
 
         // Follow-up on already generated exam content (e.g. "solution of q3", "explain question 5")
         const _isFollowUpEarly  = content.length < 150 && history.length > 1 &&
             /\b(solution|solve|explain|answer|why|how|question\s*\d+|q\s*\d+|que\s*\d+)\b/i.test(content);
 
-        // A query needs RAG if it touches any university / course-related topic, and is NOT a casual chat
+        // Final RAG decision: combine keyword-based detection with whether sticky context
+        // gave us a course to search against (only when _isRagByKeywords was true).
+        const _hasCourseCode = _hasExplicitCourseCode || Boolean(currentFilters.subject);
         const isRagQuery = !isCasualChat && (isSyllabusRequest || _isMidTermEarly || _isEteEarly || _isEtpEarly ||
                            _isCaEarly || _isNotesEarly || _isPyqEarly || _hasCourseCode || _isFollowUpEarly);
 
         // General task — has substance but no university keywords (e.g. "write a sorting algorithm")
-        // However, if we have an active subject context (_hasCourseCode), we treat it as RAG to stay on topic.
         const isGeneralTask = !isRagQuery && !isCasualChat;
 
         // Skip Qdrant entirely for non-RAG queries
         const skipRag = !isRagQuery;
 
-        console.log(`[QueryClassifier] isRagQuery=${isRagQuery}, isCasualChat=${isCasualChat}, isGeneralTask=${isGeneralTask}`);
+        console.log(`[QueryClassifier] isRagQuery=${isRagQuery}, isCasualChat=${isCasualChat}, isGeneralTask=${isGeneralTask}, stickyApplied=${!!(currentFilters.subject && !_hasExplicitCourseCode)}`);
 
         // ── 5a. Perform Hybrid Search (RAG queries only) ──────────────────────
         // For notes requests, fetch more chunks (150) to cover large documents thoroughly
