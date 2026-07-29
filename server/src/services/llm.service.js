@@ -153,7 +153,7 @@ const createThinkFilter = () => {
     // very start of the buffered text.
     const SAFETY_PREFIX_RE = /^(\s*(User Safety|Response Safety|Input Safety|Output Safety)\s*:\s*\S+\s*\n?)+/i;
 
-    return (rawToken) => {
+    return (rawToken, isEnd = false) => {
         if (done) return rawToken;
 
         buffer += rawToken;
@@ -175,13 +175,27 @@ const createThinkFilter = () => {
             return '';
         }
 
-        if (buffer.length >= 20) {
+        // Check if the buffer might be a safety string (starts with User Safety, Response Safety, etc.)
+        const possibleSafety = /^\s*(User|Response|Input|Output)/i.test(buffer);
+
+        if (possibleSafety) {
+            // It looks like a safety block. We wait until we see \n\n or buffer gets large enough
+            if (buffer.length > 150 || /\n\s*\n/.test(buffer) || isEnd) {
+                done = true;
+                const cleaned = buffer.replace(SAFETY_PREFIX_RE, '');
+                buffer = '';
+                return cleaned;
+            }
+            return ''; // keep buffering
+        }
+
+        // If it's definitely NOT a safety string, we wait a few characters to be absolutely sure,
+        // then flush.
+        if (buffer.length >= 20 || isEnd) {
             done = true;
-            // Strip any leading OpenRouter safety metadata before flushing
             const cleaned = buffer.replace(SAFETY_PREFIX_RE, '');
             buffer = '';
             return cleaned;
-
         }
 
         return '';

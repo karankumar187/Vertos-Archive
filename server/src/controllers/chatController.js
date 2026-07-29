@@ -405,10 +405,10 @@ ${contextSection}
    - May include sub-parts (a, b, c).
    SOURCE PRIORITY: FIRST PREFERENCE is to use actual PYQ practical questions. If none are available, create a realistic question matching the PYQ pattern by synthesizing the syllabus practical topics and course notes.
 8. CLASS ASSESSMENT (CA) POLICY: Only apply when the user explicitly asks for CA, class test, class assessment, or unit test questions. Follow this EXACT flow:
-   STEP 1 — If the user has NOT specified a course, ask: "Which course is this CA for? (e.g., CSE 332, MTH 174)"
-   STEP 2 — If the user has NOT specified which units, ask: "Which units does this CA cover? (e.g., Unit 1 and 2)"
-   STEP 3 — If the user has NOT specified the type, ask: "For this CA, should I generate MCQ questions or Subjective questions?"
-   Only proceed to generate questions once you have all three pieces of information (course, units, type).
+   STEP 1 — If the user has NOT specified a course, ask: "Which course is this CA for? (e.g., CSE 332, MTH 174)" and STOP GENERATING.
+   STEP 2 — If the user has NOT specified which units, ask: "Which units does this CA cover? (e.g., Unit 1 and 2)" and STOP GENERATING.
+   STEP 3 — If the user has NOT specified the type, ask: "For this CA, should I generate MCQ questions or Subjective questions?" and STOP GENERATING.
+   CRITICAL: If ANY of these 3 pieces of information are missing, you MUST ask the corresponding question and IMMEDIATELY STOP. DO NOT generate ANY test questions until you have all three (course, units, type).
    - IF MCQ: Generate EXACTLY 30 MCQs strictly from the specified units. YOU MUST STRICTLY COUNT AND ENFORCE THESE EXACT QUOTAS: If 1 unit is specified, generate EXACTLY 30 questions for it. If 2 units are specified, generate EXACTLY 15 questions for EACH unit. If 3 units are specified, generate EXACTLY 10 questions for EACH unit. If 4 units are specified, generate EXACTLY 7 questions for the first two, and 8 for the last two. If 5 units are specified, generate EXACTLY 6 questions for EACH unit. YOU ARE STRICTLY FORBIDDEN from stopping early. You MUST reach exactly 30 questions.
    - IF SUBJECTIVE for CODING/PROGRAMMING subjects (INT, CSE, MVC, Java, Python, Web Dev, etc.): Generate EXACTLY 15 CODE IMPLEMENTATION questions, evenly split. Each question MUST ask the student to write actual working code. Do NOT ask definitions like "What is MVC?".
    - IF SUBJECTIVE for MATHS/PHYSICS/NUMERICAL subjects: Generate EXACTLY 15 numerical problem-solving questions, evenly split. Do NOT ask definitions.
@@ -698,6 +698,15 @@ ${contextSection}
                         if (token) {
                             fullAssistantResponse += token;
                             res.write(`data: ${JSON.stringify({ token })}\n\n`);
+                        }
+                    }
+
+                    // Flush any remaining characters trapped in the filter buffer at end of stream
+                    if (thinkFilter) {
+                        const finalToken = thinkFilter('', true);
+                        if (finalToken) {
+                            fullAssistantResponse += finalToken;
+                            res.write(`data: ${JSON.stringify({ token: finalToken })}\n\n`);
                         }
                     }
 
