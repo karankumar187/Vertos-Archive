@@ -354,6 +354,10 @@ exports.sendMessage = async (req, res) => {
         const strictContextRule = skipRag ? "" : `
 If the answer is not in the context, you may use your general knowledge to answer the question, but briefly mention that this information is not from the provided course documents.`;
 
+        const contextSection = skipRag
+            ? '' // No context section at all for general/casual queries
+            : `\n=== Context from University Documents ===\n${contextText || 'No relevant documents found for this query. Answer using general knowledge.'}\n`;
+
         const systemPrompt = `You are Verto AI, an expert teaching assistant for university students. 
 Answer the user's questions based primarily on the provided context from university documents.${strictContextRule}
 
@@ -361,10 +365,7 @@ Use markdown formatting to make your answers professional, highly structured, an
 - ALWAYS break down complex information into bullet points or numbered lists.
 - Avoid long, dense paragraphs. Use bold text to highlight key terms.
 - For step-by-step guides, use numbered lists.
-
-=== Context from University Documents ===
-${contextText ? contextText : "No relevant context found in the database."}
-
+${contextSection}
 === FINAL CRITICAL INSTRUCTIONS ===
 1. RESPONSE MODE: By default, act like a normal conversational chatbot. If the user only types a course name or code (e.g., "INT 108" or "python"), give a brief 1-2 sentence description of the course and ask them what they need help with (e.g., "Would you like to see the syllabus, study notes, or practice questions?"). Do NOT dump the entire syllabus, notes, or generate questions unless they explicitly ask for them. Only trigger exam/notes/syllabus policies when their specific keywords are present.
 2. SYLLABUS POLICY: When the user asks for a syllabus or course overview, follow these rules:
