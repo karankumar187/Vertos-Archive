@@ -198,7 +198,8 @@ const MessageBubble = React.memo(function MessageBubble({ msg, onRegenerate, use
   const [showSources, setShowSources] = useState(false);
   const [galleryDoc, setGalleryDoc] = useState(null);
   const uniqueSources = msg.sources ? [...new Map(msg.sources.map(s => [s.documentId, s])).values()] : [];
-  
+  const isStreaming = !isUser && !msg.content;
+
   return (
     <>
       {galleryDoc && <GalleryModal doc={galleryDoc} onClose={() => setGalleryDoc(null)} />}
@@ -236,8 +237,25 @@ const MessageBubble = React.memo(function MessageBubble({ msg, onRegenerate, use
           lineHeight: 1.7,
           width: "100%"
         }} className="markdown-body">
-          {isUser ? (
+           {isUser ? (
              <p style={{ whiteSpace: "pre-wrap", margin: 0 }}>{msg.content}</p>
+          ) : isStreaming ? (
+            // Typing indicator — shown while waiting for first token
+            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '4px 2px' }}>
+              <style>{`
+                @keyframes typingBounce {
+                  0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+                  30% { transform: translateY(-6px); opacity: 1; }
+                }
+              `}</style>
+              {[0, 1, 2].map(i => (
+                <span key={i} style={{
+                  width: 7, height: 7, borderRadius: '50%',
+                  background: '#c8861a', display: 'inline-block',
+                  animation: `typingBounce 1.1s ease-in-out ${i * 0.16}s infinite`,
+                }} />
+              ))}
+            </div>
           ) : (
              <ReactMarkdown 
                 remarkPlugins={[remarkGfm, remarkMath]}
