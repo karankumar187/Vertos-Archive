@@ -531,7 +531,9 @@ ${contextSection}
         }
 
         let userQueryFinal = content;
-        if (isSyllabusRequest) {
+        if (isCasualChat) {
+            userQueryFinal = content + "\n\n[REMINDER: The user just sent a casual greeting or short confirmation. Reply warmly as Verto AI, an expert university teaching assistant. Ask them what course they would like to study today (e.g., notes, syllabus, or practice questions). Keep it very short and conversational (1-2 sentences max). Do NOT complain about missing course codes.]";
+        } else if (isSyllabusRequest) {
             userQueryFinal = content + "\n\n[REMINDER: The user is asking about the SYLLABUS. Do NOT generate questions. Present the syllabus as a clean, structured overview. Make sure to list ALL UNITS (typically all 6 units) without skipping any and do NOT stop early. Include textbooks if available.]"
         } else if (isMidTermRequest) {
             if (isFollowUpOnGeneratedContent) {
