@@ -337,6 +337,12 @@ exports.sendMessage = async (req, res) => {
 
             contextText = searchResults.map((result, i) => `[Source ${i + 1} - ${result.metadata.title}]:\n${result.text}`).join('\n\n');
             
+            // Cap context size to ~14,000 characters (~3,500 tokens) to ensure we don't
+            // exceed strict free tier TPM limits (e.g. Groq 6000 TPM). 
+            if (contextText.length > 14000) {
+                contextText = contextText.substring(0, 14000) + "\n\n...[Context truncated to prevent exceeding token limits]";
+            }
+            
             // Collect sources to save with the assistant message later
             searchResults.forEach(res => {
                 sourceData.push({
