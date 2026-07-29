@@ -904,10 +904,11 @@ export default function ChatPage() {
                 lines.forEach(line => {
                     if (line.startsWith('event: sources')) {
                         isSourcesEvent = true;
+                    } else if (line.startsWith('event: provider_used')) {
+                        // Must come BEFORE 'event: provider' check — it's a more specific prefix
+                        isProviderUsedEvent = true;
                     } else if (line.startsWith('event: provider')) {
                         isProviderEvent = true;
-                    } else if (line.startsWith('event: provider_used')) {
-                        isProviderUsedEvent = true;
                     } else if (line.startsWith('data: ')) {
                         const dataStr = line.replace('data: ', '').trim();
                         if (dataStr === '[DONE]') {
