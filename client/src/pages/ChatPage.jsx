@@ -405,6 +405,7 @@ const MessageBubble = React.memo(function MessageBubble({ msg, onRegenerate, use
                 const p = msg.providerUsed || msg.provider;
                 // Confidence comes from the initial provider event (before any fallback)
                 const conf = msg.provider?.confidence ?? msg.provider?.effectiveConfidence ?? null;
+                const isOverridden = !!msg.provider?.overrideReason;
                 const confColor = conf === null ? '#8b6535'
                     : conf >= 0.6 ? '#059669'
                     : conf >= 0.35 ? '#d97706'
@@ -414,8 +415,8 @@ const MessageBubble = React.memo(function MessageBubble({ msg, onRegenerate, use
                         display: 'flex', alignItems: 'center', gap: '6px',
                         marginLeft: 'auto',
                     }}>
-                        {/* Confidence badge — only shown for RAG queries where confidence is available */}
-                        {conf !== null && (
+                        {/* Confidence badge — only shown for real RAG queries (no overrides) */}
+                        {!isOverridden && conf !== null && (
                             <div style={{
                                 display: 'flex', alignItems: 'center', gap: '3px',
                                 background: `${confColor}12`, border: `1px solid ${confColor}40`,
