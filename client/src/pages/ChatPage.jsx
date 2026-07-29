@@ -403,18 +403,43 @@ const MessageBubble = React.memo(function MessageBubble({ msg, onRegenerate, use
 
             {!isUser && (msg.providerUsed || msg.provider) && (() => {
                 const p = msg.providerUsed || msg.provider;
+                // Confidence comes from the initial provider event (before any fallback)
+                const conf = msg.provider?.confidence ?? msg.provider?.effectiveConfidence ?? null;
+                const confColor = conf === null ? '#8b6535'
+                    : conf >= 0.6 ? '#059669'
+                    : conf >= 0.35 ? '#d97706'
+                    : '#dc2626';
                 return (
                     <div style={{
-                        display: 'flex', alignItems: 'center', gap: '4px',
-                        background: '#fdfaf5', border: '1px solid #e9dcc8',
-                        padding: '2px 8px', borderRadius: '10px',
-                        fontSize: '0.65rem', color: '#8b6535', fontWeight: 600,
-                        marginLeft: 'auto'
-                    }} title={`Model: ${p.model}`}>
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
-                        </svg>
-                        {p.providerName}
+                        display: 'flex', alignItems: 'center', gap: '6px',
+                        marginLeft: 'auto',
+                    }}>
+                        {/* Confidence badge — only shown for RAG queries where confidence is available */}
+                        {conf !== null && (
+                            <div style={{
+                                display: 'flex', alignItems: 'center', gap: '3px',
+                                background: `${confColor}12`, border: `1px solid ${confColor}40`,
+                                padding: '2px 7px', borderRadius: '10px',
+                                fontSize: '0.62rem', color: confColor, fontWeight: 700,
+                            }} title="Retrieval confidence score — how well the database matched your query">
+                                <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                                </svg>
+                                {Math.round(conf * 100)}%
+                            </div>
+                        )}
+                        {/* Provider badge */}
+                        <div style={{
+                            display: 'flex', alignItems: 'center', gap: '4px',
+                            background: '#fdfaf5', border: '1px solid #e9dcc8',
+                            padding: '2px 8px', borderRadius: '10px',
+                            fontSize: '0.65rem', color: '#8b6535', fontWeight: 600,
+                        }} title={`Model: ${p.model}${p.fallback ? ' (fallback)' : ''}`}>
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+                            </svg>
+                            {p.providerName}{p.fallback ? ' ↩' : ''}
+                        </div>
                     </div>
                 );
             })()}
