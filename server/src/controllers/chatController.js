@@ -346,7 +346,7 @@ exports.sendMessage = async (req, res) => {
 
         // 6. Construct OpenAI Messages Array
         const strictContextRule = skipRag ? "" : `
-If the answer is not in the context, say "I don't have enough information in the provided documents to answer that definitively." but you can offer general knowledge if appropriate, making sure to clarify it's not from the course material.`;
+If the answer is not in the context, you may use your general knowledge to answer the question, but briefly mention that this information is not from the provided course documents.`;
 
         const systemPrompt = `You are Verto AI, an expert teaching assistant for university students. 
 Answer the user's questions based primarily on the provided context from university documents.${strictContextRule}
