@@ -660,10 +660,12 @@ ${contextText ? contextText : "No relevant context found in the database."}
                 const isNonOpenAI = id !== 'openai';
                 
                 try {
+                    const safeMaxTokens = id === 'openai' ? 16000 : 4000;
+                    
                     const stream = await llmClient.chat.completions.create({
                         model:      llmModel,
                         messages:   apiMessages,
-                        max_tokens: 16000,
+                        max_tokens: safeMaxTokens,
                         stream:     true,
                     });
 
