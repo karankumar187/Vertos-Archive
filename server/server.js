@@ -287,4 +287,25 @@ app.use((err, req, res, next) => {
 const PORT = config.PORT || 5001;
 server.listen(PORT, () => {
     console.log(`Server running in ${config.NODE_ENV || 'development'} mode on port ${PORT}`);
+
+    // ── Keep-Alive Ping (Production Only) ─────────────────────────────────────
+    // Render's free tier spins down after 15 minutes of inactivity, causing 30–60s
+    // cold starts that time out on mobile browsers. We ping ourselves every 10
+    // minutes to keep the server warm at all times.
+    if (config.NODE_ENV === 'production' && process.env.RENDER_EXTERNAL_URL) {
+        const keepAliveUrl = `${process.env.RENDER_EXTERNAL_URL}/`;
+        setInterval(async () => {
+            try {
+                const https = require('https');
+                https.get(keepAliveUrl, (res) => {
+                    console.log(`[KeepAlive] Pinged ${keepAliveUrl} — status: ${res.statusCode}`);
+                }).on('error', (err) => {
+                    console.warn(`[KeepAlive] Ping failed: ${err.message}`);
+                });
+            } catch (e) {
+                console.warn('[KeepAlive] Error during ping:', e.message);
+            }
+        }, 10 * 60 * 1000); // every 10 minutes
+        console.log(`[KeepAlive] Self-ping enabled → ${keepAliveUrl} (every 10 min)`);
+    }
 });
