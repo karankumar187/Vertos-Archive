@@ -136,10 +136,22 @@ const getProvidersWaterfall = (confidence) => {
 // ---------------------------------------------------------------------------
 // createThinkFilter
 // ---------------------------------------------------------------------------
+/**
+ * Streaming token filter for non-OpenAI models.
+ * Strips:
+ *  1. <think>...</think> reasoning blocks emitted by some models.
+ *  2. OpenRouter safety-classifier metadata lines that appear before the
+ *     actual answer, e.g.:
+ *       "User Safety: safe\nResponse Safety: safe\n"
+ */
 const createThinkFilter = () => {
     let buffer      = '';
     let sawOpen     = false;  // saw <think>
     let done        = false;  // no more filtering needed
+
+    // Regex that matches one or more OpenRouter safety-metadata lines at the
+    // very start of the buffered text.
+    const SAFETY_PREFIX_RE = /^(\s*(User Safety|Response Safety|Input Safety|Output Safety)\s*:\s*\S+\s*\n?)+/i;
 
     return (rawToken) => {
         if (done) return rawToken;
@@ -165,9 +177,11 @@ const createThinkFilter = () => {
 
         if (buffer.length >= 20) {
             done = true;
-            const out = buffer;
+            // Strip any leading OpenRouter safety metadata before flushing
+            const cleaned = buffer.replace(SAFETY_PREFIX_RE, '');
             buffer = '';
-            return out;
+            return cleaned;
+
         }
 
         return '';
