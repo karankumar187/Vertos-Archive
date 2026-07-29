@@ -218,6 +218,30 @@ exports.sendMessage = async (req, res) => {
             .lean();
         history.reverse();
 
+        // ── Early Query Classification (Moved up) ───────────────────────────
+        // Check for casual greeting FIRST — very short, no substance ("hi", "thanks", "ok")
+        const isCasualChat = content.trim().split(/\s+/).length <= 8 &&
+            /^(hi|hello|hey|thanks|thank\s*you|ok|okay|sure|yes|no|bye|good|great|nice|cool|got\s*it|understood|lol|haha|what['']?s\s*up|sup)/i.test(content.trim());
+
+        // Policy keywords — any of these means this is a RAG query:
+        const _isMidTermEarly   = !isSyllabusRequest && /\b(mid[\s-]?term|midterm|mock[\s-]?test|40\s*mcq)\b/i.test(content);
+        const _isEteEarly       = !isSyllabusRequest && /\b(end[\s-]?term|ete|final[\s-]?exam|final[\s-]?paper|end[\s-]?sem|endsem)\b/i.test(content);
+        const _isEtpEarly       = !isSyllabusRequest && /\b(etp|end[\s-]?term[\s-]?practical|practical[\s-]?exam|lab[\s-]?exam|viva)\b/i.test(content);
+        const _isCaEarly        = !isSyllabusRequest && /\b(ca|class[\s-]?assessment|class[\s-]?test|unit[\s-]?test|ca[\s-]?\d|ca\d)\b/i.test(content);
+        const _isNotesEarly     = !isSyllabusRequest && !_isMidTermEarly && !_isEteEarly && !_isEtpEarly && !_isCaEarly && /\b(notes|study\s*material|lecture\s*notes|explain|explanation)\b/i.test(content);
+        const _isPyqEarly       = !isSyllabusRequest && !_isMidTermEarly && !_isEteEarly && !_isEtpEarly && !_isCaEarly && /\b(pyq|pyqs|previous year|past year|practice questions?)\b/i.test(content);
+        
+        // Course code in current message ONLY (not inherited from history yet)
+        const _hasExplicitCourseCode = /\b([a-zA-Z]{2,4})[-_\s]*(\d{3})\b/i.test(content);
+
+        // Follow-up on already generated exam content (e.g. "solution of q3", "explain question 5")
+        const _isFollowUpEarly  = content.length < 150 && history.length > 1 &&
+            /\b(solution|solve|explain|answer|why|how|question\s*\d+|q\s*\d+|que\s*\d+)\b/i.test(content);
+
+        // A query needs RAG only based on its own keywords — NOT inherited course context
+        const _isRagByKeywords = !isCasualChat && (isSyllabusRequest || _isMidTermEarly || _isEteEarly || _isEtpEarly ||
+                           _isCaEarly || _isNotesEarly || _isPyqEarly || _hasExplicitCourseCode || _isFollowUpEarly);
+
         // 4.5. Manage Active Course Context (Sticky Context)
         // IMPORTANT: only apply sticky context if the current query has actual
         // study/course keywords. Generic questions like "what is database" should
@@ -265,32 +289,11 @@ exports.sendMessage = async (req, res) => {
         }
         // else: query has no study keywords → don't apply sticky context at all
 
-
         if (activeCourseUpdated) {
             await conversation.save();
         }
 
-        // ── 5. Early Query Classification ────────────────────────────────────
-        // Determine query type BEFORE hitting Qdrant and BEFORE sticky context
-        // so we can decide whether to inherit activeCourse.
-
-        // Check for casual greeting FIRST — very short, no substance ("hi", "thanks", "ok")
-        const isCasualChat = content.trim().split(/\s+/).length <= 8 &&
-            /^(hi|hello|hey|thanks|thank\s*you|ok|okay|sure|yes|no|bye|good|great|nice|cool|got\s*it|understood|lol|haha|what['']?s\s*up|sup)/i.test(content.trim());
-
-        // Policy keywords — any of these means this is a RAG query:
-        const _isMidTermEarly   = !isSyllabusRequest && /\b(mid[\s-]?term|midterm|mock[\s-]?test|40\s*mcq)\b/i.test(content);
-        const _isEteEarly       = !isSyllabusRequest && /\b(end[\s-]?term|ete|final[\s-]?exam|final[\s-]?paper|end[\s-]?sem|endsem)\b/i.test(content);
-        const _isEtpEarly       = !isSyllabusRequest && /\b(etp|end[\s-]?term[\s-]?practical|practical[\s-]?exam|lab[\s-]?exam|viva)\b/i.test(content);
-        const _isCaEarly        = !isSyllabusRequest && /\b(ca|class[\s-]?assessment|class[\s-]?test|unit[\s-]?test|ca[\s-]?\d|ca\d)\b/i.test(content);
-        const _isNotesEarly     = !isSyllabusRequest && !_isMidTermEarly && !_isEteEarly && !_isEtpEarly && !_isCaEarly && /\b(notes|study\s*material|lecture\s*notes|explain|explanation)\b/i.test(content);
-        const _isPyqEarly       = !isSyllabusRequest && !_isMidTermEarly && !_isEteEarly && !_isEtpEarly && !_isCaEarly && /\b(pyq|pyqs|previous year|past year|practice questions?)\b/i.test(content);
-        // Course code in current message ONLY (not inherited from history yet)
-        const _hasExplicitCourseCode = /\b([a-zA-Z]{2,4})[-_\s]*(\d{3})\b/i.test(content);
-
-        // Follow-up on already generated exam content (e.g. "solution of q3", "explain question 5")
-        const _isFollowUpEarly  = content.length < 150 && history.length > 1 &&
-            /\b(solution|solve|explain|answer|why|how|question\s*\d+|q\s*\d+|que\s*\d+)\b/i.test(content);
+        // ── 5. Final Query Classification ────────────────────────────────────
 
         // Final RAG decision: combine keyword-based detection with whether sticky context
         // gave us a course to search against (only when _isRagByKeywords was true).
