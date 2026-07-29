@@ -6,6 +6,7 @@ const OpenAI = require('openai');
 
 // ── Re-use the existing hardened OpenAI client from openai.service ────────
 const { openaiClient } = require('./openai.service');
+const { getSettings }  = require('./llmSettings.service');
 
 // ── Free Provider Clients (OpenAI-compatible) ───────────────────────────
 const openRouterClient = new OpenAI({
@@ -79,32 +80,51 @@ const computeConfidence = (searchResults = []) => {
 // ---------------------------------------------------------------------------
 /**
  * Returns an ordered array of LLM providers to try.
- * 
- * If confidence is high, it returns all available free providers followed by OpenAI.
- * If confidence is low, it returns only OpenAI.
+ *
+ * Routing mode (from admin settings):
+ *  - 'waterfall'     — fixed priority order: OpenRouter → Groq → HuggingFace → Mistral → OpenAI
+ *  - 'load-balance'  — free providers are randomly shuffled to spread traffic evenly
+ *
+ * Disabled providers (toggled off in admin panel) are always skipped.
+ * Providers on cooldown (circuit breaker) are always skipped.
+ * OpenAI is always appended last as the ultimate fallback.
  *
  * @param {number} confidence — output of computeConfidence()
  * @returns {Array<{ id: string, client: OpenAI, model: string, providerName: string }>}
  */
 const getProvidersWaterfall = (confidence) => {
-    const threshold = parseFloat(process.env.LLM_CONFIDENCE_THRESHOLD ?? String(DEFAULT_CONFIDENCE_THRESHOLD));
+    const { routingMode, confidenceThreshold, providerEnabled } = getSettings();
+    const threshold = confidenceThreshold;
     const waterfall = [];
 
     // Only add free providers if confidence meets threshold and they are not on cooldown
     if (confidence >= threshold) {
         const now = Date.now();
-        if (process.env.OPENROUTER_API_KEY && (!providerCooldowns['openrouter'] || now > providerCooldowns['openrouter'])) {
-            waterfall.push({ id: 'openrouter', client: openRouterClient, model: 'openrouter/free', providerName: 'OpenRouter' });
+        const freeProviders = [];
+
+        if (process.env.OPENROUTER_API_KEY && providerEnabled.openrouter && (!providerCooldowns['openrouter'] || now > providerCooldowns['openrouter'])) {
+            freeProviders.push({ id: 'openrouter', client: openRouterClient, model: 'openrouter/free', providerName: 'OpenRouter' });
         }
-        if (process.env.GROQ_API_KEY && (!providerCooldowns['groq'] || now > providerCooldowns['groq'])) {
-            waterfall.push({ id: 'groq', client: groqClient, model: 'llama-3.1-8b-instant', providerName: 'Groq' });
+        if (process.env.GROQ_API_KEY && providerEnabled.groq && (!providerCooldowns['groq'] || now > providerCooldowns['groq'])) {
+            freeProviders.push({ id: 'groq', client: groqClient, model: 'llama-3.1-8b-instant', providerName: 'Groq' });
         }
-        if (process.env.HF_API_KEY && (!providerCooldowns['huggingface'] || now > providerCooldowns['huggingface'])) {
-            waterfall.push({ id: 'huggingface', client: hfClient, model: 'meta-llama/Llama-3.1-8B-Instruct', providerName: 'HuggingFace (nscale)' });
+        if (process.env.HF_API_KEY && providerEnabled.huggingface && (!providerCooldowns['huggingface'] || now > providerCooldowns['huggingface'])) {
+            freeProviders.push({ id: 'huggingface', client: hfClient, model: 'meta-llama/Llama-3.1-8B-Instruct', providerName: 'HuggingFace' });
         }
-        if (process.env.MISTRAL_API_KEY && (!providerCooldowns['mistral'] || now > providerCooldowns['mistral'])) {
-            waterfall.push({ id: 'mistral', client: mistralClient, model: 'open-mistral-nemo', providerName: 'Mistral' });
+        if (process.env.MISTRAL_API_KEY && providerEnabled.mistral && (!providerCooldowns['mistral'] || now > providerCooldowns['mistral'])) {
+            freeProviders.push({ id: 'mistral', client: mistralClient, model: 'open-mistral-nemo', providerName: 'Mistral' });
         }
+
+        // In load-balance mode, shuffle the free providers randomly
+        if (routingMode === 'load-balance' && freeProviders.length > 1) {
+            for (let i = freeProviders.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [freeProviders[i], freeProviders[j]] = [freeProviders[j], freeProviders[i]];
+            }
+            console.log(`[LLM Router] Load-balance mode — order: ${freeProviders.map(p => p.providerName).join(' → ')}`);
+        }
+
+        waterfall.push(...freeProviders);
     }
 
     // Always append OpenAI as the final fallback (or the only option if confidence is low)

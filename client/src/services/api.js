@@ -70,7 +70,11 @@ export const adminAPI = {
     getAnnouncements:() => api.get('/admin/announcements'),
     createAnnouncement: (data) => api.post('/admin/announcements', data),
     updateAnnouncement: (id, data) => api.put(`/admin/announcements/${id}`, data),
-    deleteAnnouncement: (id) => api.delete(`/admin/announcements/${id}`)
+    deleteAnnouncement: (id) => api.delete(`/admin/announcements/${id}`),
+
+    // LLM Settings
+    getLLMSettings:    () => api.get('/admin/llm-settings'),
+    updateLLMSettings: (data) => api.put('/admin/llm-settings', data),
 };
 
 // ─── Chat API ─────────────────────────────────────────────────────────────

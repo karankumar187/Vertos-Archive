@@ -3,6 +3,7 @@ const router = express.Router();
 const { protect, authorizeAdmin } = require('../middleware/auth');
 const { getPendingUploads, approveUpload, rejectUpload, checkDuplicate, getLiveDocuments, deleteDocument, reprocessDocument, getUsers, updateUserRole, suspendUser, getAdminAnalytics, getActivityLogs } = require('../controllers/adminController');
 const { getAnnouncements, createAnnouncement, updateAnnouncement, deleteAnnouncement } = require('../controllers/announcementController');
+const { getSettings, updateSettings } = require('../services/llmSettings.service');
 
 // All admin routes are protected and require admin role
 router.use(protect);
@@ -43,5 +44,18 @@ router.get('/announcements', getAnnouncements);
 router.post('/announcements', createAnnouncement);
 router.put('/announcements/:id', updateAnnouncement);
 router.delete('/announcements/:id', deleteAnnouncement);
+
+// ─── LLM Settings ──────────────────────────────────────────────────────────
+router.get('/llm-settings', (req, res) => {
+    res.json({ success: true, settings: getSettings() });
+});
+router.put('/llm-settings', (req, res) => {
+    try {
+        const updated = updateSettings(req.body);
+        res.json({ success: true, settings: updated });
+    } catch (err) {
+        res.status(400).json({ success: false, message: err.message });
+    }
+});
 
 module.exports = router;

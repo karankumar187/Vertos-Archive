@@ -24,6 +24,7 @@ import AdminAnalytics from "./pages/admin/AdminAnalytics";
 import AdminCommunity from "./pages/admin/AdminCommunity";
 import AdminAnnouncements from "./pages/admin/AdminAnnouncements";
 import AdminActivityLogs from "./pages/admin/AdminActivityLogs";
+import AdminSettings from "./pages/admin/AdminSettings";
 
 const Placeholder = ({ title }) => (
   <div style={{ display: "flex", flexDirection: "column", gap: "24px", height: "100%" }}>
@@ -108,7 +109,7 @@ function App() {
             <Route path="community" element={<AdminCommunity />} />
             <Route path="announcements" element={<AdminAnnouncements />} />
             <Route path="reports" element={<Placeholder title="Reports" />} />
-            <Route path="settings" element={<Placeholder title="Settings" />} />
+            <Route path="settings" element={<AdminSettings />} />
             <Route path="logs" element={<AdminActivityLogs />} />
           </Route>
 
