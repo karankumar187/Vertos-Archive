@@ -705,10 +705,15 @@ ${contextText ? contextText : "No relevant context found in the database."}
         }
 
         // 9. Save assistant message to DB
+        // Guard: if the stream produced no content (e.g. safety filter stripped everything),
+        // use a fallback so the Mongoose `required` validator doesn't throw.
+        const finalContent = fullAssistantResponse.trim() ||
+            "I wasn't able to generate a response. Please try rephrasing your question.";
+
         const assistantMessage = new Message({
             conversationId,
             role: 'assistant',
-            content: fullAssistantResponse,
+            content: finalContent,
             sources: sourceData
         });
         await assistantMessage.save();
