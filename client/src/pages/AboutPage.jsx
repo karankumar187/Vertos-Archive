@@ -91,6 +91,30 @@ export default function AboutPage() {
           </div>
         </div>
 
+        {/* Privacy Policy */}
+        <div style={{ background: "#fff", borderRadius: "16px", padding: "32px", border: "1px solid #f0e6d2", boxShadow: "0 4px 16px rgba(160,110,40,0.04)" }}>
+          <h2 style={{ fontSize: "1.4rem", fontWeight: 700, color: "#1f1209", marginBottom: "16px" }}>Privacy Policy & Data Usage</h2>
+          <p style={{ fontSize: "1rem", color: "#5c4021", lineHeight: 1.7, marginBottom: "16px" }}>
+            We take your privacy seriously. Vertos Archive collects minimal personal data required to provide a personalized academic experience. By using our platform, you agree to the collection and use of information as described below.
+          </p>
+          <h3 style={{ fontSize: "1.1rem", fontWeight: 600, color: "#1f1209", marginBottom: "8px" }}>Information We Collect</h3>
+          <ul style={{ fontSize: "1rem", color: "#5c4021", lineHeight: 1.7, marginBottom: "16px", paddingLeft: "20px" }}>
+            <li><strong>Google Profile Data:</strong> When you sign in using Google OAuth, we collect your name, email address, and profile picture.</li>
+            <li><strong>User-Generated Content:</strong> Documents you upload and messages you send in the AI chat are securely stored to facilitate the core features of the platform.</li>
+          </ul>
+          <h3 style={{ fontSize: "1.1rem", fontWeight: 600, color: "#1f1209", marginBottom: "8px" }}>How We Use Your Data</h3>
+          <ul style={{ fontSize: "1rem", color: "#5c4021", lineHeight: 1.7, marginBottom: "16px", paddingLeft: "20px" }}>
+            <li>To create and manage your user account securely.</li>
+            <li>To display your name and profile picture on the contributor leaderboard (if you upload documents).</li>
+            <li>To personalize your chat experience and maintain your conversation history.</li>
+            <li>We <strong>do not</strong> sell your data to third parties. Data is used strictly for operational purposes within Vertos Archive.</li>
+          </ul>
+          <h3 style={{ fontSize: "1.1rem", fontWeight: 600, color: "#1f1209", marginBottom: "8px" }}>Data Protection & Deletion</h3>
+          <p style={{ fontSize: "1rem", color: "#5c4021", lineHeight: 1.7, margin: 0 }}>
+            Your data is encrypted in transit and at rest. If you wish to have your account and all associated data permanently deleted, please contact the administrators.
+          </p>
+        </div>
+
       </div>
     </div>
   );
