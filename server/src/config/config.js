@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 module.exports = {
     JWT_SECRET: process.env.JWT_SECRET || 'vertos_jwt_secret_change_in_production',
     JWT_EXPIRE: process.env.JWT_EXPIRE || '7d',

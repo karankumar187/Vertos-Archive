@@ -1,3 +1,4 @@
+require('dotenv').config();
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const User = require('../models/User');
@@ -8,6 +9,7 @@ const isGoogleConfigured =
     config.GOOGLE_CLIENT_ID !== 'your_google_client_id_here';
 
 if (isGoogleConfigured) {
+    console.log('[Passport] Registering Google OAuth strategy...');
     passport.use(new GoogleStrategy({
         clientID: config.GOOGLE_CLIENT_ID,
         clientSecret: config.GOOGLE_CLIENT_SECRET,
@@ -59,7 +61,7 @@ async (accessToken, refreshToken, profile, done) => {
     }
     }));
 } else {
-    console.warn('⚠️  Google OAuth not configured. Add GOOGLE_CLIENT_ID & GOOGLE_CLIENT_SECRET to .env to enable Google login.');
+    console.warn('[Passport] ⚠️ Google OAuth NOT configured. GOOGLE_CLIENT_ID is missing from environment.');
 }
 
 // Minimal session serialisation (only store user id)

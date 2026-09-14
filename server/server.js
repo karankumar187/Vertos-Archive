@@ -1,6 +1,7 @@
+require('dotenv').config();
+
 const express = require('express');
 const cors = require('cors');
-const dotenv = require('dotenv');
 const session = require('express-session');
 const { MongoStore } = require('connect-mongo');
 const helmet = require('helmet');
@@ -8,13 +9,10 @@ const mongoSanitize = require('express-mongo-sanitize');
 const xss = require('xss');
 const hpp = require('hpp');
 const rateLimit = require('express-rate-limit');
+const config = require('./src/config/config');
 const passport = require('./src/config/passport');
 const connectDB = require('./src/config/db');
 const authRoutes = require('./src/routes/auth');
-const config = require('./src/config/config');
-
-// Load environment variables
-dotenv.config();
 
 // Production Guard: Ensure secrets exist
 if (process.env.NODE_ENV === 'production') {
