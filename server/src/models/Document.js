@@ -55,6 +55,24 @@ const documentSchema = new mongoose.Schema({
         type: Number,
         required: true,
     },
+    examType: {
+        type: String,
+        enum: ['ca', 'midterm', 'ete', 'etp', 'other', null],
+        default: null,
+    },
+    units: {
+        type: [Number],
+        default: [],
+    },
+    year: {
+        type: Number,
+        default: null,
+    },
+    session: {
+        type: String,
+        trim: true,
+        default: null,
+    },
     indexed: {
         type: Boolean,
         default: false,
@@ -65,12 +83,14 @@ const documentSchema = new mongoose.Schema({
 documentSchema.index({
     title: 'text',
     subject: 'text',
-    category: 'text'
+    category: 'text',
+    examType: 'text'
 }, {
     weights: {
         title: 10,
         subject: 5,
-        category: 2
+        category: 2,
+        examType: 3
     },
     name: 'HybridSearchTextIndex'
 });

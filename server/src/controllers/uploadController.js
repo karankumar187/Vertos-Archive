@@ -5,10 +5,25 @@ const { extractTextFromBuffer } = require('../services/documentParser');
 
 exports.uploadDocument = async (req, res) => {
     try {
-        const { title, description, category, subject, semester } = req.body;
+        const { title, description, category, subject, semester, examType, year, session } = req.body;
 
         if (!req.files || req.files.length === 0) {
             return res.status(400).json({ success: false, message: 'Please upload at least one file' });
+        }
+
+        // Safely parse units (can arrive as array, JSON string, or comma-separated numbers)
+        let parsedUnits = [];
+        if (req.body.units) {
+            if (Array.isArray(req.body.units)) {
+                parsedUnits = req.body.units.map(Number).filter(n => !isNaN(n) && n >= 0 && n <= 6);
+            } else if (typeof req.body.units === 'string') {
+                try {
+                    const arr = JSON.parse(req.body.units);
+                    parsedUnits = Array.isArray(arr) ? arr.map(Number).filter(n => !isNaN(n) && n >= 0 && n <= 6) : [];
+                } catch {
+                    parsedUnits = req.body.units.split(',').map(s => Number(s.trim())).filter(n => !isNaN(n) && n >= 0 && n <= 6);
+                }
+            }
         }
 
         console.log(`[Upload] Received ${req.files.length} files for document: ${title}`);
@@ -49,13 +64,17 @@ exports.uploadDocument = async (req, res) => {
         await Promise.all(uploadPromises);
         console.log(`[Upload] All files processed. Total extracted text length: ${allExtractedText.length}`);
 
-        // 3. Save to PendingDocument
+        // 3. Save to PendingDocument with enriched metadata
         const pendingDoc = new PendingDocument({
             title,
             description,
             category: category ? category.toLowerCase() : category,
             subject,
             semester: semester ? Number(semester) : undefined,
+            examType: examType ? examType.toLowerCase().trim() : null,
+            units: parsedUnits,
+            year: year ? Number(year) : null,
+            session: session ? session.trim() : null,
             uploaderId: req.user._id,
             // Keep first file URL/type/size for backwards compatibility / simple views
             fileUrl: savedFiles[0].url,

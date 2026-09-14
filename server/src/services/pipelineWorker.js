@@ -116,8 +116,13 @@ exports.processDocument = async (documentId) => {
                 const { generateEmbeddings } = require('./openai.service');
                 
                 // Contextualize chunks with metadata so each chunk is semantically linked to the document topic
+                const metaParts = [`Title: "${doc.title}"`, `Subject: "${doc.subject || 'N/A'}"`, `Category: "${doc.category || 'N/A'}"`];
+                if (doc.examType) metaParts.push(`Exam: "${doc.examType.toUpperCase()}"`);
+                if (doc.units && doc.units.length > 0) metaParts.push(`Units: [${doc.units.join(', ')}]`);
+                if (doc.year) metaParts.push(`Year: ${doc.year}`);
+
                 const contextualizedChunks = chunks.map(chunk => {
-                    const header = `[Document Context: Title: "${doc.title}", Subject: "${doc.subject || 'N/A'}", Category: "${doc.category || 'N/A'}"]\n`;
+                    const header = `[Document Context: ${metaParts.join(', ')}]\n`;
                     return header + chunk;
                 });
 
@@ -130,6 +135,10 @@ exports.processDocument = async (documentId) => {
                     title: doc.title,
                     subject: doc.subject || '',
                     category: doc.category || '',
+                    examType: doc.examType || '',
+                    units: doc.units || [],
+                    year: doc.year || null,
+                    session: doc.session || '',
                     source: doc.source || 'User Upload',
                     uploaderID: doc.uploaderID ? doc.uploaderID.toString() : '',
                     fileUrl: doc.fileUrl || '',

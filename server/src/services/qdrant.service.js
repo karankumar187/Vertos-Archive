@@ -27,29 +27,30 @@ exports.initQdrant = async () => {
                 },
             });
             console.log(`[Qdrant] Collection '${COLLECTION_NAME}' created successfully.`);
-            
-            // Create payload indexes for filtering
-            console.log(`[Qdrant] Creating payload index for 'category'...`);
-            await client.createPayloadIndex(COLLECTION_NAME, {
-                field_name: 'category',
-                field_schema: 'keyword',
-                wait: true,
-            });
-            console.log(`[Qdrant] Creating payload index for 'subject'...`);
-            await client.createPayloadIndex(COLLECTION_NAME, {
-                field_name: 'subject',
-                field_schema: 'keyword',
-                wait: true,
-            });
-            console.log(`[Qdrant] Creating payload index for 'documentId'...`);
-            await client.createPayloadIndex(COLLECTION_NAME, {
-                field_name: 'documentId',
-                field_schema: 'keyword',
-                wait: true,
-            });
-            console.log(`[Qdrant] Payload indexes created.`);
         } else {
             console.log(`[Qdrant] Collection '${COLLECTION_NAME}' already exists.`);
+        }
+
+        // Ensure payload indexes for filtering exist
+        const indexFields = [
+            { field_name: 'category', field_schema: 'keyword' },
+            { field_name: 'subject', field_schema: 'keyword' },
+            { field_name: 'documentId', field_schema: 'keyword' },
+            { field_name: 'examType', field_schema: 'keyword' },
+            { field_name: 'units', field_schema: 'integer' },
+        ];
+
+        for (const idx of indexFields) {
+            try {
+                await client.createPayloadIndex(COLLECTION_NAME, {
+                    field_name: idx.field_name,
+                    field_schema: idx.field_schema,
+                    wait: true,
+                });
+                console.log(`[Qdrant] Payload index for '${idx.field_name}' ensured.`);
+            } catch (idxErr) {
+                // Index may already exist; safe to ignore
+            }
         }
     } catch (err) {
         console.error('[Qdrant] Error during initialization:', err);

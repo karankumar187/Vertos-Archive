@@ -37,7 +37,24 @@ exports.approveUpload = async (req, res) => {
         }
 
         // Admin may override metadata fields
-        const { title, subject, category, reviewComment } = req.body;
+        const { title, subject, category, reviewComment, examType, units, year, session } = req.body;
+
+        const effectiveExamType = examType !== undefined ? (examType ? examType.toLowerCase().trim() : null) : (pendingDoc.examType || null);
+        let effectiveUnits = pendingDoc.units || [];
+        if (units !== undefined) {
+            if (Array.isArray(units)) {
+                effectiveUnits = units.map(Number).filter(n => !isNaN(n) && n >= 0 && n <= 6);
+            } else if (typeof units === 'string') {
+                try {
+                    const parsed = JSON.parse(units);
+                    effectiveUnits = Array.isArray(parsed) ? parsed.map(Number).filter(n => !isNaN(n) && n >= 0 && n <= 6) : [];
+                } catch {
+                    effectiveUnits = units.split(',').map(s => Number(s.trim())).filter(n => !isNaN(n) && n >= 0 && n <= 6);
+                }
+            }
+        }
+        const effectiveYear = year !== undefined ? (year ? Number(year) : null) : (pendingDoc.year || null);
+        const effectiveSession = session !== undefined ? (session ? session.trim() : null) : (pendingDoc.session || null);
 
         // Create main Document (use admin overrides if provided)
         const newDoc = new Document({
@@ -46,6 +63,10 @@ exports.approveUpload = async (req, res) => {
             source: 'User Upload',
             verified: true,
             subject: subject || pendingDoc.subject,
+            examType: effectiveExamType,
+            units: effectiveUnits,
+            year: effectiveYear,
+            session: effectiveSession,
             uploaderID: pendingDoc.uploaderId,
             approvedBy: req.user._id,
             reviewComment: reviewComment || '',
@@ -447,5 +468,80 @@ exports.getActivityLogs = async (req, res) => {
         res.json({ success: true, data: logs });
     } catch (err) {
         res.status(500).json({ success: false, message: 'Server error' });
+    }
+};
+
+// @desc    Update metadata of an existing live document
+// @route   PUT /api/admin/documents/:id/metadata
+// @access  Private/Admin
+exports.updateDocumentMetadata = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { title, subject, category, examType, units, year, session, triggerReindex } = req.body;
+
+        const doc = await Document.findById(id);
+        if (!doc) {
+            return res.status(404).json({ success: false, message: 'Document not found' });
+        }
+
+        if (title) doc.title = title.trim();
+        if (subject) doc.subject = subject.trim();
+        if (category) doc.category = category.toLowerCase().trim();
+        
+        if (examType !== undefined) {
+            doc.examType = examType ? examType.toLowerCase().trim() : null;
+        }
+
+        if (units !== undefined) {
+            if (Array.isArray(units)) {
+                doc.units = units.map(Number).filter(n => !isNaN(n) && n >= 0 && n <= 6);
+            } else if (typeof units === 'string') {
+                try {
+                    const parsed = JSON.parse(units);
+                    doc.units = Array.isArray(parsed) ? parsed.map(Number).filter(n => !isNaN(n) && n >= 0 && n <= 6) : [];
+                } catch {
+                    doc.units = units.split(',').map(s => Number(s.trim())).filter(n => !isNaN(n) && n >= 0 && n <= 6);
+                }
+            }
+        }
+
+        if (year !== undefined) {
+            doc.year = year ? Number(year) : null;
+        }
+
+        if (session !== undefined) {
+            doc.session = session ? session.trim() : null;
+        }
+
+        await doc.save();
+
+        // Optionally trigger pipeline re-indexing to sync Qdrant metadata payload
+        if (triggerReindex !== false && doc.indexed) {
+            processDocument(doc._id).catch(err => {
+                console.warn(`[Admin] Background re-indexing failed for doc ${doc._id}:`, err.message);
+            });
+        }
+
+        // Log admin activity
+        try {
+            await ActivityLog.create({
+                adminId: req.user._id,
+                action: 'DOCUMENT_METADATA_UPDATED',
+                targetType: 'Document',
+                targetId: doc._id,
+                details: `Updated metadata for "${doc.title}" (examType: ${doc.examType}, units: [${doc.units}])`
+            });
+        } catch (logErr) {
+            console.warn('[Admin] Failed to log activity:', logErr.message);
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'Document metadata updated successfully',
+            data: doc
+        });
+    } catch (error) {
+        console.error('Update document metadata error:', error);
+        res.status(500).json({ success: false, message: 'Server error updating document metadata' });
     }
 };

@@ -10,6 +10,7 @@ import campusSketch from "../assets/campus-sketch.png";
 import { chatAPI, archiveAPI } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import CodeBlock from "../components/CodeBlock";
+import AgentStepIndicator from "../components/AgentStepIndicator";
 
 const API_BASE = (import.meta?.env?.VITE_API_URL) || 'http://localhost:5001/api';
 const FILE_PROXY_BASE = API_BASE.replace('/api', '');
@@ -230,6 +231,9 @@ const MessageBubble = React.memo(function MessageBubble({ msg, onRegenerate, use
           width: "100%",
           overflowX: "auto"
         }}>
+          {!isUser && (msg.currentStep || (msg.agentSteps && msg.agentSteps.length > 0)) && (
+            <AgentStepIndicator currentStep={msg.currentStep} steps={msg.agentSteps} />
+          )}
           <div style={{
           fontFamily: "'Inter', sans-serif",
           fontSize: "0.875rem",
@@ -848,6 +852,7 @@ export default function ChatPage() {
             let retryDone = false;
             let retryBuffer = '';
             let retryIsSourcesEvent = false;
+            let retryIsAgentStepEvent = false;
             while (!retryDone) {
                 const { value, done: rd } = await retryReader.read();
                 retryDone = rd;
@@ -857,6 +862,7 @@ export default function ChatPage() {
                     retryBuffer = lines.pop();
                     lines.forEach(line => {
                         if (line.startsWith('event: sources')) { retryIsSourcesEvent = true; }
+                        else if (line.startsWith('event: agent_step')) { retryIsAgentStepEvent = true; }
                         else if (line.startsWith('data: ')) {
                             const dataStr = line.replace('data: ', '').trim();
                             if (dataStr === '[DONE]') { setLoading(false); loadConversations(); return; }
@@ -866,9 +872,18 @@ export default function ChatPage() {
                                     if (!assistantMsgId) { assistantMsgId = `a_${Date.now()}`; setMessages(prev => [...prev, { role: "assistant", id: assistantMsgId, content: "", time: now, sources: parsed }]); }
                                     else { setMessages(prev => prev.map(m => m.id === assistantMsgId ? { ...m, sources: parsed } : m)); }
                                     retryIsSourcesEvent = false;
-                                } else if (parsed.token) {
-                                    if (!assistantMsgId) { assistantMsgId = `a_${Date.now()}`; setMessages(prev => [...prev, { role: "assistant", id: assistantMsgId, content: parsed.token, time: now, sources: [] }]); }
-                                    else { setMessages(prev => prev.map(m => m.id === assistantMsgId ? { ...m, content: m.content + parsed.token } : m)); }
+                                } else if (retryIsAgentStepEvent) {
+                                    if (!assistantMsgId) {
+                                        assistantMsgId = `a_${Date.now()}`;
+                                        setMessages(prev => [...prev, { role: "assistant", id: assistantMsgId, content: "", time: now, sources: [], currentStep: parsed, agentSteps: [parsed] }]);
+                                    } else {
+                                        setMessages(prev => prev.map(m => m.id === assistantMsgId ? { ...m, currentStep: parsed, agentSteps: [...(m.agentSteps || []), parsed] } : m));
+                                    }
+                                    retryIsAgentStepEvent = false;
+                                } else if (parsed.token || parsed.text) {
+                                    const t = parsed.token || parsed.text;
+                                    if (!assistantMsgId) { assistantMsgId = `a_${Date.now()}`; setMessages(prev => [...prev, { role: "assistant", id: assistantMsgId, content: t, time: now, sources: [] }]); }
+                                    else { setMessages(prev => prev.map(m => m.id === assistantMsgId ? { ...m, content: m.content + t } : m)); }
                                 } else if (parsed.message) {
                                     if (!assistantMsgId) { assistantMsgId = `a_${Date.now()}`; setMessages(prev => [...prev, { role: "assistant", id: assistantMsgId, content: "**Error:** " + parsed.message, time: now, sources: [] }]); }
                                 }
@@ -890,6 +905,7 @@ export default function ChatPage() {
         let done = false;
         let buffer = '';
         let isSourcesEvent = false;
+        let isAgentStepEvent = false;
         let isProviderEvent = false;
         let isProviderUsedEvent = false;
 
@@ -905,6 +921,8 @@ export default function ChatPage() {
                 lines.forEach(line => {
                     if (line.startsWith('event: sources')) {
                         isSourcesEvent = true;
+                    } else if (line.startsWith('event: agent_step')) {
+                        isAgentStepEvent = true;
                     } else if (line.startsWith('event: provider_used')) {
                         // Must come BEFORE 'event: provider' check — it's a more specific prefix
                         isProviderUsedEvent = true;
@@ -928,6 +946,26 @@ export default function ChatPage() {
                                     setMessages(prev => prev.map(m => m.id === assistantMsgId ? { ...m, sources: parsed } : m));
                                 }
                                 isSourcesEvent = false;
+                            } else if (isAgentStepEvent) {
+                                if (!assistantMsgId) {
+                                    assistantMsgId = `a_${Date.now()}`;
+                                    setMessages(prev => [...prev, {
+                                        role: "assistant",
+                                        id: assistantMsgId,
+                                        content: "",
+                                        time: now,
+                                        sources: [],
+                                        currentStep: parsed,
+                                        agentSteps: [parsed]
+                                    }]);
+                                } else {
+                                    setMessages(prev => prev.map(m => m.id === assistantMsgId ? {
+                                        ...m,
+                                        currentStep: parsed,
+                                        agentSteps: [...(m.agentSteps || []), parsed]
+                                    } : m));
+                                }
+                                isAgentStepEvent = false;
                             } else if (isProviderEvent) {
                                 // Store provider routing info in message (shown as a badge)
                                 if (!assistantMsgId) {
@@ -943,12 +981,13 @@ export default function ChatPage() {
                                     setMessages(prev => prev.map(m => m.id === assistantMsgId ? { ...m, providerUsed: parsed } : m));
                                 }
                                 isProviderUsedEvent = false;
-                            } else if (parsed.token) {
+                            } else if (parsed.token || parsed.text) {
+                                const chunk = parsed.token || parsed.text;
                                 if (!assistantMsgId) {
                                     assistantMsgId = `a_${Date.now()}`;
-                                    setMessages(prev => [...prev, { role: "assistant", id: assistantMsgId, content: parsed.token, time: now, sources: [] }]);
+                                    setMessages(prev => [...prev, { role: "assistant", id: assistantMsgId, content: chunk, time: now, sources: [] }]);
                                 } else {
-                                    setMessages(prev => prev.map(m => m.id === assistantMsgId ? { ...m, content: m.content + parsed.token } : m));
+                                    setMessages(prev => prev.map(m => m.id === assistantMsgId ? { ...m, content: m.content + chunk } : m));
                                 }
                             } else if (parsed.message) { // error
                                 if (!assistantMsgId) {

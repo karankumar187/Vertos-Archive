@@ -2,7 +2,6 @@ import { useState, useRef } from "react";
 import campusSketch from "../assets/campus-sketch.png";
 import { uploadAPI } from "../services/api";
 
-// Map of display label → backend enum value
 const CATEGORIES = [
   { label: "Notes",          value: "notes" },
   { label: "Syllabus",       value: "syllabus" },
@@ -10,11 +9,25 @@ const CATEGORIES = [
   { label: "University Info",value: "university" },
 ];
 
+const EXAM_TYPES = [
+  { label: "Class Assessment (CA)", value: "ca" },
+  { label: "Mid Term",              value: "midterm" },
+  { label: "End Term Exam (ETE)",   value: "ete" },
+  { label: "Practical (ETP)",       value: "etp" },
+  { label: "Other",                 value: "other" },
+];
+
+const UNIT_OPTIONS = [0, 1, 2, 3, 4, 5, 6];
+
 export default function UploadPage() {
   const [category, setCategory]       = useState("");
   const [title, setTitle]             = useState("");
   const [description, setDescription] = useState("");
   const [subject, setSubject]         = useState("");
+  const [examType, setExamType]       = useState("ca");
+  const [units, setUnits]             = useState([]);
+  const [year, setYear]               = useState(new Date().getFullYear().toString());
+  const [session, setSession]         = useState("");
   const [files, setFiles]             = useState([]);
   const [dragging, setDragging]       = useState(false);
   const [submitted, setSubmitted]     = useState(false);
@@ -54,6 +67,15 @@ export default function UploadPage() {
       formData.append("description", description);
       formData.append("category", category.value); // send the backend enum value
       formData.append("subject", subject);
+
+      if (category.value === 'pyq') {
+        if (examType) formData.append("examType", examType);
+        if (units && units.length > 0) formData.append("units", JSON.stringify(units));
+        if (year) formData.append("year", year);
+        if (session) formData.append("session", session);
+      } else if (category.value === 'notes') {
+        if (units && units.length > 0) formData.append("units", JSON.stringify(units));
+      }
       
       files.forEach(f => {
         formData.append("files", f);
@@ -260,6 +282,212 @@ export default function UploadPage() {
                     </span>
                   )}
                 </div>
+
+                {/* ── Conditional PYQ Metadata ── */}
+                {category?.value === "pyq" && (
+                  <div style={{
+                    background: "rgba(200, 134, 26, 0.05)",
+                    border: "1.5px solid #e8c96a",
+                    borderRadius: "12px",
+                    padding: "16px 18px",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "14px",
+                  }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <span style={{ fontSize: "14px" }}>🎯</span>
+                      <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.85rem", fontWeight: 700, color: "#7a4f0d" }}>
+                        Paper Classification & Exam Details
+                      </span>
+                    </div>
+
+                    {/* Exam Type */}
+                    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                      <label style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.78rem", fontWeight: 600, color: "#5c4021", textTransform: "uppercase" }}>
+                        Exam Type
+                      </label>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "7px" }}>
+                        {EXAM_TYPES.map(t => {
+                          const active = examType === t.value;
+                          return (
+                            <button key={t.value} type="button"
+                              onClick={() => setExamType(t.value)}
+                              style={{
+                                padding: "6px 14px",
+                                fontFamily: "'Inter', sans-serif",
+                                fontSize: "0.8rem",
+                                fontWeight: active ? 600 : 400,
+                                color: active ? "#fff" : "#5c4021",
+                                background: active ? "#c8861a" : "#fff",
+                                border: active ? "1.5px solid #b45309" : "1.5px solid #ddd0b8",
+                                borderRadius: "8px",
+                                cursor: "pointer",
+                                transition: "all 0.15s",
+                              }}
+                            >
+                              {t.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Units Multi-Select */}
+                    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <label style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.78rem", fontWeight: 600, color: "#5c4021", textTransform: "uppercase" }}>
+                          Units Covered in this Paper
+                        </label>
+                        <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.72rem", color: "#9a7845" }}>
+                          {units.length === 0 ? "Select applicable units" : `${units.length} unit(s) selected`}
+                        </span>
+                      </div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                        {UNIT_OPTIONS.map(u => {
+                          const active = units.includes(u);
+                          return (
+                            <button key={u} type="button"
+                              onClick={() => {
+                                setUnits(prev => active ? prev.filter(x => x !== u) : [...prev, u].sort());
+                              }}
+                              style={{
+                                padding: "5px 12px",
+                                fontFamily: "'Inter', sans-serif",
+                                fontSize: "0.8rem",
+                                fontWeight: active ? 700 : 500,
+                                color: active ? "#7a4f0d" : "#5c4021",
+                                background: active ? "#fef3dc" : "#fff",
+                                border: active ? "1.5px solid #c8861a" : "1.5px solid #ddd0b8",
+                                borderRadius: "6px",
+                                cursor: "pointer",
+                                transition: "all 0.15s",
+                              }}
+                            >
+                              {active ? `✓ Unit ${u}` : `Unit ${u}`}
+                            </button>
+                          );
+                        })}
+                        {units.length > 0 && (
+                          <button type="button" onClick={() => setUnits([])}
+                            style={{
+                              padding: "5px 10px",
+                              fontFamily: "'Inter', sans-serif",
+                              fontSize: "0.75rem",
+                              color: "#b08050",
+                              background: "none",
+                              border: "none",
+                              cursor: "pointer",
+                              textDecoration: "underline",
+                            }}
+                          >
+                            Clear
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Year + Session */}
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                      <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
+                        <label style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.78rem", fontWeight: 600, color: "#5c4021", textTransform: "uppercase" }}>
+                          Exam Year (Optional)
+                        </label>
+                        <input type="number" min="2015" max="2035" value={year}
+                          onChange={e => setYear(e.target.value)}
+                          placeholder="e.g. 2024"
+                          style={{
+                            padding: "9px 12px", background: "#fff",
+                            border: "1.5px solid #ddd0b8", borderRadius: "8px",
+                            fontFamily: "'Inter', sans-serif", fontSize: "0.85rem",
+                            color: "#1f1209", outline: "none",
+                          }}
+                        />
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
+                        <label style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.78rem", fontWeight: 600, color: "#5c4021", textTransform: "uppercase" }}>
+                          Session (Optional)
+                        </label>
+                        <select value={session} onChange={e => setSession(e.target.value)}
+                          style={{
+                            padding: "9px 12px", background: "#fff",
+                            border: "1.5px solid #ddd0b8", borderRadius: "8px",
+                            fontFamily: "'Inter', sans-serif", fontSize: "0.85rem",
+                            color: "#1f1209", outline: "none",
+                          }}
+                        >
+                          <option value="">Unspecified</option>
+                          <option value="Jan-May">Jan-May (Spring Term)</option>
+                          <option value="Aug-Dec">Aug-Dec (Autumn Term)</option>
+                          <option value="Summer">Summer Term</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Conditional Notes Metadata ── */}
+                {category?.value === "notes" && (
+                  <div style={{
+                    background: "rgba(200, 134, 26, 0.04)",
+                    border: "1.5px solid #e8c96a88",
+                    borderRadius: "12px",
+                    padding: "14px 18px",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "8px",
+                  }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <label style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.78rem", fontWeight: 600, color: "#5c4021", textTransform: "uppercase" }}>
+                        Units Covered in these Notes (Optional)
+                      </label>
+                      <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.72rem", color: "#9a7845" }}>
+                        {units.length === 0 ? "Select units if specific" : `${units.length} unit(s) tagged`}
+                      </span>
+                    </div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                      {UNIT_OPTIONS.map(u => {
+                        const active = units.includes(u);
+                        return (
+                          <button key={u} type="button"
+                            onClick={() => {
+                              setUnits(prev => active ? prev.filter(x => x !== u) : [...prev, u].sort());
+                            }}
+                            style={{
+                              padding: "5px 12px",
+                              fontFamily: "'Inter', sans-serif",
+                              fontSize: "0.8rem",
+                              fontWeight: active ? 700 : 500,
+                              color: active ? "#7a4f0d" : "#5c4021",
+                              background: active ? "#fef3dc" : "#fff",
+                              border: active ? "1.5px solid #c8861a" : "1.5px solid #ddd0b8",
+                              borderRadius: "6px",
+                              cursor: "pointer",
+                              transition: "all 0.15s",
+                            }}
+                          >
+                            {active ? `✓ Unit ${u}` : `Unit ${u}`}
+                          </button>
+                        );
+                      })}
+                      {units.length > 0 && (
+                        <button type="button" onClick={() => setUnits([])}
+                          style={{
+                            padding: "5px 10px",
+                            fontFamily: "'Inter', sans-serif",
+                            fontSize: "0.75rem",
+                            color: "#b08050",
+                            background: "none",
+                            border: "none",
+                            cursor: "pointer",
+                            textDecoration: "underline",
+                          }}
+                        >
+                          Clear
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {/* ── Two-col: Title + Subject ── */}
                 <div className="mobile-grid-1" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "18px" }}>

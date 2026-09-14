@@ -5,6 +5,7 @@ const { openaiClient } = require('../services/openai.service');
 const Document = require('../models/Document');
 const { computeConfidence, getProvidersWaterfall, createThinkFilter, markProviderFailure } = require('../services/llm.service');
 const { streamBatchedQuestions } = require('../services/questionBatcher');
+const { classifyIntent, runAgentWorkflow } = require('../agents');
 
 // ---------------------------------------------------------------------------
 // extractCaUnits
@@ -218,10 +219,90 @@ exports.sendMessage = async (req, res) => {
             .lean();
         history.reverse();
 
-        // ── Early Query Classification (Moved up) ───────────────────────────
-        // Check for casual greeting FIRST — very short, no substance ("hi", "thanks", "ok")
-        const isCasualChat = content.trim().split(/\s+/).length <= 8 &&
-            /^(hi|hello|hey|thanks|thank\s*you|ok|okay|sure|yes|no|bye|good|great|nice|cool|got\s*it|understood|lol|haha|what['']?s\s*up|sup)/i.test(content.trim());
+        // ── 4a. Agentic Intent Classification & Dispatcher ─────────────────
+        let agentClassification = null;
+        try {
+            agentClassification = await classifyIntent({
+                userMessage: content,
+                history,
+                currentCourseContext: conversation.activeCourse
+            });
+
+            console.log(`[ChatController] Agent classification:`, agentClassification);
+
+            if (agentClassification.intent && ['exam', 'notes', 'syllabus', 'tutor'].includes(agentClassification.intent)) {
+                // Setup SSE Headers for streaming agent steps and tokens
+                res.setHeader('Content-Type', 'text/event-stream');
+                res.setHeader('Cache-Control', 'no-cache');
+                res.setHeader('Connection', 'keep-alive');
+
+                // Update active course context on conversation if detected
+                if (agentClassification.subject && agentClassification.subject !== conversation.activeCourse) {
+                    conversation.activeCourse = agentClassification.subject;
+                    await conversation.save();
+                }
+
+                // If clarification is required (e.g. CA with no units specified):
+                if (agentClassification.needsClarification && agentClassification.clarificationQuestion) {
+                    res.write(`data: ${JSON.stringify({ text: agentClassification.clarificationQuestion })}\n\n`);
+                    res.write('data: [DONE]\n\n');
+                    const assistantMsg = new Message({
+                        conversationId,
+                        role: 'assistant',
+                        content: agentClassification.clarificationQuestion
+                    });
+                    await assistantMsg.save();
+                    return res.end();
+                }
+
+                // Helper to emit animated agent step events
+                const sendStep = (stepObj) => {
+                    res.write(`event: agent_step\ndata: ${JSON.stringify(stepObj)}\n\n`);
+                };
+
+                sendStep({
+                    step: 'orchestrator_routing',
+                    label: `Dispatching to ${agentClassification.intent.toUpperCase()} Specialist Agent`,
+                    icon: agentClassification.intent === 'exam' ? 'pyq' : (agentClassification.intent === 'notes' ? 'notes' : 'syllabus'),
+                    description: `Targeting ${agentClassification.subject || 'course material'}`
+                });
+
+                let fullResponse = '';
+                const workflowResult = await runAgentWorkflow({
+                    intent: agentClassification.intent,
+                    userMessage: content,
+                    history,
+                    subject: agentClassification.subject || conversation.activeCourse || '',
+                    examType: agentClassification.examType,
+                    format: agentClassification.format,
+                    units: agentClassification.units,
+                    onStep: sendStep,
+                    onToken: (token) => {
+                        fullResponse += token;
+                        res.write(`data: ${JSON.stringify({ text: token })}\n\n`);
+                    }
+                });
+
+                // Persist the assistant message
+                const assistantMessage = new Message({
+                    conversationId,
+                    role: 'assistant',
+                    content: fullResponse || workflowResult.generatedContent || '',
+                    sources: []
+                });
+                await assistantMessage.save();
+
+                res.write('data: [DONE]\n\n');
+                return res.end();
+            }
+        } catch (agentErr) {
+            console.error('[ChatController] Agent workflow failed, continuing with legacy fallback:', agentErr);
+        }
+
+        // Check for casual/general chat via Orchestrator or greeting pattern
+        const isCasualChat = (agentClassification?.intent === 'casual') ||
+            (content.trim().split(/\s+/).length <= 8 &&
+            /^(hi|hello|hey|thanks|thank\s*you|ok|okay|sure|yes|no|bye|good|great|nice|cool|got\s*it|understood|lol|haha|what['']?s\s*up|sup)/i.test(content.trim()));
 
         // Policy keywords — any of these means this is a RAG query:
         const _isMidTermEarly   = !isSyllabusRequest && /\b(mid[\s-]?term|midterm|mock[\s-]?test|40\s*mcq)\b/i.test(content);

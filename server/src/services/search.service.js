@@ -28,16 +28,27 @@ exports.performHybridSearch = async (query, filters = {}, limit = 40) => {
         const [queryEmbedding] = await generateEmbeddings([query]);
 
         // 2. Prepare filters
-        // Map our simple filter object to Qdrant filter syntax
+        // Map filter object to Qdrant filter syntax
         let qdrantFilter = null;
-        if (Object.keys(filters).length > 0) {
-            const conditions = Object.entries(filters).map(([key, value]) => ({
-                key: key,
-                match: { value: value }
-            }));
-            qdrantFilter = {
-                must: conditions
-            };
+        const conditions = [];
+
+        if (filters.category) {
+            conditions.push({ key: 'category', match: { value: filters.category } });
+        }
+        if (filters.subject) {
+            conditions.push({ key: 'subject', match: { value: filters.subject } });
+        }
+        if (filters.examType) {
+            conditions.push({ key: 'examType', match: { value: filters.examType } });
+        }
+        if (filters.units && Array.isArray(filters.units) && filters.units.length > 0) {
+            conditions.push({ key: 'units', match: { any: filters.units } });
+        } else if (typeof filters.units === 'number') {
+            conditions.push({ key: 'units', match: { value: filters.units } });
+        }
+
+        if (conditions.length > 0) {
+            qdrantFilter = { must: conditions };
         }
 
         // 3. Execute Vector Search (Qdrant)
@@ -52,11 +63,16 @@ exports.performHybridSearch = async (query, filters = {}, limit = 40) => {
         vectorResults = vectorResults.filter(point => isSyllabus || isNotes || point.score >= 0.25);
         
         // 4. Execute Keyword Search (MongoDB)
-        // Prepare MongoDB filter by removing any empty values
-        const mongoFilter = { ...filters };
-        Object.keys(mongoFilter).forEach(k => {
-            if (!mongoFilter[k]) delete mongoFilter[k];
-        });
+        // Prepare MongoDB filter
+        const mongoFilter = {};
+        if (filters.category) mongoFilter.category = filters.category;
+        if (filters.subject) mongoFilter.subject = filters.subject;
+        if (filters.examType) mongoFilter.examType = filters.examType;
+        if (filters.units && Array.isArray(filters.units) && filters.units.length > 0) {
+            mongoFilter.units = { $in: filters.units };
+        } else if (typeof filters.units === 'number') {
+            mongoFilter.units = filters.units;
+        }
 
         // Only do text search if query has words
         let keywordResults = [];
@@ -97,6 +113,10 @@ exports.performHybridSearch = async (query, filters = {}, limit = 40) => {
                     title: point.payload.title,
                     subject: point.payload.subject,
                     category: point.payload.category,
+                    examType: point.payload.examType || null,
+                    units: point.payload.units || [],
+                    year: point.payload.year || null,
+                    session: point.payload.session || null,
                     source: point.payload.source,
                     fileUrl: point.payload.fileUrl || '',
                     fileType: point.payload.fileType || '',

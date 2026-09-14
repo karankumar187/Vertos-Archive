@@ -9,6 +9,16 @@ const CATEGORIES = [
   { label: "University Info",value: "university" },
 ];
 
+const EXAM_TYPES = [
+  { label: "Class Assessment (CA)", value: "ca" },
+  { label: "Mid Term",              value: "midterm" },
+  { label: "End Term Exam (ETE)",   value: "ete" },
+  { label: "Practical (ETP)",       value: "etp" },
+  { label: "Other",                 value: "other" },
+];
+
+const UNIT_OPTIONS = [0, 1, 2, 3, 4, 5, 6];
+
 const API_BASE = (import.meta?.env?.VITE_API_URL) || 'http://localhost:5001/api';
 const FILE_PROXY_BASE = API_BASE.replace('/api', '');
 
@@ -27,6 +37,10 @@ function ReviewModal({ doc, mode, onClose, onSuccess }) {
         title: doc.title || '',
         subject: doc.subject || '',
         category: doc.category || '',
+        examType: doc.examType || (doc.category === 'pyq' ? 'ca' : ''),
+        units: doc.units || [],
+        year: doc.year || '',
+        session: doc.session || '',
         reviewComment: '',
     });
     const [loading, setLoading] = useState(false);
@@ -42,6 +56,10 @@ function ReviewModal({ doc, mode, onClose, onSuccess }) {
                     title: form.title,
                     subject: form.subject,
                     category: form.category,
+                    examType: form.category === 'pyq' ? form.examType : null,
+                    units: form.units,
+                    year: form.year,
+                    session: form.session,
                     reviewComment: form.reviewComment,
                 });
                 if (data.success) onSuccess(doc._id);
@@ -138,6 +156,81 @@ function ReviewModal({ doc, mode, onClose, onSuccess }) {
                                 </select>
                             </div>
                         </div>
+
+                        {form.category === 'pyq' && (
+                            <div>
+                                <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#5c4021', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Exam Type</label>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                                    {EXAM_TYPES.map(t => (
+                                        <button
+                                            key={t.value} type="button"
+                                            onClick={() => setForm(f => ({ ...f, examType: t.value }))}
+                                            style={{
+                                                padding: '4px 10px', fontSize: '0.75rem', borderRadius: '6px',
+                                                border: form.examType === t.value ? '1.5px solid #b45309' : '1px solid #ddd0b8',
+                                                background: form.examType === t.value ? '#c8861a' : '#fff',
+                                                color: form.examType === t.value ? '#fff' : '#5c4021',
+                                                cursor: 'pointer', fontWeight: form.examType === t.value ? 600 : 400
+                                            }}
+                                        >
+                                            {t.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        <div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                                <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#5c4021', textTransform: 'uppercase' }}>Units Covered</label>
+                                <span style={{ fontSize: '0.72rem', color: '#9a7845' }}>{form.units.length} unit(s) selected</span>
+                            </div>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                                {UNIT_OPTIONS.map(u => {
+                                    const active = form.units.includes(u);
+                                    return (
+                                        <button
+                                            key={u} type="button"
+                                            onClick={() => setForm(f => ({
+                                                ...f,
+                                                units: active ? f.units.filter(x => x !== u) : [...f.units, u].sort()
+                                            }))}
+                                            style={{
+                                                padding: '3px 8px', fontSize: '0.75rem', borderRadius: '6px',
+                                                border: active ? '1.5px solid #c8861a' : '1px solid #ddd0b8',
+                                                background: active ? '#fef3dc' : '#fff',
+                                                color: active ? '#7a4f0d' : '#5c4021',
+                                                cursor: 'pointer', fontWeight: active ? 700 : 500
+                                            }}
+                                        >
+                                            {active ? `✓ U${u}` : `U${u}`}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                            <div>
+                                <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#5c4021', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Year</label>
+                                <input
+                                    type="number" value={form.year} onChange={e => setForm(f => ({ ...f, year: e.target.value }))} placeholder="e.g. 2024"
+                                    style={{ width: '100%', padding: '9px 13px', border: '1px solid #ddd0b8', borderRadius: '8px', fontSize: '0.875rem', color: '#1f1209', outline: 'none', boxSizing: 'border-box' }}
+                                />
+                            </div>
+                            <div>
+                                <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#5c4021', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Session</label>
+                                <select
+                                    value={form.session} onChange={e => setForm(f => ({ ...f, session: e.target.value }))}
+                                    style={{ width: '100%', padding: '9px 13px', border: '1px solid #ddd0b8', borderRadius: '8px', fontSize: '0.875rem', color: '#1f1209', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
+                                >
+                                    <option value="">Unspecified</option>
+                                    <option value="Jan-May">Jan-May</option>
+                                    <option value="Aug-Dec">Aug-Dec</option>
+                                    <option value="Summer">Summer</option>
+                                </select>
+                            </div>
+                        </div>
                     </div>
                 )}
 
@@ -173,6 +266,211 @@ function ReviewModal({ doc, mode, onClose, onSuccess }) {
     );
 }
 
+function EditMetadataModal({ doc, onClose, onSuccess }) {
+    const [form, setForm] = useState({
+        title: doc.title || '',
+        subject: doc.subject || '',
+        category: doc.category || 'notes',
+        examType: doc.examType || '',
+        units: doc.units || [],
+        year: doc.year || '',
+        session: doc.session || '',
+        triggerReindex: true,
+    });
+    const [loading, setLoading] = useState(false);
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        try {
+            const payload = {
+                title: form.title,
+                subject: form.subject,
+                category: form.category,
+                examType: form.category === 'pyq' ? (form.examType || 'other') : null,
+                units: form.units,
+                year: form.year ? Number(form.year) : null,
+                session: form.session || null,
+                triggerReindex: form.triggerReindex,
+            };
+            const { data } = await adminAPI.updateDocumentMetadata(doc._id, payload);
+            if (data.success) {
+                onSuccess(data.data);
+            }
+        } catch (err) {
+            console.error(err);
+            alert("Failed to update document metadata.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div style={{
+            position: 'fixed', inset: 0, zIndex: 1000,
+            background: 'rgba(31,18,9,0.55)', backdropFilter: 'blur(4px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px',
+        }} onClick={onClose}>
+            <div style={{
+                background: '#fff', borderRadius: '18px', padding: '32px',
+                width: '100%', maxWidth: '580px',
+                boxShadow: '0 20px 60px rgba(30,10,0,0.22)',
+                border: '1px solid #e9dcc8',
+                position: 'relative',
+                maxHeight: '90vh', overflowY: 'auto'
+            }} onClick={e => e.stopPropagation()}>
+                <div style={{ marginBottom: '20px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
+                        <span style={{ fontSize: '1.4rem' }}>⚙️</span>
+                        <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: '1.3rem', fontWeight: 700, color: '#1f1209', margin: 0 }}>
+                            Edit Document Metadata
+                        </h2>
+                    </div>
+                    <p style={{ fontFamily: "'Inter', sans-serif", fontSize: '0.82rem', color: '#9a7845', margin: 0 }}>
+                        Update exam type, units, and classification to ensure surgical RAG retrieval and accurate exam generation.
+                    </p>
+                </div>
+
+                <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                    <div>
+                        <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#5c4021', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Title</label>
+                        <input
+                            type="text" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
+                            style={{ width: '100%', padding: '9px 13px', border: '1px solid #ddd0b8', borderRadius: '8px', fontSize: '0.875rem', color: '#1f1209', outline: 'none', boxSizing: 'border-box' }}
+                            required
+                        />
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                        <div>
+                            <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#5c4021', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Subject</label>
+                            <input
+                                type="text" value={form.subject} onChange={e => setForm(f => ({ ...f, subject: e.target.value }))} placeholder="e.g. CSE 332"
+                                style={{ width: '100%', padding: '9px 13px', border: '1px solid #ddd0b8', borderRadius: '8px', fontSize: '0.875rem', color: '#1f1209', outline: 'none', boxSizing: 'border-box' }}
+                                required
+                            />
+                        </div>
+                        <div>
+                            <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#5c4021', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Category</label>
+                            <select
+                                value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
+                                style={{ width: '100%', padding: '9px 13px', border: '1px solid #ddd0b8', borderRadius: '8px', fontSize: '0.875rem', color: '#1f1209', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
+                            >
+                                {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                            </select>
+                        </div>
+                    </div>
+
+                    {/* Conditional examType if category === pyq */}
+                    {form.category === 'pyq' && (
+                        <div>
+                            <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#5c4021', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Exam Type</label>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                                {EXAM_TYPES.map(t => (
+                                    <button
+                                        key={t.value} type="button"
+                                        onClick={() => setForm(f => ({ ...f, examType: t.value }))}
+                                        style={{
+                                            padding: '5px 12px', fontSize: '0.8rem', borderRadius: '6px',
+                                            border: form.examType === t.value ? '1.5px solid #b45309' : '1px solid #ddd0b8',
+                                            background: form.examType === t.value ? '#c8861a' : '#fff',
+                                            color: form.examType === t.value ? '#fff' : '#5c4021',
+                                            cursor: 'pointer', fontWeight: form.examType === t.value ? 600 : 400
+                                        }}
+                                    >
+                                        {t.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Units Covered */}
+                    <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                            <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#5c4021', textTransform: 'uppercase' }}>Units Covered</label>
+                            <span style={{ fontSize: '0.72rem', color: '#9a7845' }}>{form.units.length} unit(s) selected</span>
+                        </div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                            {UNIT_OPTIONS.map(u => {
+                                const active = form.units.includes(u);
+                                return (
+                                    <button
+                                        key={u} type="button"
+                                        onClick={() => setForm(f => ({
+                                            ...f,
+                                            units: active ? f.units.filter(x => x !== u) : [...f.units, u].sort()
+                                        }))}
+                                        style={{
+                                            padding: '4px 10px', fontSize: '0.78rem', borderRadius: '6px',
+                                            border: active ? '1.5px solid #c8861a' : '1px solid #ddd0b8',
+                                            background: active ? '#fef3dc' : '#fff',
+                                            color: active ? '#7a4f0d' : '#5c4021',
+                                            cursor: 'pointer', fontWeight: active ? 700 : 500
+                                        }}
+                                    >
+                                        {active ? `✓ U${u}` : `U${u}`}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* Year & Session */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                        <div>
+                            <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#5c4021', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Year (Optional)</label>
+                            <input
+                                type="number" value={form.year} onChange={e => setForm(f => ({ ...f, year: e.target.value }))}
+                                placeholder="e.g. 2024"
+                                style={{ width: '100%', padding: '9px 13px', border: '1px solid #ddd0b8', borderRadius: '8px', fontSize: '0.875rem', color: '#1f1209', outline: 'none', boxSizing: 'border-box' }}
+                            />
+                        </div>
+                        <div>
+                            <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#5c4021', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Session (Optional)</label>
+                            <select
+                                value={form.session} onChange={e => setForm(f => ({ ...f, session: e.target.value }))}
+                                style={{ width: '100%', padding: '9px 13px', border: '1px solid #ddd0b8', borderRadius: '8px', fontSize: '0.875rem', color: '#1f1209', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
+                            >
+                                <option value="">Unspecified</option>
+                                <option value="Jan-May">Jan-May (Spring)</option>
+                                <option value="Aug-Dec">Aug-Dec (Autumn)</option>
+                                <option value="Summer">Summer Term</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    {/* Trigger Reindex Checkbox */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
+                        <input
+                            type="checkbox" id="triggerReindex" checked={form.triggerReindex}
+                            onChange={e => setForm(f => ({ ...f, triggerReindex: e.target.checked }))}
+                            style={{ cursor: 'pointer', accentColor: '#c8861a' }}
+                        />
+                        <label htmlFor="triggerReindex" style={{ fontSize: '0.8rem', color: '#5c4021', cursor: 'pointer' }}>
+                            Sync vector database payload & contextualized embeddings (Recommended)
+                        </label>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '16px' }}>
+                        <button type="button" onClick={onClose} disabled={loading}
+                            style={{ padding: '10px 20px', background: '#fff', border: '1px solid #ddd0b8', borderRadius: '9px', fontSize: '0.85rem', fontWeight: 600, color: '#5c4021', cursor: 'pointer' }}>
+                            Cancel
+                        </button>
+                        <button type="submit" disabled={loading}
+                            style={{
+                                padding: '10px 24px', background: 'linear-gradient(135deg, #c8861a, #b45309)',
+                                border: 'none', borderRadius: '9px', fontSize: '0.85rem', fontWeight: 600, color: '#fff', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1,
+                            }}>
+                            {loading ? 'Saving...' : 'Save Metadata'}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+}
+
 export default function AdminDocuments() {
   const [activeTab, setActiveTab] = useState("pending"); // "pending" | "live"
   const [pendingDocs, setPendingDocs] = useState([]);
@@ -182,8 +480,14 @@ export default function AdminDocuments() {
   
   const [reviewModal, setReviewModal] = useState({ open: false, doc: null, mode: null });
   const [textModal, setTextModal] = useState({ open: false, text: '' });
+  const [editMetaModal, setEditMetaModal] = useState({ open: false, doc: null });
   
   const socket = useSocket();
+
+  const handleMetaSuccess = (updatedDoc) => {
+    setLiveDocs(prev => prev.map(d => d._id === updatedDoc._id ? updatedDoc : d));
+    setEditMetaModal({ open: false, doc: null });
+  };
 
   useEffect(() => {
     fetchData();
@@ -378,10 +682,27 @@ export default function AdminDocuments() {
                           </td>
                           <td style={{ padding: "12px 24px", fontSize: "0.85rem", color: "#6b4d1f" }}>{doc.uploaderID?.name || 'Unknown'}</td>
                           <td style={{ padding: "12px 24px" }}>
-                            <span style={{ padding: "4px 10px", background: "#fff", border: "1px solid #e9dcc8", color: "#8b5e0a", borderRadius: "12px", fontSize: "0.75rem", fontWeight: 600 }}>{doc.category}</span>
-                            {doc.indexed === false && (
-                                <span style={{ marginLeft: "8px", padding: "4px 8px", background: "#fee2e2", color: "#b91c1c", borderRadius: "12px", fontSize: "0.65rem", fontWeight: 700 }}>Indexing Failed</span>
-                            )}
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', alignItems: 'center' }}>
+                              <span style={{ padding: "4px 10px", background: "#fff", border: "1px solid #e9dcc8", color: "#8b5e0a", borderRadius: "12px", fontSize: "0.75rem", fontWeight: 600 }}>{doc.category}</span>
+                              {doc.examType && (
+                                <span style={{ padding: "3px 8px", background: "#fef3dc", border: "1px solid #e8c96a", color: "#7a4f0d", borderRadius: "10px", fontSize: "0.7rem", fontWeight: 700, textTransform: "uppercase" }}>
+                                  {doc.examType}
+                                </span>
+                              )}
+                              {doc.units && doc.units.length > 0 && (
+                                <span style={{ padding: "3px 8px", background: "#ecfdf5", border: "1px solid #a7f3d0", color: "#047857", borderRadius: "10px", fontSize: "0.7rem", fontWeight: 600 }}>
+                                  U: {doc.units.join(',')}
+                                </span>
+                              )}
+                              {doc.year && (
+                                <span style={{ padding: "3px 6px", background: "#f1f5f9", border: "1px solid #cbd5e1", color: "#475569", borderRadius: "10px", fontSize: "0.68rem", fontWeight: 500 }}>
+                                  {doc.year}
+                                </span>
+                              )}
+                              {doc.indexed === false && (
+                                  <span style={{ padding: "4px 8px", background: "#fee2e2", color: "#b91c1c", borderRadius: "12px", fontSize: "0.65rem", fontWeight: 700 }}>Indexing Failed</span>
+                              )}
+                            </div>
                           </td>
                           <td style={{ padding: "12px 24px", fontSize: "0.85rem", color: "#6b4d1f" }}>{new Date(doc.createdAt).toLocaleDateString()}</td>
                           <td style={{ padding: "12px 24px", textAlign: "right" }}>
@@ -394,6 +715,9 @@ export default function AdminDocuments() {
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
                                   </button>
                               )}
+                              <button onClick={() => setEditMetaModal({ open: true, doc })} style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "30px", height: "30px", borderRadius: "8px", background: "#fef3dc", color: "#b45309", border: "1px solid #fde68a", cursor: "pointer" }} title="Edit Metadata">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                              </button>
                               <button onClick={() => handleDeleteLive(doc._id)} style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "30px", height: "30px", borderRadius: "8px", background: "#fee2e2", color: "#b91c1c", border: "none", cursor: "pointer" }} title="Delete Document">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
                               </button>
@@ -483,6 +807,14 @@ export default function AdminDocuments() {
       )}
 
       {reviewModal.open && <ReviewModal doc={reviewModal.doc} mode={reviewModal.mode} onClose={() => setReviewModal({ open: false })} onSuccess={handleReviewSuccess} />}
+      
+      {editMetaModal.open && (
+        <EditMetadataModal
+          doc={editMetaModal.doc}
+          onClose={() => setEditMetaModal({ open: false, doc: null })}
+          onSuccess={handleMetaSuccess}
+        />
+      )}
     </div>
   );
 }

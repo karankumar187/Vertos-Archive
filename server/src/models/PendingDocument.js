@@ -51,6 +51,24 @@ const pendingDocumentSchema = new mongoose.Schema({
     pageCount: {
         type: Number,
     },
+    examType: {
+        type: String,
+        enum: ['ca', 'midterm', 'ete', 'etp', 'other', null],
+        default: null,
+    },
+    units: {
+        type: [Number],
+        default: [],
+    },
+    year: {
+        type: Number,
+        default: null,
+    },
+    session: {
+        type: String,
+        trim: true,
+        default: null,
+    },
     status: {
         type: String,
         enum: ['pending', 'approved', 'rejected'],

@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { protect, authorizeAdmin } = require('../middleware/auth');
-const { getPendingUploads, approveUpload, rejectUpload, checkDuplicate, getLiveDocuments, deleteDocument, reprocessDocument, getUsers, updateUserRole, suspendUser, getAdminAnalytics, getActivityLogs } = require('../controllers/adminController');
+const { getPendingUploads, approveUpload, rejectUpload, checkDuplicate, getLiveDocuments, deleteDocument, reprocessDocument, updateDocumentMetadata, getUsers, updateUserRole, suspendUser, getAdminAnalytics, getActivityLogs } = require('../controllers/adminController');
 const { getAnnouncements, createAnnouncement, updateAnnouncement, deleteAnnouncement } = require('../controllers/announcementController');
 const { getSettings, updateSettings } = require('../services/llmSettings.service');
 
@@ -14,6 +14,9 @@ router.get('/pending', getPendingUploads);
 
 // Fetch live approved documents
 router.get('/documents', getLiveDocuments);
+
+// Update live document metadata
+router.put('/documents/:id/metadata', updateDocumentMetadata);
 
 // Permanently delete a live document
 router.delete('/documents/:id', deleteDocument);

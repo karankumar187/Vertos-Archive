@@ -51,6 +51,7 @@ export const uploadAPI = {
 export const adminAPI = {
     getPending:      () => api.get('/admin/pending'),
     getLiveDocuments:() => api.get('/admin/documents'),
+    updateDocumentMetadata: (id, data) => api.put(`/admin/documents/${id}/metadata`, data),
     deleteDocument:  (id) => api.delete(`/admin/documents/${id}`),
     reprocessDocument: (id) => api.post(`/admin/documents/${id}/reprocess`),
     approveUpload:   (id, data = {}) => api.post(`/admin/approve/${id}`, data),
