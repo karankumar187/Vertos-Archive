@@ -4,8 +4,9 @@ require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
 const crypto = require('crypto');
 
 const client = new QdrantClient({
-    url: process.env.QDRANT_URL,
-    apiKey: process.env.QDRANT_API_KEY,
+    url: process.env.QDRANT_URL || 'http://127.0.0.1:6333',
+    apiKey: process.env.QDRANT_API_KEY ? process.env.QDRANT_API_KEY : undefined,
+    checkCompatibility: false,
 });
 
 const COLLECTION_NAME = 'vertos_documents';
