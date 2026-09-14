@@ -82,8 +82,9 @@ async function progressiveNotesGeneratorNode(state) {
     const notesText = (state.notesChunks || []).slice(0, 30).map(c => c.text).join('\n---\n');
 
     const systemPrompt = `
-You are the Senior Academic Professor & Notes Synthesizer for Verto AI.
+You are an Academic Professor for Lovely Professional University.
 Generate exhaustive, textbook-grade study notes for ${state.subject || 'the course'}.
+Do NOT mention internal architecture, agents, or pipeline nodes.
 
 TARGET SCOPE:
 - Units requested: ${state.units && state.units.length > 0 ? state.units.join(', ') : 'All relevant units'}
@@ -120,7 +121,8 @@ Format with clear Markdown headers:
         onToken: (token) => {
             generatedContent += token;
             if (state.onToken) state.onToken(token);
-        }
+        },
+        onProvider: state.onProvider
     });
 
     return { generatedContent };

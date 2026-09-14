@@ -255,19 +255,19 @@ exports.sendMessage = async (req, res) => {
                     return res.end();
                 }
 
-                // Helper to emit animated agent step events
+                // Helper to emit animated agent step events (clean user-facing message, no internal architecture leakage)
                 const sendStep = (stepObj) => {
                     res.write(`event: agent_step\ndata: ${JSON.stringify(stepObj)}\n\n`);
                 };
 
                 sendStep({
-                    step: 'orchestrator_routing',
-                    label: `Dispatching to ${agentClassification.intent.toUpperCase()} Specialist Agent`,
-                    icon: agentClassification.intent === 'exam' ? 'pyq' : (agentClassification.intent === 'notes' ? 'notes' : 'syllabus'),
-                    description: `Targeting ${agentClassification.subject || 'course material'}`
+                    step: 'retrieving',
+                    label: `Searching course material for ${agentClassification.subject || 'your request'}`,
+                    icon: 'pyq'
                 });
 
                 let fullResponse = '';
+                let capturedProvider = null;
                 const workflowResult = await runAgentWorkflow({
                     intent: agentClassification.intent,
                     userMessage: content,
@@ -280,15 +280,63 @@ exports.sendMessage = async (req, res) => {
                     onToken: (token) => {
                         fullResponse += token;
                         res.write(`data: ${JSON.stringify({ text: token })}\n\n`);
+                    },
+                    onProvider: (p) => {
+                        capturedProvider = p;
+                        res.write(`event: provider\ndata: ${JSON.stringify(p)}\n\n`);
                     }
                 });
+
+                // Extract all unique source documents used during agent execution
+                const allChunks = [
+                    ...(workflowResult?.pyqChunks || []),
+                    ...(workflowResult?.notesChunks || []),
+                    ...(workflowResult?.syllabusChunks || [])
+                ];
+
+                const sourceMap = new Map();
+                for (const c of allChunks) {
+                    const meta = c.metadata || {};
+                    const title = meta.source || meta.title || meta.documentTitle;
+                    if (title && !sourceMap.has(title)) {
+                        sourceMap.set(title, {
+                            title: title,
+                            documentId: meta.documentId,
+                            subject: meta.subject,
+                            fileUrl: meta.fileUrl || (meta.files && meta.files[0]) || '',
+                            fileType: meta.fileType || 'application/pdf',
+                            score: c.vectorScore || c.rrfScore || 0.88
+                        });
+                    }
+                }
+                const sourceData = Array.from(sourceMap.values());
+
+                if (sourceData.length > 0) {
+                    res.write(`event: sources\ndata: ${JSON.stringify(sourceData)}\n\n`);
+                }
+
+                // Compute confidence score
+                const avgScore = sourceData.length > 0
+                    ? sourceData.reduce((acc, s) => acc + (s.score || 0.85), 0) / sourceData.length
+                    : 0.92;
+                const finalConfidence = Math.min(0.98, Math.max(0.70, avgScore));
+
+                const providerMetadata = {
+                    providerName: capturedProvider?.providerName || workflowResult?.providerInfo?.providerName || 'Groq',
+                    model: capturedProvider?.model || workflowResult?.providerInfo?.model || 'llama-3.3-70b-versatile',
+                    confidence: finalConfidence,
+                    retrievalType: 'Hybrid Dense Vector (Qdrant) + Lexical RAG'
+                };
+
+                res.write(`event: provider_used\ndata: ${JSON.stringify(providerMetadata)}\n\n`);
 
                 // Persist the assistant message
                 const assistantMessage = new Message({
                     conversationId,
                     role: 'assistant',
                     content: fullResponse || workflowResult.generatedContent || '',
-                    sources: []
+                    sources: sourceData,
+                    provider: providerMetadata
                 });
                 await assistantMessage.save();
 

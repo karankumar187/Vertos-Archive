@@ -36,9 +36,11 @@ const AgentStateAnnotation = Annotation.Root({
     needsCorrection: Annotation({ reducer: (x, y) => y ?? x, default: () => false }),
     attributionReport: Annotation({ reducer: (x, y) => y ?? x, default: () => null }),
 
-    // Real-time callbacks
+    // Real-time callbacks & metadata
+    providerInfo: Annotation({ reducer: (x, y) => y ?? x, default: () => null }),
     onStep: Annotation({ reducer: (x, y) => y ?? x, default: () => null }),
     onToken: Annotation({ reducer: (x, y) => y ?? x, default: () => null }),
+    onProvider: Annotation({ reducer: (x, y) => y ?? x, default: () => null }),
 });
 
 module.exports = {

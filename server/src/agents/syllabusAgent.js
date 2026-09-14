@@ -41,8 +41,9 @@ async function formatSyllabusNode(state) {
     const syllabusText = (state.syllabusChunks || []).map(c => c.text).join('\n---\n');
 
     const systemPrompt = `
-You are the Course Architect for Verto AI.
-Format an official, structured syllabus document for ${state.subject || 'the course'}.
+You are an expert academic advisor for Lovely Professional University.
+Format an official, comprehensive syllabus document for ${state.subject || 'the course'}.
+Do not mention internal architecture, agents, or pipeline nodes.
 
 Format Requirements:
 1. **Course Header**: Course Code, Course Title, Credit Weightage, Prerequisites.
@@ -65,7 +66,8 @@ ${syllabusText || 'No uploaded syllabus found. Provide the standard curriculum o
         onToken: (token) => {
             generatedContent += token;
             if (state.onToken) state.onToken(token);
-        }
+        },
+        onProvider: state.onProvider
     });
 
     return { generatedContent };

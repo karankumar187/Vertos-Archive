@@ -27,7 +27,13 @@ const messageSchema = new mongoose.Schema({
         category: String,
         subject: String,
         files: [mongoose.Schema.Types.Mixed]
-    }]
+    }],
+    provider: {
+        providerName: String,
+        model: String,
+        confidence: Number,
+        retrievalType: String
+    }
 }, {
     timestamps: true
 });

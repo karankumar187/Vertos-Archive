@@ -19,7 +19,14 @@ async function runAgentWorkflow({
     units = [],
     onStep,
     onToken,
+    onProvider,
 }) {
+    let capturedProvider = null;
+    const handleProvider = (info) => {
+        capturedProvider = info;
+        if (onProvider) onProvider(info);
+    };
+
     const initialState = {
         userMessage,
         history,
@@ -30,6 +37,8 @@ async function runAgentWorkflow({
         units,
         onStep,
         onToken,
+        onProvider: handleProvider,
+        providerInfo: null,
         pyqChunks: [],
         syllabusChunks: [],
         notesChunks: [],
@@ -44,17 +53,23 @@ async function runAgentWorkflow({
 
     console.log(`[Agent Dispatcher] Invoking workflow for intent='${intent}', subject='${subject}', examType='${examType}', units=[${units}]`);
 
+    let result = null;
     if (intent === 'exam') {
-        return await examAgentGraph.invoke(initialState);
+        result = await examAgentGraph.invoke(initialState);
     } else if (intent === 'notes') {
-        return await notesAgentGraph.invoke(initialState);
+        result = await notesAgentGraph.invoke(initialState);
     } else if (intent === 'syllabus') {
-        return await syllabusAgentGraph.invoke(initialState);
+        result = await syllabusAgentGraph.invoke(initialState);
     } else if (intent === 'tutor') {
-        return await tutorAgentGraph.invoke(initialState);
+        result = await tutorAgentGraph.invoke(initialState);
     } else {
         throw new Error(`Unknown or unhandled intent: ${intent}`);
     }
+
+    if (result && capturedProvider) {
+        result.providerInfo = capturedProvider;
+    }
+    return result;
 }
 
 module.exports = {

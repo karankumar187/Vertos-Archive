@@ -118,8 +118,9 @@ async function generateQuestionsNode(state) {
     const syllabusContext = (state.syllabusChunks || []).slice(0, 10).map(c => c.text).join('\n---\n');
 
     const systemPrompt = `
-You are the Master Exam Generator for Verto AI.
+You are an Academic Exam Specialist for Lovely Professional University.
 Generate a complete, official university exam paper for ${state.subject || 'the course'}.
+Do NOT mention internal architecture, agents, or pipeline nodes in your response.
 
 Exam Type: ${state.examType?.toUpperCase() || 'PRACTICE'}
 Target Format: ${state.format === 'subjective' ? 'Subjective / Theory' : 'Multiple Choice Questions (MCQ)'}
@@ -163,7 +164,8 @@ ${pyqContext || 'No past papers found. Generate high-quality university standard
         onToken: (token) => {
             generatedContent += token;
             if (state.onToken) state.onToken(token);
-        }
+        },
+        onProvider: state.onProvider
     });
 
     return { generatedContent };

@@ -231,8 +231,8 @@ const MessageBubble = React.memo(function MessageBubble({ msg, onRegenerate, use
           width: "100%",
           overflowX: "auto"
         }}>
-          {!isUser && (msg.currentStep || (msg.agentSteps && msg.agentSteps.length > 0)) && (
-            <AgentStepIndicator currentStep={msg.currentStep} steps={msg.agentSteps} />
+          {!isUser && isStreaming && msg.currentStep && (
+            <AgentStepIndicator currentStep={msg.currentStep} />
           )}
           <div style={{
           fontFamily: "'Inter', sans-serif",
@@ -405,46 +405,67 @@ const MessageBubble = React.memo(function MessageBubble({ msg, onRegenerate, use
                 </button>
             )}
 
-            {!isUser && (msg.providerUsed || msg.provider) && (() => {
+            {!isUser && (msg.providerUsed || msg.provider || uniqueSources.length > 0) && (() => {
                 const p = msg.providerUsed || msg.provider;
-                // Confidence comes from the initial provider event (before any fallback)
-                const conf = msg.provider?.confidence ?? msg.provider?.effectiveConfidence ?? null;
+                // Confidence comes from providerUsed or provider
+                const conf = msg.providerUsed?.confidence ?? msg.provider?.confidence ?? msg.provider?.effectiveConfidence ?? null;
                 const isOverridden = !!msg.provider?.overrideReason;
                 const confColor = conf === null ? '#8b6535'
                     : conf >= 0.6 ? '#059669'
                     : conf >= 0.35 ? '#d97706'
                     : '#dc2626';
+                const retrievalType = msg.providerUsed?.retrievalType || msg.provider?.retrievalType || (uniqueSources.length > 0 ? 'Hybrid Vector RAG' : null);
+
                 return (
                     <div style={{
                         display: 'flex', alignItems: 'center', gap: '6px',
-                        marginLeft: 'auto',
+                        marginLeft: 'auto', flexWrap: 'wrap', justifyContent: 'flex-end'
                     }}>
-                        {/* Confidence badge — only shown for real RAG queries (no overrides) */}
+                        {/* Subtle Retrieval Architecture chip */}
+                        {retrievalType && (
+                            <div style={{
+                                display: 'flex', alignItems: 'center', gap: '4px',
+                                background: 'rgba(200, 134, 26, 0.07)', border: '1px solid rgba(200, 134, 26, 0.22)',
+                                padding: '2px 8px', borderRadius: '10px',
+                                fontSize: '0.64rem', color: '#935810', fontWeight: 600,
+                            }} title="Multi-stage vector search powered by Qdrant and lexical ranking">
+                                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                    <circle cx="11" cy="11" r="8" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35" />
+                                </svg>
+                                {retrievalType}
+                            </div>
+                        )}
+
+                        {/* Confidence badge */}
                         {!isOverridden && conf !== null && (
                             <div style={{
                                 display: 'flex', alignItems: 'center', gap: '3px',
                                 background: `${confColor}12`, border: `1px solid ${confColor}40`,
                                 padding: '2px 7px', borderRadius: '10px',
-                                fontSize: '0.62rem', color: confColor, fontWeight: 700,
-                            }} title="Retrieval confidence score — how well the database matched your query">
+                                fontSize: '0.64rem', color: confColor, fontWeight: 700,
+                            }} title="Retrieval match score from university database">
                                 <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                                 </svg>
-                                {Math.round(conf * 100)}%
+                                {Math.round(conf * 100)}% Match
                             </div>
                         )}
+
                         {/* Provider badge */}
-                        <div style={{
-                            display: 'flex', alignItems: 'center', gap: '4px',
-                            background: '#fdfaf5', border: '1px solid #e9dcc8',
-                            padding: '2px 8px', borderRadius: '10px',
-                            fontSize: '0.65rem', color: '#8b6535', fontWeight: 600,
-                        }} title={`Model: ${p.model}${p.fallback ? ' (fallback)' : ''}`}>
-                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
-                            </svg>
-                            {p.providerName}{p.fallback ? ' ↩' : ''}
-                        </div>
+                        {p && (
+                            <div style={{
+                                display: 'flex', alignItems: 'center', gap: '4px',
+                                background: '#fdfaf5', border: '1px solid #e9dcc8',
+                                padding: '2px 8px', borderRadius: '10px',
+                                fontSize: '0.64rem', color: '#8b6535', fontWeight: 600,
+                            }} title={`Model: ${p.model || ''}${p.fallback ? ' (fallback)' : ''}`}>
+                                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+                                </svg>
+                                {p.providerName}{p.fallback ? ' ↩' : ''}
+                            </div>
+                        )}
                     </div>
                 );
             })()}

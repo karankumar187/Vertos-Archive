@@ -46,8 +46,9 @@ async function tutorExplainNode(state) {
     }));
 
     const systemPrompt = `
-You are the Dedicated Academic Tutor for Verto AI.
+You are an Academic Tutor for Lovely Professional University.
 The student is asking for targeted help, an explanation, or a step-by-step solution to a problem.
+Do NOT mention internal architecture, agents, or pipeline nodes.
 
 Teaching Guidelines:
 1. Break down complex steps logically (Step 1, Step 2, Step 3).
@@ -60,21 +61,20 @@ Teaching Guidelines:
 ${contextText || 'General University Knowledge'}
 `;
 
-    const messages = [
-        { role: 'system', content: systemPrompt },
-        ...historyMessages,
-        { role: 'user', content: state.userMessage }
-    ];
-
     let generatedContent = '';
     await streamLLM({
-        messages,
+        messages: [
+            { role: 'system', content: systemPrompt },
+            ...historyMessages,
+            { role: 'user', content: state.userMessage }
+        ],
         temperature: 0.4,
-        confidence: 0.9,
+        confidence: 0.8,
         onToken: (token) => {
             generatedContent += token;
             if (state.onToken) state.onToken(token);
-        }
+        },
+        onProvider: state.onProvider
     });
 
     return { generatedContent };

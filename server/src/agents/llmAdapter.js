@@ -46,13 +46,16 @@ async function callLLMJson({ messages, temperature = 0.2, confidence = 0.8 }) {
  * Robust streaming LLM call that invokes onToken(tokenText) for each chunk.
  * Tries providers in waterfall sequence until one successfully initiates and streams.
  */
-async function streamLLM({ messages, temperature = 0.5, confidence = 0.8, onToken }) {
+async function streamLLM({ messages, temperature = 0.5, confidence = 0.8, onToken, onProvider }) {
     const providers = getProvidersWaterfall(confidence);
     let lastError = null;
 
     for (const provider of providers) {
         try {
             console.log(`[LLM Adapter] Streaming response from ${provider.providerName} (${provider.model})...`);
+            if (onProvider) {
+                onProvider({ providerName: provider.providerName, model: provider.model });
+            }
             
             const stream = await provider.client.chat.completions.create({
                 model: provider.model,
