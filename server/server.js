@@ -41,7 +41,15 @@ const allowedOrigins = [
     /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/,  // any localhost port
 ];
 if (process.env.CLIENT_URL) {
-    allowedOrigins.push(process.env.CLIENT_URL);
+    const urls = process.env.CLIENT_URL.split(',').map(u => u.trim());
+    urls.forEach(u => {
+        allowedOrigins.push(u);
+        if (u.includes('://www.')) {
+            allowedOrigins.push(u.replace('://www.', '://'));
+        } else if (u.includes('://')) {
+            allowedOrigins.push(u.replace('://', '://www.'));
+        }
+    });
 }
 
 app.use(cors({
