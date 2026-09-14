@@ -69,6 +69,22 @@ async function notesMiningNode(state) {
 }
 
 async function progressiveNotesGeneratorNode(state) {
+    if (!state.subject) {
+        const noSubjectMsg = "Please specify which course or subject code you need study notes for (e.g. MTH 174, CSE 332, INT 402).";
+        if (state.onToken) state.onToken(noSubjectMsg);
+        return { generatedContent: noSubjectMsg };
+    }
+
+    const syllabusChunks = state.syllabusChunks || [];
+    const notesChunks = state.notesChunks || [];
+
+    // Zero-document check: if no notes and no syllabus chunks found in archive
+    if (syllabusChunks.length === 0 && notesChunks.length === 0) {
+        const notEnoughMsg = `### ⚠️ Not Enough Information in Archive\n\nWe don't have uploaded lecture notes or syllabus documents for **${state.subject}** in the Vertos Archive yet.\n\nTo ensure academic rigor and avoid generating unverified or hallucinated material, notes generation is paused.\n\n**How to get notes for this course:**\n- Upload teacher notes, PPTs, or the syllabus for **${state.subject}** via the **Contribute** tab.\n- Once uploaded, our AI will index the material to generate complete topic-wise notes, formulas, and revision kits!`;
+        if (state.onToken) state.onToken(notEnoughMsg);
+        return { generatedContent: notEnoughMsg };
+    }
+
     if (state.onStep) {
         state.onStep({
             step: 'deep_expansion',
@@ -78,12 +94,12 @@ async function progressiveNotesGeneratorNode(state) {
         });
     }
 
-    const syllabusText = (state.syllabusChunks || []).slice(0, 15).map(c => c.text).join('\n---\n');
-    const notesText = (state.notesChunks || []).slice(0, 30).map(c => c.text).join('\n---\n');
+    const syllabusText = syllabusChunks.slice(0, 15).map(c => c.text).join('\n---\n');
+    const notesText = notesChunks.slice(0, 30).map(c => c.text).join('\n---\n');
 
     const systemPrompt = `
 You are an Academic Professor for Lovely Professional University.
-Generate exhaustive, textbook-grade study notes for ${state.subject || 'the course'}.
+Generate exhaustive, textbook-grade study notes for ${state.subject}.
 Do NOT mention internal architecture, agents, or pipeline nodes.
 
 TARGET SCOPE:
@@ -92,7 +108,7 @@ TARGET SCOPE:
 
 STRICT ANTI-SUMMARY MANDATE (CRITICAL):
 1. Under NO circumstances should you provide a brief, 2-line summary. Students need full, rigorous study material.
-2. Cover EVERY topic and subtopic mentioned in the uploaded notes and official syllabus.
+2. Ground your explanations strictly on the provided syllabus and uploaded notes context.
 3. Every section MUST include:
    - **Theoretical Foundation**: Full, rigorous definitions and underlying mechanisms.
    - **Formulas & Math**: Every equation written in LaTeX ($...$ or $$...$$) with variable definitions.
@@ -108,7 +124,14 @@ Format with clear Markdown headers:
 ...
 `;
 
-    const userPrompt = `Generate comprehensive, highly detailed notes covering all points from the uploaded notes and syllabus for ${state.subject || 'the requested course'}.`;
+    const userPrompt = `Generate comprehensive, highly detailed notes covering all points from the uploaded notes and syllabus for ${state.subject}.
+
+=== Official Syllabus Context ===
+${syllabusText || 'No official syllabus document found; using uploaded lecture notes.'}
+
+=== Uploaded Notes Context ===
+${notesText || 'No uploaded lecture notes found; expanding based on official syllabus topics.'}
+`;
 
     let generatedContent = '';
     await streamLLM({
@@ -129,6 +152,11 @@ Format with clear Markdown headers:
 }
 
 async function notesRevisionKitNode(state) {
+    // If subject was missing or there was not enough info in archive, skip revision kit
+    if (!state.subject || !state.generatedContent || state.generatedContent.includes('Not Enough Information in Archive') || state.generatedContent.includes('Please specify which course')) {
+        return { generatedContent: state.generatedContent || '' };
+    }
+
     if (state.onStep) {
         state.onStep({
             step: 'revision_kit',

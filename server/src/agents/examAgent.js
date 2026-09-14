@@ -102,6 +102,22 @@ async function mapSyllabusNode(state) {
 }
 
 async function generateQuestionsNode(state) {
+    if (!state.subject) {
+        const noSubjectMsg = "Which course or subject code is this exam practice for? (e.g. MTH 174, CSE 332, INT 402)";
+        if (state.onToken) state.onToken(noSubjectMsg);
+        return { generatedContent: noSubjectMsg };
+    }
+
+    const pyqChunks = state.pyqChunks || [];
+    const syllabusChunks = state.syllabusChunks || [];
+
+    // Zero-document check: if no PYQs and no syllabus in archive, stop to prevent hallucinating exam questions
+    if (pyqChunks.length === 0 && syllabusChunks.length === 0) {
+        const notEnoughMsg = `### ⚠️ Not Enough Information in Archive\n\nWe don't have past year question papers (PYQs) or syllabus documents for **${state.subject}** in the Vertos Archive yet.\n\nTo ensure question papers strictly follow Lovely Professional University's examination pattern, unit quotas, and curriculum standards, question generation requires source documents.\n\n**How to enable exam practice for ${state.subject}:**\n- Upload past exam papers, assignments, or the course syllabus via the **Contribute** tab.\n- Once uploaded, our AI will index the material to generate official-pattern mock exams with step-by-step explanations!`;
+        if (state.onToken) state.onToken(notEnoughMsg);
+        return { generatedContent: notEnoughMsg };
+    }
+
     if (state.onStep) {
         state.onStep({
             step: 'generating_questions',
@@ -114,12 +130,12 @@ async function generateQuestionsNode(state) {
     const unitsToGenerate = Object.keys(state.unitQuotas).map(Number);
     const totalExpected = Object.values(state.unitQuotas).reduce((a, b) => a + b, 0);
 
-    const pyqContext = (state.pyqChunks || []).slice(0, 15).map(c => c.text).join('\n---\n');
-    const syllabusContext = (state.syllabusChunks || []).slice(0, 10).map(c => c.text).join('\n---\n');
+    const pyqContext = pyqChunks.slice(0, 15).map(c => c.text).join('\n---\n');
+    const syllabusContext = syllabusChunks.slice(0, 10).map(c => c.text).join('\n---\n');
 
     const systemPrompt = `
 You are an Academic Exam Specialist for Lovely Professional University.
-Generate a complete, official university exam paper for ${state.subject || 'the course'}.
+Generate a complete, official university exam paper for ${state.subject}.
 Do NOT mention internal architecture, agents, or pipeline nodes in your response.
 
 Exam Type: ${state.examType?.toUpperCase() || 'PRACTICE'}
@@ -158,7 +174,7 @@ ${syllabusContext || 'Standard University Syllabus'}
 ${pyqContext || `No prior question papers found for ${state.subject}. Strictly derive questions from the syllabus topics above.`}
 `;
 
-    const userPrompt = `Generate the complete question paper for ${state.subject || 'the course'} following all unit quotas. Ensure every option A), B), C), D) is on its own new line.`;
+    const userPrompt = `Generate the complete question paper for ${state.subject} following all unit quotas. Ensure every option A), B), C), D) is on its own new line.`;
 
     let generatedContent = '';
     await streamLLM({
@@ -179,6 +195,11 @@ ${pyqContext || `No prior question papers found for ${state.subject}. Strictly d
 }
 
 async function reflectionAuditorNode(state) {
+    // Skip audit if missing subject or not enough info
+    if (!state.subject || !state.generatedContent || state.generatedContent.includes('Not Enough Information in Archive') || state.generatedContent.includes('Which course or subject code')) {
+        return { confidence: 1.0, issues: [], needsCorrection: false };
+    }
+
     if (state.onStep) {
         state.onStep({
             step: 'auditing_quality',
@@ -218,6 +239,11 @@ async function reflectionAuditorNode(state) {
 }
 
 async function explainabilityNode(state) {
+    // Skip attribution report if missing subject or not enough info
+    if (!state.subject || !state.generatedContent || state.generatedContent.includes('Not Enough Information in Archive') || state.generatedContent.includes('Which course or subject code')) {
+        return { generatedContent: state.generatedContent || '', attributionReport: null };
+    }
+
     if (state.onStep) {
         state.onStep({
             step: 'explainability',

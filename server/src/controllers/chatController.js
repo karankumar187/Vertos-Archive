@@ -439,6 +439,32 @@ exports.sendMessage = async (req, res) => {
         console.log(`[QueryClassifier] isRagQuery=${isRagQuery}, isCasualChat=${isCasualChat}, isGeneralTask=${isGeneralTask}, stickyApplied=${!!(currentFilters.subject && !_hasExplicitCourseCode)}`);
 
         // ── 5a. Perform Hybrid Search (RAG queries only) ──────────────────────
+        const isAcademicCourseQuery = !isCasualChat && (isSyllabusRequest || _isMidTermEarly || _isEteEarly || _isEtpEarly ||
+                           _isCaEarly || _isNotesEarly || _isPyqEarly);
+
+        // Guard 1: If query is an academic course request but no course code was found anywhere
+        if (isAcademicCourseQuery && !currentFilters.subject) {
+            let question = "Which course or subject code are you looking for? (e.g. MTH 174, CSE 332, INT 402)";
+            if (_isNotesEarly) question = "Which course or subject code do you need study notes for? (e.g. MTH 174, CSE 332, INT 402)";
+            else if (isSyllabusRequest) question = "Which course or subject code would you like the syllabus for? (e.g. MTH 174, CSE 332, INT 402)";
+            else if (_isCaEarly || _isMidTermEarly || _isEteEarly || _isEtpEarly || _isPyqEarly) question = "Which course or subject code is this exam practice for? (e.g. MTH 174, CSE 332, INT 402)";
+
+            res.setHeader('Content-Type', 'text/event-stream');
+            res.setHeader('Cache-Control', 'no-cache');
+            res.setHeader('Connection', 'keep-alive');
+
+            res.write(`data: ${JSON.stringify({ text: question })}\n\n`);
+            res.write('data: [DONE]\n\n');
+
+            const assistantMsg = new Message({
+                conversationId,
+                role: 'assistant',
+                content: question
+            });
+            await assistantMsg.save();
+            return res.end();
+        }
+
         // For notes requests, fetch more chunks (150) to cover large documents thoroughly
         const searchLimit = (currentFilters.category === 'notes') ? 150 : 40;
         let searchResults = [];
@@ -452,6 +478,26 @@ exports.sendMessage = async (req, res) => {
                 currentFilters.category = 'syllabus';
                 searchResults = await performHybridSearch(content, currentFilters);
             }
+        }
+
+        // Guard 2: If user asked for academic course material, but 0 documents exist in the archive for this subject
+        if (isAcademicCourseQuery && currentFilters.subject && (!searchResults || searchResults.length === 0)) {
+            const notEnoughMsg = `### ⚠️ Not Enough Information in Archive\n\nWe don't have study material or syllabus documents for **${currentFilters.subject}** in the Vertos Archive yet.\n\nTo ensure complete academic accuracy and prevent unverified content, please upload notes, syllabus, or past papers for **${currentFilters.subject}** via the **Contribute** tab.\n\nOnce uploaded, I'll be ready to assist you with comprehensive notes and practice exams!`;
+
+            res.setHeader('Content-Type', 'text/event-stream');
+            res.setHeader('Cache-Control', 'no-cache');
+            res.setHeader('Connection', 'keep-alive');
+
+            res.write(`data: ${JSON.stringify({ text: notEnoughMsg })}\n\n`);
+            res.write('data: [DONE]\n\n');
+
+            const assistantMsg = new Message({
+                conversationId,
+                role: 'assistant',
+                content: notEnoughMsg
+            });
+            await assistantMsg.save();
+            return res.end();
         }
 
         // Build context string from search results

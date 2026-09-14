@@ -29,6 +29,19 @@ async function retrieveSyllabusNode(state) {
 }
 
 async function formatSyllabusNode(state) {
+    if (!state.subject) {
+        const noSubjectMsg = "Which course or subject code would you like the syllabus for? (e.g. MTH 174, CSE 332, INT 402)";
+        if (state.onToken) state.onToken(noSubjectMsg);
+        return { generatedContent: noSubjectMsg };
+    }
+
+    const syllabusChunks = state.syllabusChunks || [];
+    if (syllabusChunks.length === 0) {
+        const notEnoughMsg = `### ⚠️ Not Enough Information in Archive\n\nWe don't have the official syllabus document for **${state.subject}** in the Vertos Archive yet.\n\nTo ensure complete curriculum accuracy and avoid unverified topic outlines, please upload the official course syllabus or curriculum document for **${state.subject}** via the **Contribute** tab.\n\nOnce uploaded, I will index the official 6 units, lecture breakdown, and prescribed textbooks!`;
+        if (state.onToken) state.onToken(notEnoughMsg);
+        return { generatedContent: notEnoughMsg };
+    }
+
     if (state.onStep) {
         state.onStep({
             step: 'structuring_blueprint',
@@ -38,28 +51,29 @@ async function formatSyllabusNode(state) {
         });
     }
 
-    const syllabusText = (state.syllabusChunks || []).map(c => c.text).join('\n---\n');
+    const syllabusText = syllabusChunks.map(c => c.text).join('\n---\n');
 
     const systemPrompt = `
 You are an expert academic advisor for Lovely Professional University.
-Format an official, comprehensive syllabus document for ${state.subject || 'the course'}.
+Format an official, comprehensive syllabus document for ${state.subject}.
 Do not mention internal architecture, agents, or pipeline nodes.
+Ground all topics strictly on the uploaded syllabus archive text below.
 
 Format Requirements:
 1. **Course Header**: Course Code, Course Title, Credit Weightage, Prerequisites.
-2. **6-Unit Breakdown**: Provide Unit 1 through Unit 6 with detailed bulleted topics under each.
+2. **6-Unit Breakdown**: Provide Unit 1 through Unit 6 with detailed bulleted topics under each based on the syllabus document.
 3. **Prescribed Textbooks & Reference Materials**: Author, Title, Edition.
 4. **Assessment Weightage**: Continuous Assessment (CA: 30%), Mid-Term (20%), End-Term (ETE: 50%).
 
 --- Syllabus Archive ---
-${syllabusText || 'No uploaded syllabus found. Provide the standard curriculum outline for this course code.'}
+${syllabusText}
 `;
 
     let generatedContent = '';
     await streamLLM({
         messages: [
             { role: 'system', content: systemPrompt },
-            { role: 'user', content: `Provide the complete syllabus structure for ${state.subject || 'the course'}.` }
+            { role: 'user', content: `Provide the complete syllabus structure for ${state.subject} based strictly on the uploaded syllabus.` }
         ],
         temperature: 0.2,
         confidence: 0.9,

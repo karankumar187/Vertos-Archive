@@ -109,6 +109,7 @@ Respond strictly with a JSON object matching this schema:
 Rules:
 - "units": Array of integers between 0 and 6. For Mid-Term, default to [1, 2, 3] if unspecified. For ETE, default to [1, 2, 3, 4, 5, 6]. For CA, extract specific units mentioned (e.g. "Unit 1 and 2" -> [1, 2]); if none mentioned for CA, leave empty [].
 - "format": null if unspecified.
+- CRITICAL: If intent is "exam", "notes", or "syllabus", and NO course code is present in the message or known hint, you MUST set "needsClarification": true, "subject": null, and provide a polite "clarificationQuestion" asking which course code (e.g. MTH 174, CSE 332, INT 402) they need.
 `;
 
     try {
@@ -148,19 +149,28 @@ Rules:
             result.format = explicitFormat;
         }
 
-        // ── STRICT REQUIREMENT GATHERING FOR EXAM ─────────────────────────────
-        // Never generate exam questions without knowing: Course, Question Type, and Units
-        if (result.intent === 'exam') {
-            const course = result.subject || detectedSubject;
+        // ── STRICT REQUIREMENT GATHERING FOR ALL ACADEMIC INTENTS ────────────
+        // Never generate exam questions, notes, or syllabus without knowing the Course Code!
+        const course = result.subject || detectedSubject;
 
+        if (['exam', 'notes', 'syllabus'].includes(result.intent)) {
             // 1. Missing Course Code:
             if (!course) {
                 result.needsClarification = true;
-                result.clarificationQuestion = "Which course or subject code is this exam practice for? (e.g. MTH 174, CSE 332, INT 402)";
+                if (result.intent === 'notes') {
+                    result.clarificationQuestion = "Which course or subject code do you need study notes for? (e.g. MTH 174, CSE 332, INT 402)";
+                } else if (result.intent === 'syllabus') {
+                    result.clarificationQuestion = "Which course or subject code would you like the syllabus for? (e.g. MTH 174, CSE 332, INT 402)";
+                } else {
+                    result.clarificationQuestion = "Which course or subject code is this exam practice for? (e.g. MTH 174, CSE 332, INT 402)";
+                }
                 return result;
             }
             result.subject = course;
+        }
 
+        // Exam-specific strict checks (format & units)
+        if (result.intent === 'exam') {
             // 2. Missing Question Format (MCQ vs Subjective):
             if (!result.format && !explicitFormat) {
                 result.needsClarification = true;
@@ -194,16 +204,33 @@ Rules:
         const fallbackSubject = detectedSubject;
 
         // Strict fallback clarification
-        if (intent === 'exam' && !explicitFormat) {
-            return {
-                intent,
-                subject: fallbackSubject,
-                examType: /\bca\b/i.test(userMessage) ? 'ca' : (/\bmid\b/i.test(userMessage) ? 'midterm' : 'ete'),
-                units: [],
-                format: null,
-                needsClarification: true,
-                clarificationQuestion: `Would you like **Multiple Choice Questions (MCQ)** or **Subjective / Theory Questions** for **${fallbackSubject || 'this course'}**?`
-            };
+        if (['exam', 'notes', 'syllabus'].includes(intent)) {
+            if (!fallbackSubject) {
+                let question = "Which course or subject code are you looking for? (e.g. MTH 174, CSE 332, INT 402)";
+                if (intent === 'notes') question = "Which course or subject code do you need study notes for? (e.g. MTH 174, CSE 332, INT 402)";
+                else if (intent === 'syllabus') question = "Which course or subject code would you like the syllabus for? (e.g. MTH 174, CSE 332, INT 402)";
+                return {
+                    intent,
+                    subject: null,
+                    examType: /\bca\b/i.test(userMessage) ? 'ca' : (/\bmid\b/i.test(userMessage) ? 'midterm' : 'ete'),
+                    units: [],
+                    format: explicitFormat || null,
+                    needsClarification: true,
+                    clarificationQuestion: question
+                };
+            }
+
+            if (intent === 'exam' && !explicitFormat) {
+                return {
+                    intent,
+                    subject: fallbackSubject,
+                    examType: /\bca\b/i.test(userMessage) ? 'ca' : (/\bmid\b/i.test(userMessage) ? 'midterm' : 'ete'),
+                    units: [],
+                    format: null,
+                    needsClarification: true,
+                    clarificationQuestion: `Would you like **Multiple Choice Questions (MCQ)** or **Subjective / Theory Questions** for **${fallbackSubject}**?`
+                };
+            }
         }
 
         return {
