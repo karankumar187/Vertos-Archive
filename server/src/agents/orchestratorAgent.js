@@ -122,6 +122,14 @@ Rules:
             confidence: 0.9,
         });
 
+        // Ensure intent is present and valid
+        if (!result.intent || !['exam', 'notes', 'syllabus', 'tutor', 'casual'].includes(result.intent)) {
+            if (/\b(notes|study\s*material|lecture\s*notes)\b/i.test(userMessage)) result.intent = 'notes';
+            else if (/\b(syllabus|course\s*outline)\b/i.test(userMessage)) result.intent = 'syllabus';
+            else if (/\b(ca|midterm|mid[\s-]?term|ete|etp|pyq|mcq|practice\s*questions?|exam)\b/i.test(userMessage)) result.intent = 'exam';
+            else result.intent = 'casual';
+        }
+
         // Use DB-resolved subject if the LLM subject is null or generic
         if (!result.subject && detectedSubject) {
             result.subject = detectedSubject;
