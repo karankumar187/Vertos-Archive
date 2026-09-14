@@ -9,7 +9,7 @@ const Document = require('../models/Document');
  * Also resolves course codes using database lookups.
  */
 async function classifyIntent({ userMessage, history = [], currentCourseContext = null }) {
-    // 1. First extract course code candidate from text if present
+    // 1. Extract course code candidate from userMessage, then activeCourse, then history
     let detectedSubject = currentCourseContext || null;
     const fullCourseMatch = userMessage.match(/\b([a-zA-Z]{2,4})[-_\s]*(\d{3})\b/i);
     const numCourseMatch = userMessage.match(/\b(\d{3})\b/);
@@ -31,6 +31,55 @@ async function classifyIntent({ userMessage, history = [], currentCourseContext 
         }
     }
 
+    // If still no subject detected, scan recent conversation history (newest to oldest)
+    let inheritedExamType = null;
+    let inheritedUnits = [];
+
+    if (Array.isArray(history) && history.length > 0) {
+        for (let i = history.length - 1; i >= 0; i--) {
+            const msgText = history[i].content || '';
+            const lowerText = msgText.toLowerCase();
+
+            // Detect subject if not found yet
+            if (!detectedSubject) {
+                const hMatch = msgText.match(/\b([a-zA-Z]{2,4})[-_\s]*(\d{3})\b/i);
+                if (hMatch) {
+                    try {
+                        const regexStr = `^${hMatch[1]}[-_\\s]*${hMatch[2]}$`;
+                        const uniqueSubjects = await Document.distinct('subject', { subject: new RegExp(regexStr, 'i') });
+                        detectedSubject = uniqueSubjects.length > 0 ? uniqueSubjects[0] : `${hMatch[1].toUpperCase()} ${hMatch[2]}`;
+                    } catch (e) {
+                        detectedSubject = `${hMatch[1].toUpperCase()} ${hMatch[2]}`;
+                    }
+                }
+            }
+
+            // Inherit examType if recent user turn had it
+            if (!inheritedExamType) {
+                if (/\b(ca|class[\s-]?assessment)\b/i.test(lowerText)) inheritedExamType = 'ca';
+                else if (/\b(midterm|mid[\s-]?term|mte)\b/i.test(lowerText)) inheritedExamType = 'midterm';
+                else if (/\b(ete|end[\s-]?term|endterm)\b/i.test(lowerText)) inheritedExamType = 'ete';
+                else if (/\b(etp|practical)\b/i.test(lowerText)) inheritedExamType = 'etp';
+            }
+
+            // Inherit units if recent user turn had it
+            if (inheritedUnits.length === 0) {
+                const uMatch = lowerText.match(/\bunit[s]?\s*([0-6](?:\s*(?:,|and|to|-)\s*[0-6])*)/i);
+                if (uMatch) {
+                    const nums = uMatch[1].match(/[0-6]/g);
+                    if (nums) inheritedUnits = [...new Set(nums.map(Number))];
+                }
+            }
+        }
+    }
+
+    // Explicit format detection (never guess between MCQ and Subjective)
+    const hasExplicitMcq = /\b(mcq|mcqs|objective|multiple\s*choice)\b/i.test(userMessage);
+    const hasExplicitSubjective = /\b(subjective|theory|descriptive|long\s*answer|short\s*answer)\b/i.test(userMessage);
+    let explicitFormat = null;
+    if (hasExplicitMcq) explicitFormat = 'mcq';
+    else if (hasExplicitSubjective) explicitFormat = 'subjective';
+
     // 2. Structured LLM Classification
     const prompt = `
 You are the central Orchestrator for "Verto AI", a university academic assistant.
@@ -44,7 +93,6 @@ Categories:
 5. "casual": General or normal chat, greetings ("hi", "hello"), identity questions ("who are you", "what can you do", "help me"), general college/life advice, jokes, or any message not specifically asking to generate course exam questions, notes, or syllabus.
 
 Known course code hint: ${detectedSubject || 'None yet'}
-
 Input message: "${userMessage}"
 
 Respond strictly with a JSON object matching this schema:
@@ -53,15 +101,14 @@ Respond strictly with a JSON object matching this schema:
   "subject": string | null,
   "examType": "ca" | "midterm" | "ete" | "etp" | null,
   "units": number[],
-  "format": "mcq" | "subjective" | "mixed",
+  "format": "mcq" | "subjective" | null,
   "needsClarification": boolean,
   "clarificationQuestion": string | null
 }
 
 Rules:
 - "units": Array of integers between 0 and 6. For Mid-Term, default to [1, 2, 3] if unspecified. For ETE, default to [1, 2, 3, 4, 5, 6]. For CA, extract specific units mentioned (e.g. "Unit 1 and 2" -> [1, 2]); if none mentioned for CA, leave empty [].
-- If user requests exam questions for CA but mentions no units and no syllabus topic, set needsClarification: true and ask politely which unit(s) their CA covers.
-- "format": Default to "mcq" unless user explicitly asks for subjective / theory questions.
+- "format": null if unspecified.
 `;
 
     try {
@@ -88,6 +135,48 @@ Rules:
             result.units = [];
         }
 
+        // Inherit examType & units from recent history if user is replying to a clarification
+        if (!result.examType && inheritedExamType) {
+            result.examType = inheritedExamType;
+        }
+        if (result.units.length === 0 && inheritedUnits.length > 0) {
+            result.units = inheritedUnits;
+        }
+
+        // Apply explicit format override if detected directly from keywords
+        if (explicitFormat) {
+            result.format = explicitFormat;
+        }
+
+        // ── STRICT REQUIREMENT GATHERING FOR EXAM ─────────────────────────────
+        // Never generate exam questions without knowing: Course, Question Type, and Units
+        if (result.intent === 'exam') {
+            const course = result.subject || detectedSubject;
+
+            // 1. Missing Course Code:
+            if (!course) {
+                result.needsClarification = true;
+                result.clarificationQuestion = "Which course or subject code is this exam practice for? (e.g. MTH 174, CSE 332, INT 402)";
+                return result;
+            }
+            result.subject = course;
+
+            // 2. Missing Question Format (MCQ vs Subjective):
+            if (!result.format && !explicitFormat) {
+                result.needsClarification = true;
+                const unitText = result.units && result.units.length > 0 ? ` for Unit ${result.units.join(', ')}` : '';
+                result.clarificationQuestion = `To generate the right questions for **${course}**${unitText}, would you like:\n\n1. **Multiple Choice Questions (MCQ)**\n2. **Subjective / Theory Questions**\n\nPlease let me know your preferred format!`;
+                return result;
+            }
+
+            // 3. Missing Units for CA:
+            if (result.examType === 'ca' && (!result.units || result.units.length === 0)) {
+                result.needsClarification = true;
+                result.clarificationQuestion = `Which specific unit(s) should this Continuous Assessment (CA) cover for **${course}**? (e.g. Unit 1, Unit 2, or Units 1 & 2)`;
+                return result;
+            }
+        }
+
         return result;
     } catch (err) {
         console.error('[Orchestrator] Intent classification failed, falling back to heuristics:', err.message);
@@ -102,12 +191,27 @@ Rules:
         else if (isNotes) intent = 'notes';
         else if (isSyllabus) intent = 'syllabus';
 
+        const fallbackSubject = detectedSubject;
+
+        // Strict fallback clarification
+        if (intent === 'exam' && !explicitFormat) {
+            return {
+                intent,
+                subject: fallbackSubject,
+                examType: /\bca\b/i.test(userMessage) ? 'ca' : (/\bmid\b/i.test(userMessage) ? 'midterm' : 'ete'),
+                units: [],
+                format: null,
+                needsClarification: true,
+                clarificationQuestion: `Would you like **Multiple Choice Questions (MCQ)** or **Subjective / Theory Questions** for **${fallbackSubject || 'this course'}**?`
+            };
+        }
+
         return {
             intent,
-            subject: detectedSubject,
+            subject: fallbackSubject,
             examType: /\bca\b/i.test(userMessage) ? 'ca' : (/\bmid\b/i.test(userMessage) ? 'midterm' : 'ete'),
             units: [],
-            format: /\bsubjective\b/i.test(userMessage) ? 'subjective' : 'mcq',
+            format: explicitFormat || 'mcq',
             needsClarification: false,
             clarificationQuestion: null,
         };

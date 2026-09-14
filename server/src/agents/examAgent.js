@@ -129,29 +129,36 @@ Unit Quota Breakdown:
 ${Object.entries(state.unitQuotas).map(([u, q]) => `- Unit ${u}: exactly ${q} questions`).join('\n')}
 
 STYLE & RIGOR POLICIES:
-1. PYQ Priority: If past year questions are in the reference context, include them directly with original university phrasing.
-2. For newly generated questions, strictly mimic the difficulty and numerical/coding depth of the past papers.
-3. MCQ Formatting Rule (STRICT):
-   - Every question must have options A), B), C), D) on their own SEPARATE lines. Never put options on the same line.
-   - Provide Answer and a clear technical explanation.
-4. Header Format:
+1. Topic Fidelity: All questions MUST be strictly based on the syllabus curriculum and topics of ${state.subject}.
+2. PYQ Priority: If past year questions are in the reference context, include them directly with original university phrasing.
+3. If no past year papers are uploaded for ${state.subject}, synthesize original university-grade questions using the official syllabus topics for the requested units.
+4. MCQ Formatting Rule (STRICT):
+   - You MUST place each option on a NEW LINE:
+     A) ...
+     B) ...
+     C) ...
+     D) ...
+   - NEVER put options A), B), C), D) on the same line or in a single paragraph.
+   - Separate options and the Correct Answer with a blank line.
+5. Header Format:
    ## Unit [X] Questions
    ### Question 1: [Question text]
    A) [Option A]
    B) [Option B]
    C) [Option C]
    D) [Option D]
+
    **Correct Answer:** [Letter]
-   **Explanation:** [Brief explanation]
+   **Explanation:** [Brief technical explanation]
 
 --- Syllabi Context ---
 ${syllabusContext || 'Standard University Syllabus'}
 
 --- Past Year Papers Context ---
-${pyqContext || 'No past papers found. Generate high-quality university standard questions.'}
+${pyqContext || `No prior question papers found for ${state.subject}. Strictly derive questions from the syllabus topics above.`}
 `;
 
-    const userPrompt = `Generate the complete question paper for ${state.subject || 'the course'} following all unit quotas.`;
+    const userPrompt = `Generate the complete question paper for ${state.subject || 'the course'} following all unit quotas. Ensure every option A), B), C), D) is on its own new line.`;
 
     let generatedContent = '';
     await streamLLM({
