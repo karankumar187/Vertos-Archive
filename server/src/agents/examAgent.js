@@ -148,23 +148,39 @@ STYLE & RIGOR POLICIES:
 1. Topic Fidelity: All questions MUST be strictly based on the syllabus curriculum and topics of ${state.subject}.
 2. PYQ Priority: If past year questions are in the reference context, include them directly with original university phrasing.
 3. If no past year papers are uploaded for ${state.subject}, synthesize original university-grade questions using the official syllabus topics for the requested units.
-4. MCQ Formatting Rule (STRICT):
-   - You MUST place each option on a NEW LINE:
-     A) ...
-     B) ...
-     C) ...
-     D) ...
-   - NEVER put options A), B), C), D) on the same line or in a single paragraph.
-   - Separate options and the Correct Answer with a blank line.
+4. MCQ Formatting Rule (MANDATORY):
+   - You MUST format every MCQ with blank lines separating the question, options, correct answer, and explanation:
+
+   ### Question 1: [Question text]
+
+   **A)** [Option A text]
+
+   **B)** [Option B text]
+
+   **C)** [Option C text]
+
+   **D)** [Option D text]
+
+   **Correct Answer:** [A/B/C/D]
+
+   **Explanation:** [Concise technical rationale]
+
+   - STRICT BAN: NEVER place options A), B), C), D) together on the same line or in one paragraph. Each option MUST be on its own line preceded by a blank line and start with bold **A)**, **B)**, **C)**, **D)**.
+   - ALWAYS place a blank line before **Correct Answer:** and before **Explanation:**.
 5. Header Format:
    ## Unit [X] Questions
    ### Question 1: [Question text]
-   A) [Option A]
-   B) [Option B]
-   C) [Option C]
-   D) [Option D]
+
+   **A)** [Option A]
+
+   **B)** [Option B]
+
+   **C)** [Option C]
+
+   **D)** [Option D]
 
    **Correct Answer:** [Letter]
+
    **Explanation:** [Brief technical explanation]
 
 --- Syllabi Context ---
@@ -174,7 +190,7 @@ ${syllabusContext || 'Standard University Syllabus'}
 ${pyqContext || `No prior question papers found for ${state.subject}. Strictly derive questions from the syllabus topics above.`}
 `;
 
-    const userPrompt = `Generate the complete question paper for ${state.subject} following all unit quotas. Ensure every option A), B), C), D) is on its own new line.`;
+    const userPrompt = `Generate the complete question paper for ${state.subject} following all unit quotas. CRITICAL: Every single option must be on its own line with blank lines between **A)**, **B)**, **C)**, **D)**, and blank lines before **Correct Answer:** and **Explanation:**.`;
 
     let generatedContent = '';
     await streamLLM({

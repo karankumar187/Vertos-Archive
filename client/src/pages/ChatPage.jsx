@@ -139,9 +139,16 @@ const preprocessMath = (text) => {
     res = res.replace(/([^\n])\s*\$\$/g, '$1\n$$$$'); 
     res = res.replace(/\$\$\s*([^\n])/g, '$$$$\n$1');
     
-    // Fix common AI math syntax error where \begin is used without $$
-    // We wrap \begin{align}, \begin{matrix}, \begin{vmatrix}, \begin{equation} if they aren't wrapped
-    // To be safe, we'll just rely on the $$ normalization above since the AI is instructed to use $$.
+    // ── MCQ Structuring ──
+    // Separate question headers onto their own lines
+    res = res.replace(/(?:^|\n)[ \t]*(?:###[ \t]*)?(Question\s*\d+[:.])/gi, '\n\n### $1\n');
+    // Separate options A), B), C), D) or A., B., C., D. onto their own lines with bold prefix
+    res = res.replace(/(?:[ \t]*\n[ \t]*|[ \t]+)(?:\*\*)?(?:\()?([A-D])(?:\)|\.)(?:\*\*)?[ \t]+/g, '\n\n**$1)** ');
+    // Separate Correct Answer
+    res = res.replace(/(?:[ \t]*\n[ \t]*|[ \t]+)(?:\*\*)?(?:Correct Answer|Answer)(?::\*\*|:\s*|\*\*:)\s*(?:\*\*)?([A-D])(?:\*\*)?/gi, '\n\n**Correct Answer:** $1');
+    // Separate Explanation
+    res = res.replace(/(?:[ \t]*\n[ \t]*|[ \t]+)(?:\*\*)?Explanation(?::\*\*|:\s*|\*\*:)\s*/gi, '\n\n**Explanation:** ');
+
     return res;
 };
 
@@ -414,29 +421,11 @@ const MessageBubble = React.memo(function MessageBubble({ msg, onRegenerate, use
                     : conf >= 0.6 ? '#059669'
                     : conf >= 0.35 ? '#d97706'
                     : '#dc2626';
-                const retrievalType = msg.providerUsed?.retrievalType || msg.provider?.retrievalType || (uniqueSources.length > 0 ? 'Hybrid Vector RAG' : null);
-
                 return (
                     <div style={{
                         display: 'flex', alignItems: 'center', gap: '6px',
                         marginLeft: 'auto', flexWrap: 'wrap', justifyContent: 'flex-end'
                     }}>
-                        {/* Subtle Retrieval Architecture chip */}
-                        {retrievalType && (
-                            <div style={{
-                                display: 'flex', alignItems: 'center', gap: '4px',
-                                background: 'rgba(200, 134, 26, 0.07)', border: '1px solid rgba(200, 134, 26, 0.22)',
-                                padding: '2px 8px', borderRadius: '10px',
-                                fontSize: '0.64rem', color: '#935810', fontWeight: 600,
-                            }} title="Multi-stage vector search powered by Qdrant and lexical ranking">
-                                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                                    <circle cx="11" cy="11" r="8" />
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35" />
-                                </svg>
-                                {retrievalType}
-                            </div>
-                        )}
-
                         {/* Confidence badge */}
                         {!isOverridden && conf !== null && (
                             <div style={{
