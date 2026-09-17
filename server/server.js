@@ -155,14 +155,18 @@ app.get('/api/file/view', async (req, res) => {
     const { url, download, title } = req.query;
     if (!url) return res.status(400).send('Missing url parameter');
     
-    // Only allow Cloudinary URLs
-    if (!url.startsWith('https://res.cloudinary.com/')) {
-        return res.status(403).send('Forbidden: Only Cloudinary URLs are allowed');
+    const isCloudinary = url.startsWith('https://res.cloudinary.com/');
+    const isMyDrive = url.includes('workers.dev') || url.includes('nip.io') || url.includes('137.23.42.121') || (process.env.MEDIA_API_URL && url.includes(new URL(process.env.MEDIA_API_URL).hostname));
+    
+    if (!isCloudinary && !isMyDrive) {
+        return res.status(403).send('Forbidden: Only authorized storage URLs are allowed');
     }
     
     try {
-        const cloudinary = require('./src/config/cloudinary').cloudinary;
+        let cloudinary;
+        try { cloudinary = require('./src/config/cloudinary').cloudinary; } catch {}
         const https = require('https');
+        const http = require('http');
         const urlObj = new URL(url);
         const originalFilename = urlObj.pathname.split('/').pop() || 'document';
         const urlExt = originalFilename.split('.').pop().toLowerCase();
@@ -222,8 +226,9 @@ app.get('/api/file/view', async (req, res) => {
             };
 
             const safeUrl = new URL(getSafeTargetUrl(targetUrl)).href;
+            const protocol = safeUrl.startsWith('https:') ? https : http;
             
-            https.get(safeUrl, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' } }, (fileRes) => {
+            protocol.get(safeUrl, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' } }, (fileRes) => {
                 if ([301, 302, 307, 308].includes(fileRes.statusCode) && fileRes.headers.location) {
                     const redirectUrl = new URL(fileRes.headers.location, safeUrl).href;
                     fetchAndPipe(redirectUrl, redirectCount + 1, retryWithPdf);

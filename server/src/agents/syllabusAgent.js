@@ -54,16 +54,57 @@ async function formatSyllabusNode(state) {
     const syllabusText = syllabusChunks.map(c => c.text).join('\n---\n');
 
     const systemPrompt = `
-You are an expert academic advisor for Lovely Professional University.
-Format an official, comprehensive syllabus document for ${state.subject}.
+You are an expert Senior Academic Dean for Lovely Professional University.
+Format an official, beautifully structured course curriculum document for ${state.subject}.
 Do not mention internal architecture, agents, or pipeline nodes.
 Ground all topics strictly on the uploaded syllabus archive text below.
 
-Format Requirements:
-1. **Course Header**: Course Code, Course Title, Credit Weightage, Prerequisites.
-2. **6-Unit Breakdown**: Provide Unit 1 through Unit 6 with detailed bulleted topics under each based on the syllabus document.
-3. **Prescribed Textbooks & Reference Materials**: Author, Title, Edition.
-4. **Assessment Weightage**: Continuous Assessment (CA: 30%), Mid-Term (20%), End-Term (ETE: 50%).
+STRUCTURE & FORMATTING SPECIFICATION (MANDATORY):
+Follow this exact Markdown hierarchy and layout with dividers and tables:
+
+# 📚 Course Curriculum: ${state.subject}
+
+> **Course Code:** ${state.subject} | **Credit Weightage:** [Credits from archive, e.g. 4 Credits (L-T-P: 3-1-0)] | **Department:** [Department/School]
+
+---
+
+## 🎯 Course Overview & Objectives
+[A concise, professional 2-3 sentence overview describing the aim of this course and core learning outcomes based on the syllabus.]
+
+---
+
+## 📑 6-Unit Curriculum Blueprint
+
+For EACH unit (Unit 1 through Unit 6), follow this clean format:
+
+### Unit 1: [Unit Title]
+- **Core Topics:** [High-level topic list]
+- **Detailed Syllabus Topics:**
+  - [Sub-topic 1: key mechanisms, concepts]
+  - [Sub-topic 2: key mechanisms, concepts]
+  - [Sub-topic 3: key mechanisms, concepts]
+- **Practical / Laboratory Scope (if applicable):** [Lab topics or implementations]
+
+[Repeat identical clean structure for Unit 2, Unit 3, Unit 4, Unit 5, and Unit 6. NEVER skip or merge units.]
+
+---
+
+## 📖 Recommended Textbooks & Reference Materials
+Format as a clean Markdown table:
+| Category | Book Title & Author | Edition / Publisher |
+| :--- | :--- | :--- |
+| **Prescribed Textbook** | [Book title] by [Author] | [Edition / Publisher] |
+| **Reference Book** | [Book title] by [Author] | [Edition / Publisher] |
+
+---
+
+## ⚖️ Official Examination & Evaluation Scheme
+Format as a clean Markdown table:
+| Evaluation Component | Weightage | Units Covered | Testing Format |
+| :--- | :--- | :--- | :--- |
+| **Continuous Assessment (CA)** | 30% | Units 1–2 / Periodic | Class Tests, MCQs, Homework & Quizzes |
+| **Mid-Term Exam (MTE)** | 20% | Units 1, 2 & 3 | 40 MCQs or 15 Subjective Questions |
+| **End-Term Exam (ETE)** | 50% | All Units (1 to 6) | Comprehensive University Exam Paper |
 
 --- Syllabus Archive ---
 ${syllabusText}
@@ -73,7 +114,7 @@ ${syllabusText}
     await streamLLM({
         messages: [
             { role: 'system', content: systemPrompt },
-            { role: 'user', content: `Provide the complete syllabus structure for ${state.subject} based strictly on the uploaded syllabus.` }
+            { role: 'user', content: `Provide the complete, official syllabus blueprint for ${state.subject} based strictly on the uploaded syllabus archive, covering all 6 units, textbooks table, and exam scheme.` }
         ],
         temperature: 0.2,
         confidence: 0.9,

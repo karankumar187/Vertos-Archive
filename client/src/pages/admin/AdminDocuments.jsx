@@ -24,7 +24,7 @@ const FILE_PROXY_BASE = API_BASE.replace('/api', '');
 
 const getViewableUrl = (url, title = '', ext = '') => {
   if (!url || url === '#') return '#';
-  if (url.startsWith('https://res.cloudinary.com/')) {
+  if (url.startsWith('https://res.cloudinary.com/') || url.includes('/api/v1/media') || url.includes('nip.io') || url.includes('workers.dev')) {
     let proxyUrl = `${FILE_PROXY_BASE}/api/file/view?url=${encodeURIComponent(url)}&ext=${ext}`;
     if (title) proxyUrl += `&title=${encodeURIComponent(title)}`;
     return proxyUrl;

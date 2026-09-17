@@ -51,7 +51,7 @@ const FILE_PROXY_BASE = API_BASE.replace('/api', '');
 
 const getViewableUrl = (url, title = '', ext = '') => {
   if (!url || url === '#') return '#';
-  if (url.startsWith('https://res.cloudinary.com/')) {
+  if (url.startsWith('https://res.cloudinary.com/') || url.includes('/api/v1/media') || url.includes('nip.io') || url.includes('workers.dev')) {
     let params = `url=${encodeURIComponent(url)}`;
     if (title) params += `&title=${encodeURIComponent(title)}`;
     if (ext) params += `&ext=${ext}`;

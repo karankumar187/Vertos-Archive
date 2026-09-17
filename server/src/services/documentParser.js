@@ -46,35 +46,53 @@ const getFileCategory = (mimeTypeOrUrl) => {
  */
 const downloadFileBuffer = async (fileUrl) => {
     try {
-        const uploadIndex = fileUrl.indexOf('/upload/');
-        if (uploadIndex === -1) throw new Error('URL does not appear to be a Cloudinary URL (missing /upload/)');
+        // If file is stored on myDrive or any standard HTTP URL (not Cloudinary)
+        if (!fileUrl.includes('res.cloudinary.com')) {
+            const response = await axios.get(fileUrl, {
+                responseType: 'arraybuffer',
+                timeout: 30000,
+            });
+            console.log(`[Parser] Downloaded ${response.data.byteLength} bytes directly from storage URL.`);
+            return Buffer.from(response.data);
+        }
 
-        const beforeUpload = fileUrl.substring(0, uploadIndex);
-        const urlSegments = beforeUpload.split('/');
-        const resourceType = urlSegments[urlSegments.length - 1];
+        // Legacy Cloudinary signed download
+        const match = fileUrl.match(/\/(raw|image|video)\/(upload|authenticated)\/(?:s--[a-zA-Z0-9_-]+--\/)?(?:v\d+\/)?(.+?)$/);
+        if (match) {
+            const resource_type = match[1];
+            const type = match[2];
+            const publicIdWithExt = match[3];
 
-        let publicIdWithExt = fileUrl.substring(uploadIndex + '/upload/'.length);
-        publicIdWithExt = publicIdWithExt.replace(/^v\d+\//, '');
+            let signedUrl;
+            if (resource_type === 'image' || resource_type === 'video') {
+                const extMatch = publicIdWithExt.match(/\.([a-z0-9]+)$/i);
+                const format = extMatch ? extMatch[1] : undefined;
+                const publicId = extMatch ? publicIdWithExt.slice(0, -extMatch[0].length) : publicIdWithExt;
+                signedUrl = cloudinary.url(publicId, {
+                    sign_url: true,
+                    type,
+                    resource_type,
+                    ...(format ? { format } : {}),
+                    secure: true,
+                    expires_at: Math.floor(Date.now() / 1000) + 300,
+                });
+            } else {
+                signedUrl = cloudinary.utils.private_download_url(publicIdWithExt, '', { type, resource_type });
+            }
 
-        console.log(`[Parser] Cloudinary resource_type: "${resourceType}", public_id: "${publicIdWithExt}"`);
+            const response = await axios.get(signedUrl, {
+                responseType: 'arraybuffer',
+                timeout: 30000,
+            });
 
-        const signedUrl = cloudinary.url(publicIdWithExt, {
-            resource_type: resourceType || 'raw',
-            type: 'upload',
-            sign_url: true,
-            expires_at: Math.floor(Date.now() / 1000) + 300, // 5 min
-        });
+            console.log(`[Parser] Downloaded ${response.data.byteLength} bytes via signed Cloudinary URL.`);
+            return Buffer.from(response.data);
+        }
 
-        const response = await axios.get(signedUrl, {
-            responseType: 'arraybuffer',
-            timeout: 30000,
-        });
-
-        console.log(`[Parser] Downloaded ${response.data.byteLength} bytes via signed Cloudinary URL.`);
-        return Buffer.from(response.data);
+        throw new Error('URL does not match recognized Cloudinary pattern');
 
     } catch (err) {
-        throw new Error(`Failed to download file from Cloudinary: ${err.message}`);
+        throw new Error(`Failed to download file from storage: ${err.message}`);
     }
 };
 

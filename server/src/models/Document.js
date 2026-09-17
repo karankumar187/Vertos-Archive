@@ -42,6 +42,10 @@ const documentSchema = new mongoose.Schema({
         type: String, // MIME type e.g. application/pdf, image/jpeg
         default: '',
     },
+    publicId: {
+        type: String,
+        default: null,
+    },
     extractedText: {
         type: String, // Pre-extracted text stored at upload time
         default: '',
@@ -49,7 +53,8 @@ const documentSchema = new mongoose.Schema({
     files: [{
         url: { type: String, required: true },
         type: { type: String, required: true },
-        size: { type: Number, required: true }
+        size: { type: Number, required: true },
+        publicId: { type: String, default: null }
     }],
     pageCount: {
         type: Number,

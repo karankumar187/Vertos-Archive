@@ -72,6 +72,7 @@ exports.approveUpload = async (req, res) => {
             reviewComment: reviewComment || '',
             fileUrl: pendingDoc.fileUrl,
             fileType: pendingDoc.fileType || '',
+            publicId: pendingDoc.publicId || (pendingDoc.files && pendingDoc.files[0] && pendingDoc.files[0].publicId) || null,
             files: pendingDoc.files || [],
             extractedText: pendingDoc.extractedText || '',
             pageCount: pendingDoc.pageCount || 0,
@@ -191,7 +192,13 @@ exports.checkDuplicate = async (req, res) => {
 };
 
 const { deleteDocumentEmbeddings } = require('../services/qdrant.service');
-const { cloudinary } = require('../config/cloudinary');
+const { deleteFromMyDrive } = require('../services/myDrive.service');
+let cloudinary;
+try {
+    cloudinary = require('../config/cloudinary').cloudinary;
+} catch {
+    // Cloudinary optional
+}
 
 // @desc    Get all live/approved documents
 // @route   GET /api/admin/documents
@@ -209,7 +216,7 @@ exports.getLiveDocuments = async (req, res) => {
     }
 };
 
-// @desc    Permanently delete a live document from Mongo, Cloudinary, and Qdrant
+// @desc    Permanently delete a live document from Mongo, Storage (myDrive/Cloudinary), and Qdrant
 // @route   DELETE /api/admin/documents/:id
 // @access  Private/Admin
 exports.deleteDocument = async (req, res) => {
@@ -220,8 +227,33 @@ exports.deleteDocument = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Document not found' });
         }
 
-        // 1. Delete from Cloudinary
-        if (doc.fileUrl) {
+        // 1. Delete from myDrive
+        const publicIdsToDelete = new Set();
+        if (doc.publicId) publicIdsToDelete.add(doc.publicId);
+        if (Array.isArray(doc.files)) {
+            doc.files.forEach(f => {
+                if (f.publicId) publicIdsToDelete.add(f.publicId);
+            });
+        }
+
+        // If fileUrl is a myDrive URL, extract publicId if not already captured
+        if (doc.fileUrl && !doc.fileUrl.includes('res.cloudinary.com')) {
+            const match = doc.fileUrl.match(/\/media\/(.+?)(\.[a-zA-Z0-9]+)?$/);
+            if (match && match[1]) {
+                publicIdsToDelete.add(match[1]);
+            }
+        }
+
+        for (const pid of publicIdsToDelete) {
+            try {
+                await deleteFromMyDrive(pid);
+            } catch (err) {
+                console.error(`[Admin] Error deleting ${pid} from myDrive:`, err.message);
+            }
+        }
+
+        // 2. Fallback: Delete from Cloudinary if legacy URL
+        if (doc.fileUrl && doc.fileUrl.includes('res.cloudinary.com') && cloudinary) {
             try {
                 const parts = doc.fileUrl.split('/upload/');
                 if (parts.length > 1) {
@@ -229,7 +261,6 @@ exports.deleteDocument = async (req, res) => {
                     const pathWithExt = pathWithVersion.replace(/^v\d+\//, ''); 
                     const pathWithoutExt = pathWithExt.split('.').slice(0, -1).join('.');
                     
-                    // Try destroying as both raw and image to be safe
                     await cloudinary.uploader.destroy(pathWithExt, { resource_type: 'raw' }).catch(() => {});
                     await cloudinary.uploader.destroy(pathWithoutExt, { resource_type: 'image' }).catch(() => {});
                 }

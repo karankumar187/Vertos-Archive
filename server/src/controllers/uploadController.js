@@ -1,6 +1,6 @@
 const PendingDocument = require('../models/PendingDocument');
 const Contributor = require('../models/Contributor');
-const { uploadBufferToCloudinary } = require('../config/cloudinary');
+const { uploadBufferToMyDrive } = require('../services/myDrive.service');
 const { extractTextFromBuffer } = require('../services/documentParser');
 
 exports.uploadDocument = async (req, res) => {
@@ -38,15 +38,17 @@ exports.uploadDocument = async (req, res) => {
             const mimeType = file.mimetype;
             totalSize += file.size || 0;
 
-            // 1. Upload buffer to Cloudinary
-            console.log(`[Upload] Uploading file ${index + 1}/${req.files.length} (${mimeType})...`);
-            const cloudinaryResult = await uploadBufferToCloudinary(buffer, mimeType);
-            const fileUrl = cloudinaryResult.secure_url;
+            // 1. Upload buffer to myDrive
+            console.log(`[Upload] Uploading file ${index + 1}/${req.files.length} (${mimeType}) to myDrive...`);
+            const filename = file.originalname || `${(title || 'doc').replace(/[^a-zA-Z0-9_-]/g, '_')}_p${index + 1}`;
+            const myDriveResult = await uploadBufferToMyDrive(buffer, mimeType, filename, 'vertos_archive_documents');
+            const fileUrl = myDriveResult.secure_url;
             
             savedFiles.push({
                 url: fileUrl,
                 type: mimeType,
-                size: cloudinaryResult.bytes || file.size || 0
+                size: myDriveResult.bytes || file.size || 0,
+                publicId: myDriveResult.public_id || null
             });
 
             // 2. Extract text immediately from the buffer
@@ -80,6 +82,7 @@ exports.uploadDocument = async (req, res) => {
             fileUrl: savedFiles[0].url,
             fileSize: totalSize,
             fileType: savedFiles[0].type,
+            publicId: savedFiles[0].publicId,
             // New array
             files: savedFiles,
             extractedText: allExtractedText.trim(),

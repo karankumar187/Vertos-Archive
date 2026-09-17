@@ -18,7 +18,7 @@ const FILE_PROXY_BASE = API_BASE.replace('/api', '');
 // Returns a proxied URL so all file types open correctly in the browser
 const getViewableUrl = (url, title = '', ext = '') => {
   if (!url || url === '#') return '#';
-  if (url.startsWith('https://res.cloudinary.com/')) {
+  if (url.startsWith('https://res.cloudinary.com/') || url.includes('/api/v1/media') || url.includes('nip.io') || url.includes('workers.dev')) {
     let proxyUrl = `${FILE_PROXY_BASE}/api/file/view?url=${encodeURIComponent(url)}&ext=${ext}`;
     if (title) proxyUrl += `&title=${encodeURIComponent(title)}`;
     proxyUrl += '&v=2'; // Cache-buster for recent proxy fix
@@ -30,7 +30,7 @@ const getViewableUrl = (url, title = '', ext = '') => {
 // Returns a proxied download URL that forces Content-Disposition: attachment
 const getDownloadUrl = (url, title = '', ext = '') => {
   if (!url || url === '#') return '#';
-  if (url.startsWith('https://res.cloudinary.com/')) {
+  if (url.startsWith('https://res.cloudinary.com/') || url.includes('/api/v1/media') || url.includes('nip.io') || url.includes('workers.dev')) {
     let proxyUrl = `${FILE_PROXY_BASE}/api/file/view?download=1&url=${encodeURIComponent(url)}&ext=${ext}`;
     if (title) proxyUrl += `&title=${encodeURIComponent(title)}`;
     return proxyUrl;
@@ -148,6 +148,12 @@ const preprocessMath = (text) => {
     res = res.replace(/(?:[ \t]*\n[ \t]*|[ \t]+)(?:\*\*)?(?:Correct Answer|Answer)(?::\*\*|:\s*|\*\*:)\s*(?:\*\*)?([A-D])(?:\*\*)?/gi, '\n\n**Correct Answer:** $1');
     // Separate Explanation
     res = res.replace(/(?:[ \t]*\n[ \t]*|[ \t]+)(?:\*\*)?Explanation(?::\*\*|:\s*|\*\*:)\s*/gi, '\n\n**Explanation:** ');
+
+    // ── Unit & Section Structuring ──
+    // Ensure Unit headers start on a clean line with proper markdown H2
+    res = res.replace(/(?:^|\n)[ \t]*(?:##+[ \t]*)?(Unit\s*[0-6][:.\s-][^\n]*)/gi, '\n\n## $1\n');
+    // Clean excessive blank lines (> 2 newlines)
+    res = res.replace(/\n{3,}/g, '\n\n');
 
     return res;
 };

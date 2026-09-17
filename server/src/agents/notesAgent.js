@@ -98,30 +98,60 @@ async function progressiveNotesGeneratorNode(state) {
     const notesText = notesChunks.slice(0, 30).map(c => c.text).join('\n---\n');
 
     const systemPrompt = `
-You are an Academic Professor for Lovely Professional University.
-Generate exhaustive, textbook-grade study notes for ${state.subject}.
+You are a Senior Academic Professor for Lovely Professional University.
+Generate exhaustive, beautifully structured textbook-grade study notes for ${state.subject}.
 Do NOT mention internal architecture, agents, or pipeline nodes.
 
 TARGET SCOPE:
 - Units requested: ${state.units && state.units.length > 0 ? state.units.join(', ') : 'All relevant units'}
 - User query: "${state.userMessage}"
 
-STRICT ANTI-SUMMARY MANDATE (CRITICAL):
-1. Under NO circumstances should you provide a brief, 2-line summary. Students need full, rigorous study material.
-2. Ground your explanations strictly on the provided syllabus and uploaded notes context.
-3. Every section MUST include:
-   - **Theoretical Foundation**: Full, rigorous definitions and underlying mechanisms.
-   - **Formulas & Math**: Every equation written in LaTeX ($...$ or $$...$$) with variable definitions.
-   - **Code / Syntax Blocks**: If applicable (CSE, IT, Programming), provide complete, well-commented code snippets.
-   - **Step-by-step Algorithms**: When processes or procedures are involved, list every step.
-   - **Worked Practical Example**: Include at least one concrete numerical or code example per major concept.
-   - **Professor Callouts**: Highlight subtle edge cases and frequent exam pitfalls found in the notes.
+STRUCTURE & FORMATTING POLICIES (MANDATORY):
+Follow this exact visual layout for every major topic:
 
-Format with clear Markdown headers:
-# Course Notes: [Course Title]
+# 📝 Comprehensive Study Notes: ${state.subject}
+
+> **Course:** ${state.subject} | **Coverage:** ${state.units && state.units.length > 0 ? 'Units ' + state.units.join(', ') : 'Syllabus Core'} | **Target:** University Exam & Practical Mastery
+
+---
+
+For EACH unit requested:
+
 ## Unit [X]: [Unit Title]
-### 1. [Topic Name]
-...
+
+### [1.0] [Major Concept / Topic Name]
+
+#### 📌 Theoretical Foundations & Architecture
+- **Formal Definition:** [Rigorous academic definition]
+- **Core Principles & Working Mechanism:**
+  - **[Component/Aspect A]:** [In-depth technical explanation]
+  - **[Component/Aspect B]:** [In-depth technical explanation]
+
+#### 📐 Mathematical Formulations & Equations (if applicable)
+$$
+[Full LaTeX display equation]
+$$
+*Where:*
+- $variable$ = [Definition and units]
+
+#### 💻 Code Implementation & Algorithms (if coding/CSE/IT subject)
+\`\`\`[language]
+// Clean, runnable, well-commented code snippet
+\`\`\`
+
+#### 🔍 Worked Numerical Problem / Practical Case Study
+- **Problem:** [Clear problem statement with specific values]
+- **Step-by-Step Solution:**
+  1. **Step 1:** ...
+  2. **Step 2:** ...
+- **Key Takeaway:** ...
+
+#### ⚠️ Professor's Exam Callout & Trap Warnings
+> **Exam Pitfall:** [Crucial edge case, common misconception, or typical university exam trap]
+
+---
+
+[Proceed through all syllabus sub-topics with identical rigor and structure. NEVER give a 2-line summary.]
 `;
 
     const userPrompt = `Generate comprehensive, highly detailed notes covering all points from the uploaded notes and syllabus for ${state.subject}.
@@ -166,11 +196,19 @@ async function notesRevisionKitNode(state) {
         });
     }
 
-    const kitHeader = `\n\n---\n### 📑 Quick-Revision Kit & Exam Trap Callouts\n`;
+    const kitHeader = `\n\n---\n## 📑 Quick-Revision Cheat Sheet & Exam Callouts\n`;
     const prompt = `
 Based on the notes just generated for ${state.subject || 'this course'}, produce a concise Quick-Revision Kit:
-1. "Key Formulas & Syntax Cheat Sheet": A Markdown table summarizing crucial formulas or commands.
-2. "Top 3 Common Exam Mistakes": Pitfalls students frequently make on these specific topics.
+
+1. A clean Markdown table summarizing core formulas, syntax, or key concepts:
+| Concept / Topic | Key Formula / Syntax / Rule | High-Yield Exam Takeaway |
+| :--- | :--- | :--- |
+| ... | ... | ... |
+
+2. "Top 3 Common Exam Mistakes":
+> 1. **Mistake 1:** [Pitfall description and how to solve correctly]
+> 2. **Mistake 2:** [Pitfall description and how to solve correctly]
+> 3. **Mistake 3:** [Pitfall description and how to solve correctly]
 
 Output only this section in Markdown.
 `;
