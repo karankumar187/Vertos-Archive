@@ -71,6 +71,12 @@ const uploadBufferToMyDrive = async (
     }
 
     const data = await response.json();
+    if (data.secure_url && data.secure_url.includes('137.23.42.121.nip.io')) {
+        data.secure_url = data.secure_url.replace(/https?:\/\/137\.23\.42\.121\.nip\.io\/api\/v1\/media/, 'https://drive-edge-cache.karan9302451907.workers.dev/api/v1/media');
+    }
+    if (data.url && data.url.includes('137.23.42.121.nip.io')) {
+        data.url = data.url.replace(/https?:\/\/137\.23\.42\.121\.nip\.io\/api\/v1\/media/, 'https://drive-edge-cache.karan9302451907.workers.dev/api/v1/media');
+    }
     console.log(`[myDrive] Upload succeeded: ${data.public_id} -> ${data.secure_url}`);
     return data;
 };

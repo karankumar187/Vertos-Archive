@@ -225,7 +225,11 @@ app.get('/api/file/view', async (req, res) => {
                 return u;
             };
 
-            const safeUrl = new URL(getSafeTargetUrl(targetUrl)).href;
+            let effectiveTargetUrl = targetUrl;
+            if (effectiveTargetUrl.includes('137.23.42.121.nip.io')) {
+                effectiveTargetUrl = effectiveTargetUrl.replace(/https?:\/\/137\.23\.42\.121\.nip\.io\/api\/v1\/media/, 'https://drive-edge-cache.karan9302451907.workers.dev/api/v1/media');
+            }
+            const safeUrl = new URL(getSafeTargetUrl(effectiveTargetUrl)).href;
             const protocol = safeUrl.startsWith('https:') ? https : http;
             
             protocol.get(safeUrl, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' } }, (fileRes) => {
