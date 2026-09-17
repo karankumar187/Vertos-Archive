@@ -21,8 +21,22 @@ exports.getArchive = async (req, res) => {
     const documents = await Document.find(filter)
       .populate('uploaderID', 'name avatar')
       .sort({ createdAt: -1 });
+
+    const sanitized = documents.map(d => {
+      const obj = d.toObject();
+      if (obj.fileUrl) {
+        obj.fileUrl = obj.fileUrl.replace(/https?:\/\/137\.23\.42\.121\.nip\.io\/api\/v1\/media/, 'https://drive-edge-cache.karan9302451907.workers.dev/api/v1/media');
+      }
+      if (Array.isArray(obj.files)) {
+        obj.files = obj.files.map(f => ({
+          ...f,
+          url: (f.url || '').replace(/https?:\/\/137\.23\.42\.121\.nip\.io\/api\/v1\/media/, 'https://drive-edge-cache.karan9302451907.workers.dev/api/v1/media')
+        }));
+      }
+      return obj;
+    });
       
-    res.json({ success: true, data: documents });
+    res.json({ success: true, data: sanitized });
   } catch (error) {
     console.error('Error fetching archive documents:', error);
     res.status(500).json({ success: false, message: 'Server error fetching archive' });
@@ -49,6 +63,10 @@ exports.downloadDocument = async (req, res) => {
     if (fileIndex >= 0 && doc.files && doc.files[fileIndex]) {
       fileUrl = doc.files[fileIndex].url;
       fileType = doc.files[fileIndex].type || fileType;
+    }
+
+    if (fileUrl && fileUrl.includes('137.23.42.121.nip.io')) {
+      fileUrl = fileUrl.replace(/https?:\/\/137\.23\.42\.121\.nip\.io\/api\/v1\/media/, 'https://drive-edge-cache.karan9302451907.workers.dev/api/v1/media');
     }
 
     // Build a safe filename, include page number if multi-page
@@ -128,9 +146,12 @@ exports.getDocumentFiles = async (req, res) => {
     const doc = await Document.findById(req.params.id).select('title fileUrl fileType files');
     if (!doc) return res.status(404).json({ success: false, message: 'Document not found' });
 
-    const allFiles = (doc.files && doc.files.length > 0)
+    const allFiles = ((doc.files && doc.files.length > 0)
       ? doc.files.map((f, i) => ({ index: i, url: f.url, type: f.type }))
-      : [{ index: 0, url: doc.fileUrl, type: doc.fileType }];
+      : [{ index: 0, url: doc.fileUrl, type: doc.fileType }]).map(f => ({
+        ...f,
+        url: (f.url || '').replace(/https?:\/\/137\.23\.42\.121\.nip\.io\/api\/v1\/media/, 'https://drive-edge-cache.karan9302451907.workers.dev/api/v1/media')
+      }));
 
     res.json({ success: true, title: doc.title, files: allFiles });
   } catch (error) {

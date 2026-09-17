@@ -15,22 +15,29 @@ import AgentStepIndicator from "../components/AgentStepIndicator";
 const API_BASE = (import.meta?.env?.VITE_API_URL) || 'http://localhost:5001/api';
 const FILE_PROXY_BASE = API_BASE.replace('/api', '');
 
+const normalizeMediaUrl = (url) => {
+  if (!url) return '';
+  return url.replace(/https?:\/\/137\.23\.42\.121\.nip\.io\/api\/v1\/media/, 'https://drive-edge-cache.karan9302451907.workers.dev/api/v1/media');
+};
+
 // Returns a proxied URL so all file types open correctly in the browser
-const getViewableUrl = (url, title = '', ext = '') => {
-  if (!url || url === '#') return '#';
-  if (url.startsWith('https://res.cloudinary.com/') || url.includes('/api/v1/media') || url.includes('nip.io') || url.includes('workers.dev')) {
+const getViewableUrl = (rawUrl, title = '', ext = '') => {
+  if (!rawUrl || rawUrl === '#') return '#';
+  const url = normalizeMediaUrl(rawUrl);
+  if (url.startsWith('https://res.cloudinary.com/') || url.includes('/api/v1/media') || url.includes('workers.dev')) {
     let proxyUrl = `${FILE_PROXY_BASE}/api/file/view?url=${encodeURIComponent(url)}&ext=${ext}`;
     if (title) proxyUrl += `&title=${encodeURIComponent(title)}`;
-    proxyUrl += '&v=2'; // Cache-buster for recent proxy fix
+    proxyUrl += '&v=3'; // Cache-buster for recent proxy fix
     return proxyUrl;
   }
   return url;
 };
 
 // Returns a proxied download URL that forces Content-Disposition: attachment
-const getDownloadUrl = (url, title = '', ext = '') => {
-  if (!url || url === '#') return '#';
-  if (url.startsWith('https://res.cloudinary.com/') || url.includes('/api/v1/media') || url.includes('nip.io') || url.includes('workers.dev')) {
+const getDownloadUrl = (rawUrl, title = '', ext = '') => {
+  if (!rawUrl || rawUrl === '#') return '#';
+  const url = normalizeMediaUrl(rawUrl);
+  if (url.startsWith('https://res.cloudinary.com/') || url.includes('/api/v1/media') || url.includes('workers.dev')) {
     let proxyUrl = `${FILE_PROXY_BASE}/api/file/view?download=1&url=${encodeURIComponent(url)}&ext=${ext}`;
     if (title) proxyUrl += `&title=${encodeURIComponent(title)}`;
     return proxyUrl;

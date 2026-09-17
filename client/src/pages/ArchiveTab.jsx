@@ -49,13 +49,19 @@ const handleDownload = async (doc) => {
 const API_BASE = (import.meta?.env?.VITE_API_URL) || 'http://localhost:5001/api';
 const FILE_PROXY_BASE = API_BASE.replace('/api', '');
 
-const getViewableUrl = (url, title = '', ext = '') => {
-  if (!url || url === '#') return '#';
-  if (url.startsWith('https://res.cloudinary.com/') || url.includes('/api/v1/media') || url.includes('nip.io') || url.includes('workers.dev')) {
+export const normalizeMediaUrl = (url) => {
+  if (!url) return '';
+  return url.replace(/https?:\/\/137\.23\.42\.121\.nip\.io\/api\/v1\/media/, 'https://drive-edge-cache.karan9302451907.workers.dev/api/v1/media');
+};
+
+const getViewableUrl = (rawUrl, title = '', ext = '') => {
+  if (!rawUrl || rawUrl === '#') return '#';
+  const url = normalizeMediaUrl(rawUrl);
+  if (url.startsWith('https://res.cloudinary.com/') || url.includes('/api/v1/media') || url.includes('workers.dev')) {
     let params = `url=${encodeURIComponent(url)}`;
     if (title) params += `&title=${encodeURIComponent(title)}`;
     if (ext) params += `&ext=${ext}`;
-    params += '&v=2'; // Cache-buster for recent proxy fix
+    params += '&v=3'; // Cache-buster for recent proxy fix
     return `${FILE_PROXY_BASE}/api/file/view?${params}`;
   }
   return url;
@@ -271,9 +277,14 @@ export default function ArchiveTab() {
       if (!background) setLoading(true);
       const { data } = await archiveAPI.getArchive({});
       if (data.success) {
-        const filtered = data.data.filter(d => PUBLIC_CATEGORIES.includes(d.category?.toLowerCase()));
+        const normalized = (data.data || []).map(d => ({
+          ...d,
+          fileUrl: normalizeMediaUrl(d.fileUrl),
+          files: (d.files || []).map(f => ({ ...f, url: normalizeMediaUrl(f.url) }))
+        }));
+        const filtered = normalized.filter(d => PUBLIC_CATEGORIES.includes(d.category?.toLowerCase()));
         setDocuments(filtered);
-        cacheSet("community_archive_all", filtered);
+        cacheSet("community_archive_all_v4", filtered);
       }
     } catch (err) {
       console.error("Error fetching archive:", err);
@@ -283,7 +294,7 @@ export default function ArchiveTab() {
   };
 
   useEffect(() => {
-    const cached = cacheGet("community_archive_all");
+    const cached = cacheGet("community_archive_all_v4");
     if (cached) {
       setDocuments(cached);
       setLoading(false);
